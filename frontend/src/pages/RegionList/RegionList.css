@@ -1,0 +1,216 @@
+.region-list-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.region-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.region-list-header h1 {
+  margin: 0;
+  color: #333;
+  font-size: 28px;
+}
+
+.new-region-btn {
+  padding: 8px 16px;
+  background-color: #4a6fa5;
+  color: white;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.new-region-btn:hover {
+  background-color: #3a5a8c;
+  transform: translateY(-2px);
+}
+
+.search-filter-bar {
+  margin-bottom: 20px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.regions-table-container {
+  overflow-x: auto;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.regions-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.regions-table th,
+.regions-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.regions-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #555;
+  position: sticky;
+  top: 0;
+}
+
+.regions-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.schools-cell a {
+  color: #4a6fa5;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.schools-cell a:hover {
+  color: #304c73;
+  text-decoration: underline;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 10px;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.edit-btn {
+  background-color: #f0f0f0;
+  color: #333;
+  text-decoration: none;
+  border: 1px solid #ddd;
+}
+
+.edit-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.delete-btn {
+  background-color: #fff0f0;
+  color: #e53e3e;
+  border: 1px solid #e53e3e;
+}
+
+.delete-btn:hover {
+  background-color: #ffe0e0;
+}
+
+.no-data-message {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  color: #6c757d;
+  margin-bottom: 30px;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 18px;
+  color: #666;
+}
+
+.error-message {
+  background-color: #fff5f5;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  color: #e53e3e;
+  margin-bottom: 30px;
+}
+
+.error-message h2 {
+  margin-top: 0;
+}
+
+.error-message button {
+  background-color: #e53e3e;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+}
+
+.error-message button:hover {
+  background-color: #c53030;
+}
+
+.breadcrumb-navigation {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #777;
+}
+
+.breadcrumb-link {
+  color: #4a6fa5;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.breadcrumb-link:hover {
+  color: #304c73;
+  text-decoration: underline;
+}
+
+.breadcrumb-separator {
+  margin: 0 10px;
+}
+
+.breadcrumb-current {
+  font-weight: 500;
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  .region-list-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .actions-cell {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .edit-btn,
+  .delete-btn {
+    text-align: center;
+  }
+} 

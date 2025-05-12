@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: language-center
+    env: node
+    nodeVersion: 18.x
+    buildCommand: npm run render-build
+    startCommand: npm run render-start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false # This will be set through Render dashboard
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - backend/**
+        - frontend/**
+        - package.json
+        - build-frontend.js 

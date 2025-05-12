@@ -1,0 +1,558 @@
+.class-form-container {
+  padding: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.class-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.class-form-header h1 {
+  font-size: 1.8rem;
+  color: #333;
+  margin: 0;
+}
+
+.class-form {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  margin-bottom: 20px;
+}
+
+.form-section {
+  margin-bottom: 30px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 20px;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 10px;
+}
+
+.form-section h2 {
+  font-size: 1.4rem;
+  color: #444;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.form-group {
+  flex: 1;
+  min-width: 0; /* Prevents flex items from overflowing */
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  font-size: 1.2rem;
+  color: #555;
+  margin: 0;
+  padding-top: 8px;
+}
+
+.schedule-buttons-stack, 
+.schedule-buttons, 
+.add-btn, 
+.same-width-btn, 
+.remove-btn.same-width-btn, 
+.remove-btn.same-width-btn:hover, 
+.remove-btn.same-width-btn:disabled,
+.schedule-items,
+.holiday-items {
+  display: none;
+}
+
+.schedule-item .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.schedule-section,
+.holiday-section {
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  padding: 25px;
+  margin-top: 25px;
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.03);
+}
+
+.schedule-item,
+.holiday-item {
+  background-color: white;
+  border-radius: 4px;
+  padding: 15px;
+  border: 1px solid #eee;
+  position: relative;
+}
+
+.schedule-item .form-group {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.schedule-item .form-group label {
+  margin-bottom: 8px;
+  font-weight: 500;
+  display: block;
+}
+
+.schedule-item .form-group input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 100%;
+  font-size: 14px;
+  color: #333;
+}
+
+/* Style "to" text instead of using ::after pseudo-element */
+.time-separator {
+  display: none;
+  position: absolute;
+  left: calc(50% - 15px);
+  bottom: 12px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Clear any floats */
+.schedule-item:after,
+.form-row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Ensure the remove button aligns properly */
+.remove-btn-container {
+  display: none;
+}
+
+.holiday-item .form-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.remove-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.remove-btn:hover {
+  background-color: #c0392b;
+}
+
+.remove-btn:disabled {
+  background-color: #f1a9a0;
+  cursor: not-allowed;
+}
+
+.no-data-message {
+  background-color: #f8f9fa;
+  border: 1px dashed #dee2e6;
+  border-radius: 4px;
+  padding: 15px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.no-data-message.small {
+  padding: 10px;
+  font-size: 0.9rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.cancel-btn {
+  background-color: #f8f9fa;
+  color: #495057;
+  text-decoration: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.cancel-btn:hover {
+  background-color: #e9ecef;
+}
+
+.submit-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.submit-btn:hover {
+  background-color: #218838;
+}
+
+.submit-btn:disabled {
+  background-color: #8fcb9b;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 12px 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #f5c6cb;
+}
+
+.error-message p {
+  margin: 0;
+}
+
+.breadcrumb-navigation {
+  margin-top: 20px;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.breadcrumb-link {
+  color: #4a90e2;
+  text-decoration: none;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-separator {
+  margin: 0 8px;
+}
+
+.breadcrumb-current {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .class-form {
+    padding: 20px;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .cancel-btn,
+  .submit-btn {
+    width: 100%;
+  }
+  
+  .schedule-item .form-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .schedule-item .form-group {
+    margin-bottom: 10px;
+  }
+  
+  .holiday-item .form-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .schedule-buttons-stack {
+    width: 100%;
+    max-width: 150px;
+  }
+}
+
+/* Remove unnecessary CSS */
+/* Fix for "to" text placement */
+.schedule-item .form-row .form-group:nth-child(2)::after {
+  content: none;
+}
+
+/* Schedule and holiday section styles */
+.schedule-section,
+.holiday-section {
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  padding: 25px;
+  margin-top: 25px;
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.03);
+}
+
+.section-header {
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  font-size: 1.2rem;
+  color: #555;
+  margin: 0;
+}
+
+/* Schedule list styles */
+.schedule-list,
+.holiday-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.schedule-item,
+.holiday-item {
+  background-color: white;
+  border-radius: 4px;
+  padding: 15px;
+  border: 1px solid #eee;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+}
+
+.schedule-item select {
+  width: 150px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-grow: 1;
+}
+
+.time-inputs input[type="time"] {
+  width: 120px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.time-inputs span {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.remove-schedule-btn,
+.remove-holiday-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.remove-schedule-btn:hover,
+.remove-holiday-btn:hover {
+  background-color: #c0392b;
+}
+
+.remove-schedule-btn:disabled,
+.remove-holiday-btn:disabled {
+  background-color: #f1a9a0;
+  cursor: not-allowed;
+}
+
+.add-schedule-btn,
+.add-holiday-btn {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  align-self: flex-start;
+  margin-top: 5px;
+}
+
+.add-schedule-btn:hover,
+.add-holiday-btn:hover {
+  background-color: #3a7bc8;
+}
+
+.add-schedule-btn:disabled,
+.add-holiday-btn:disabled {
+  background-color: #a0c3e8;
+  cursor: not-allowed;
+}
+
+/* Holiday item styles */
+.holiday-inputs {
+  display: flex;
+  flex-grow: 1;
+  gap: 15px;
+}
+
+.date-input {
+  min-width: 200px;
+}
+
+.desc-input {
+  flex-grow: 1;
+}
+
+.holiday-inputs label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.holiday-inputs input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .schedule-item,
+  .holiday-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .schedule-item select,
+  .time-inputs,
+  .holiday-inputs {
+    width: 100%;
+  }
+  
+  .time-inputs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .time-inputs input[type="time"] {
+    width: 100%;
+  }
+  
+  .time-inputs span {
+    align-self: center;
+    margin: 5px 0;
+  }
+  
+  .holiday-inputs {
+    flex-direction: column;
+  }
+  
+  .remove-schedule-btn,
+  .remove-holiday-btn,
+  .add-schedule-btn,
+  .add-holiday-btn {
+    width: 100%;
+  }
+}
+
+.day-select {
+  min-width: 150px;
+}
+
+.day-select label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.day-select select {
+  width: 100%;
+} 

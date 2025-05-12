@@ -1,0 +1,774 @@
+.teacher-schedule-container {
+  padding: 20px;
+}
+
+.teacher-schedule-container h1 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.schedule-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 992px) {
+  .schedule-content {
+    flex-direction: row;
+  }
+  
+  .course-list {
+    flex: 0 0 300px;
+  }
+  
+  .calendar-container {
+    flex: 1;
+  }
+}
+
+.course-list {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.course-list h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.course-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.course-item {
+  background-color: white;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.course-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+  color: #2c3e50;
+}
+
+.course-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.course-schedule {
+  font-size: 0.85rem;
+  color: #555;
+  background-color: #f9f9f9;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.schedule-times {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.schedule-times li {
+  padding: 3px 0;
+}
+
+.calendar-container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.time-legend {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 15px;
+  gap: 15px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.legend-color {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  border-radius: 3px;
+}
+
+.legend-morning {
+  background-color: var(--morning-color);
+}
+
+.legend-afternoon {
+  background-color: var(--afternoon-color);
+}
+
+.legend-evening {
+  background-color: var(--evening-color);
+}
+
+/* Calendar customization */
+.rbc-calendar {
+  font-family: inherit;
+  --morning-color: #4285f4; /* Blue for morning (6:00 - 11:59) */
+  --afternoon-color: #fbbc05; /* Yellow/Gold for afternoon (12:00 - 16:59) */
+  --evening-color: #34a853; /* Green for evening (17:00 - 22:00) */
+  /* Increase time slot resolution */
+  --time-slot-height: 1.75rem; /* Default height for time slots */
+}
+
+.rbc-event {
+  padding: 2px 5px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: absolute !important;
+  z-index: 5; /* Ensure events appear above grid lines */
+}
+
+.rbc-event-content {
+  width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 0.8rem !important;
+}
+
+.morning-event {
+  background-color: #4a90e2;
+}
+
+.afternoon-event {
+  background-color: #f5a623;
+}
+
+.evening-event {
+  background-color: #8e44ad;
+}
+
+/* Kindergarten class specific styling */
+.kindergarten-event {
+  display: block !important;
+  opacity: 1 !important;
+  z-index: 10 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  position: relative !important;
+}
+
+/* Ensure the course events have distinctive styling too */
+.course-event {
+  border-left: 4px solid #3498db !important;
+}
+
+.event-details {
+  font-size: 0.75rem !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Smaller text for very small events */
+.rbc-event.rbc-event-continues-prior,
+.rbc-event.rbc-event-continues-after,
+.rbc-event.rbc-event-continues-earlier,
+.rbc-event.rbc-event-continues-later {
+  font-size: 0.7rem !important;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.error-message {
+  background-color: #fff0f0;
+  border-left: 4px solid #ff3333;
+  padding: 15px;
+  margin: 20px 0;
+  border-radius: 4px;
+}
+
+.error-message h2 {
+  margin-top: 0;
+  color: #cc0000;
+}
+
+.error-message button {
+  background-color: #ff3333;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.error-message button:hover {
+  background-color: #cc0000;
+}
+
+.no-data-message {
+  background-color: #f5f5f5;
+  padding: 20px;
+  text-align: center;
+  border-radius: 8px;
+  color: #666;
+}
+
+.event-wrapper {
+  width: 100%;
+  overflow: hidden;
+}
+
+.event-title {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* For very small events, only show the title */
+.rbc-event.rbc-event-allday .event-details,
+.rbc-event.rbc-event-continues-prior .event-details,
+.rbc-event.rbc-event-continues-after .event-details {
+  display: none;
+}
+
+/* For extremely small events, use smaller font */
+@media screen and (max-width: 768px) {
+  .event-title {
+    font-size: 0.75rem;
+  }
+  
+  .event-details {
+    font-size: 0.65rem !important;
+  }
+}
+
+/* Add or update these styles for the kindergarten classes */
+
+.kindergarten-list {
+  margin-top: 1.5rem;
+  border-top: 1px solid #eaeaea;
+  padding-top: 1.5rem;
+}
+
+/* Calendar event styling */
+.morning-event.kindergarten-event {
+  background-color: #7986cb !important; /* Indigo */
+  border-left: 4px solid #3949ab !important;
+  color: white !important;
+}
+
+.afternoon-event.kindergarten-event {
+  background-color: #5c6bc0 !important; /* Darker indigo */
+  border-left: 4px solid #3949ab !important;
+  color: white !important;
+}
+
+.evening-event.kindergarten-event {
+  background-color: #3f51b5 !important; /* Deep indigo */
+  border-left: 4px solid #283593 !important;
+  color: white !important;
+}
+
+/* Updated legend for kindergarten classes */
+.legend-item .legend-kindergarten {
+  background-color: #3f51b5 !important;
+}
+
+/* Make time slot heights more precise */
+.rbc-time-view .rbc-time-gutter .rbc-timeslot-group,
+.rbc-time-view .rbc-time-column .rbc-timeslot-group {
+  min-height: var(--time-slot-height);
+  height: var(--time-slot-height);
+}
+
+/* Make sure event heights match their actual durations */
+.rbc-time-view .rbc-day-slot .rbc-event {
+  min-height: auto !important;
+  padding: 2px 5px !important;
+}
+
+/* Increase the resolution of the time grid */
+.rbc-time-view .rbc-day-slot .rbc-events-container {
+  margin-right: 0;
+}
+
+/* Add more granular time slots */
+.rbc-timeslot-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure time labels align with grid lines */
+.rbc-time-view .rbc-time-header-gutter {
+  position: relative;
+}
+
+/* Responsive layout */
+.schedule-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Mobile-first approach */
+.assignments-panel {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.assignments-panel h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+  color: #333;
+  text-align: center;
+}
+
+.assignments-panel h3 {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  color: #444;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Tabs for navigation */
+.assignment-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 6px 12px;
+  background: #e0e0e0;
+  border: none;
+  border-radius: 4px;
+  color: #444;
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.tab-button.active {
+  background: #3f51b5;
+  color: white;
+}
+
+.tab-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tab-button:hover:not(.disabled) {
+  background: #d0d0d0;
+}
+
+.tab-button.active:hover {
+  background: #303f9f;
+}
+
+/* Assignment items */
+.assignment-section {
+  margin-bottom: 15px;
+}
+
+.compact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.assignment-item {
+  background-color: white;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.assignment-name {
+  font-weight: bold;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+  color: #2c3e50;
+}
+
+.assignment-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.assignment-schedule {
+  font-size: 0.75rem;
+  color: #555;
+  background-color: #f9f9f9;
+  padding: 6px;
+  border-radius: 4px;
+}
+
+.schedule-times.compact {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.schedule-times.compact li {
+  background: #eee;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+/* Desktop layout */
+@media (min-width: 992px) {
+  .schedule-content {
+    flex-direction: row;
+  }
+  
+  .assignments-panel {
+    flex: 0 0 250px;
+    max-height: 500px;
+  }
+  
+  .calendar-container {
+    flex: 1;
+  }
+}
+
+/* Tablet layout */
+@media (min-width: 768px) and (max-width: 991px) {
+  .schedule-content {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .assignments-panel {
+    flex: 0 0 250px;
+    max-height: 400px;
+  }
+  
+  .calendar-container {
+    flex: 1;
+    min-width: 450px;
+  }
+}
+
+/* Mobile layout - vertical stack */
+@media (max-width: 767px) {
+  .schedule-content {
+    flex-direction: column;
+  }
+  
+  .teacher-schedule-container {
+    padding: 10px;
+  }
+  
+  .assignments-panel {
+    max-height: 300px;
+  }
+  
+  .calendar-container {
+    margin-top: 15px;
+  }
+
+  .time-legend {
+    flex-wrap: wrap;
+  }
+  
+  .legend-item {
+    font-size: 0.75rem;
+    margin-bottom: 3px;
+  }
+  
+  .legend-color {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Smaller calendar on mobile */
+  .rbc-toolbar {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .rbc-toolbar-label {
+    margin: 8px 0;
+  }
+
+  .rbc-header {
+    padding: 4px 3px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Event tooltip styles */
+.tooltip-container {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 90%;
+  max-width: 320px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.event-tooltip {
+  background-color: white;
+  width: 100%;
+}
+
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  background-color: #4285f4;
+  color: white;
+}
+
+.tooltip-header.kindergarten {
+  background-color: #3f51b5;
+}
+
+.tooltip-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80%;
+}
+
+.close-tooltip {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 5px;
+}
+
+.tooltip-content {
+  padding: 12px 15px;
+}
+
+.tooltip-schedule {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.tooltip-details {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.tooltip-details strong {
+  font-weight: 500;
+  color: #555;
+}
+
+/* Make events clickable */
+.event-wrapper {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.course-event .event-wrapper:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.kindergarten-event .event-wrapper:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Desktop tooltip positioning */
+@media (min-width: 768px) {
+  .tooltip-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    bottom: auto;
+  }
+}
+
+/* Smaller screens */
+@media (max-width: 480px) {
+  .tooltip-container {
+    bottom: 10px;
+    width: 95%;
+  }
+  
+  .tooltip-header h4 {
+    font-size: 0.9rem;
+  }
+  
+  .tooltip-content {
+    padding: 10px;
+  }
+  
+  .tooltip-details {
+    font-size: 0.8rem;
+  }
+}
+
+/* Hide specific time periods */
+.hidden-time-slot {
+  position: relative;
+  overflow: hidden;
+}
+
+.hidden-time-slot::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    45deg,
+    #f0f0f0,
+    #f0f0f0 10px,
+    #e0e0e0 10px,
+    #e0e0e0 20px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Show diagonal pattern for events in hidden time slots */
+.hidden-time-slot .rbc-event {
+  position: relative;
+  z-index: 3;
+}
+
+/* Make hidden time slots smaller to indicate they're collapsed */
+.hidden-time-slot .rbc-timeslot-group {
+  min-height: 10px !important;
+  height: 10px !important;
+  border-top: 1px dashed #aaa;
+  border-bottom: 1px dashed #aaa;
+}
+
+/* Style the time gutter for hidden slots */
+.rbc-time-view .rbc-time-gutter .hidden-time-slot .rbc-timeslot-group {
+  position: relative;
+}
+
+.rbc-time-view .rbc-time-gutter .hidden-time-slot .rbc-timeslot-group::after {
+  content: '⋯';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #888;
+  font-size: 14px;
+}
+
+/* Styling for events that fall in hidden time slots */
+.hidden-slot-event {
+  position: relative;
+  z-index: 5;
+}
+
+.hidden-slot-event::before {
+  content: '⚠️';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 10px;
+  z-index: 6;
+}
+
+/* Show events that cross hidden slots but start/end in visible slots */
+.hidden-slot-event.rbc-event-continues-after,
+.hidden-slot-event.rbc-event-continues-prior {
+  opacity: 0.7;
+  border-left: 3px solid #ff9800 !important;
+}
+
+/* Make the hidden time slots more compact */
+.rbc-time-view .rbc-time-content .hidden-time-slot {
+  max-height: 15px;
+  min-height: 15px;
+  overflow: hidden;
+}
+
+/* Mobile optimizations for hidden slots */
+@media (max-width: 767px) {
+  .hidden-time-slot .rbc-timeslot-group {
+    min-height: 5px !important;
+    height: 5px !important;
+  }
+  
+  .rbc-time-view .rbc-time-gutter .hidden-time-slot .rbc-timeslot-group::after {
+    font-size: 10px;
+  }
+}
