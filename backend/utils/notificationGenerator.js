@@ -73,42 +73,47 @@ const generateNotification = async (entityType, entityId, action, entityName = '
       message = customMessage;
     } else {
       const capitalizedEntity = entityType.charAt(0).toUpperCase() + entityType.slice(1);
+      const currentDate = new Date();
+      const timeString = currentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
       switch (action) {
         case 'create':
-          message = `New ${entityType} "${entityName}" was created`;
+          message = `Great news! A new ${entityType} named "${entityName}" has just been added to the system at ${timeString}`;
           type = 'success';
           break;
         case 'update':
-          message = `${capitalizedEntity} "${entityName}" was updated`;
+          message = `We've just updated the ${entityType} "${entityName}" with the latest information. Check it out!`;
           type = 'info';
           break;
         case 'delete':
-          message = `${capitalizedEntity} "${entityName}" was deleted`;
+          message = `The ${entityType} "${entityName}" has been removed from the system. If this was a mistake, please contact support.`;
           type = 'warning';
           break;
         case 'cancel':
           if (entityType === 'session') {
             finalEntityType = parentEntityType || entityType;
             finalEntityId = parentEntityId || entityId;
-            const parentInfo = parentEntityName ? ` (${parentEntityName})` : '';
-            const dateInfo = date ? ` on ${date.toLocaleDateString()}` : '';
-            message = `Session${dateInfo} has been canceled${parentInfo}`;
+            const parentInfo = parentEntityName ? ` for ${parentEntityName}` : '';
+            const dateInfo = date ? ` scheduled for ${date.toLocaleDateString()}` : '';
+            message = `Heads up! The session${dateInfo}${parentInfo} has been canceled. Please check your schedule.`;
             type = 'warning';
           } else {
-            message = `${capitalizedEntity} "${entityName}" was canceled`;
+            message = `Important: The ${entityType} "${entityName}" has been canceled. Please review any related plans.`;
             type = 'warning';
           }
           break;
         case 'ending_soon':
-          message = `${capitalizedEntity} "${entityName}" is ending soon`;
-          type = 'info';
           if (date) {
-            message = `${capitalizedEntity} "${entityName}" is ending on ${date.toLocaleDateString()}`;
+            const daysUntil = Math.ceil((date - currentDate) / (1000 * 60 * 60 * 24));
+            const dayText = daysUntil === 1 ? 'tomorrow' : `in ${daysUntil} days`;
+            message = `Reminder: The ${entityType} "${entityName}" is ending ${dayText} on ${date.toLocaleDateString()}. Don't forget to prepare!`;
+          } else {
+            message = `Just a friendly reminder that the ${entityType} "${entityName}" is ending soon. Make sure you're prepared!`;
           }
+          type = 'info';
           break;
         default:
-          message = `Action performed on ${entityType} "${entityName}"`;
+          message = `There's been an update to the ${entityType} "${entityName}". Take a moment to review the changes.`;
       }
     }
 

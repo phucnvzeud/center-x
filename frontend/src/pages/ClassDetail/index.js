@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { kindergartenClassesAPI, schoolsAPI } from '../../api';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { kindergartenClassesAPI } from '../../api';
 import './ClassDetail.css';
-import { FaChevronDown, FaChevronRight, FaCheckCircle, FaTimesCircle, FaCalendarAlt, FaFileExcel, FaCheck, FaTimes, FaEdit } from 'react-icons/fa';
+import { FaChevronDown, FaChevronRight, FaCalendarAlt, FaFileExcel, FaCheck, FaTimes, FaEdit } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import { Button, Badge, Table, Spinner, Card, Row, Col, Container, Modal, Form } from 'react-bootstrap';
+import { Button, Badge, Table, Spinner, Card } from 'react-bootstrap';
 
 const SessionStatusOptions = [
   { value: 'Scheduled', label: 'Scheduled', color: '#4a90e2' },
@@ -25,7 +25,6 @@ const ClassDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
-  const [updatingSession, setUpdatingSession] = useState(null);
   const [sessionActionLoading, setSessionActionLoading] = useState(false);
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const [sessionToUpdate, setSessionToUpdate] = useState(null);
@@ -36,36 +35,11 @@ const ClassDetail = () => {
   const [updatingSessionId, setUpdatingSessionId] = useState(null);
   const [customSessionModalOpen, setCustomSessionModalOpen] = useState(false);
   const [customSessionForm, setCustomSessionForm] = useState({
-    date: new Date().toISOString().split('T')[0], // Default to today in YYYY-MM-DD format
+    date: new Date().toISOString().split('T')[0],
     notes: ''
   });
 
-  useEffect(() => {
-    const fetchClassData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch class details
-        const classResponse = await kindergartenClassesAPI.getById(classId);
-        setKClass(classResponse.data);
-        
-        // Fetch sessions data if active tab is sessions
-        if (activeTab === 'sessions') {
-          await fetchSessionsData();
-        }
-        
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching class data:', err);
-        setError('Failed to load class data. Please try again later.');
-        setLoading(false);
-      }
-    };
-
-    fetchClassData();
-  }, [classId, activeTab]);
-  
-  const fetchSessionsData = async () => {
+  const fetchSessionsData = useCallback(async () => {
     try {
       const [sessionsResponse, statsResponse] = await Promise.all([
         kindergartenClassesAPI.getSessions(classId),
@@ -96,7 +70,32 @@ const ClassDetail = () => {
       console.error('Error fetching sessions data:', err);
       setError('Failed to load sessions data. Please try again later.');
     }
-  };
+  }, [classId]);
+
+  useEffect(() => {
+    const fetchClassData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch class details
+        const classResponse = await kindergartenClassesAPI.getById(classId);
+        setKClass(classResponse.data);
+        
+        // Fetch sessions data if active tab is sessions
+        if (activeTab === 'sessions') {
+          await fetchSessionsData();
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching class data:', err);
+        setError('Failed to load class data. Please try again later.');
+        setLoading(false);
+      }
+    };
+
+    fetchClassData();
+  }, [classId, activeTab, fetchSessionsData]);
   
   const getCurrentMonthKey = () => {
     const today = new Date();
@@ -531,25 +530,28 @@ const ClassDetail = () => {
     }
   }, [sessions]);
 
-  // Group sessions by month for collapsible display
   const sessionsByMonth = useMemo(() => {
     if (!sessions.length) return {};
 
-    return sessions.reduce((acc, session, index) => {
+    const grouped = {};
+    sessions.forEach(session => {
       const date = new Date(session.date);
       const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-      const monthLabel = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-      
-      if (!acc[monthKey]) {
-        acc[monthKey] = {
-          label: monthLabel,
+      const monthName = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+      if (!grouped[monthKey]) {
+        grouped[monthKey] = {
+          label: monthName,
           sessions: []
         };
       }
-      
-      acc[monthKey].sessions.push({...session, index});
-      return acc;
-    }, {});
+      grouped[monthKey].sessions.push(session);
+    });
+
+    // Sort months in descending order (most recent first)
+    return Object.fromEntries(
+      Object.entries(grouped).sort(([a], [b]) => b.localeCompare(a))
+    );
   }, [sessions]);
 
   if (loading) {
@@ -917,9 +919,7 @@ const ClassDetail = () => {
                   ))}
                 </div>
               ) : (
-                <div className="no-data-message">
-                  No sessions have been scheduled for this class.
-                </div>
+                <div className="no-sessions">No sessions found</div>
               )}
             </div>
           </div>
