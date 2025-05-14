@@ -60,6 +60,8 @@ const CourseForm = () => {
           const courseRes = await coursesAPI.getById(courseId);
           const courseData = courseRes.data;
           
+          console.log("Loaded course data:", JSON.stringify(courseData, null, 2));
+          
           // Format dates for input fields
           if (courseData.startDate) {
             courseData.startDate = new Date(courseData.startDate).toISOString().split('T')[0];
@@ -88,7 +90,16 @@ const CourseForm = () => {
           
           // Initialize schedule from weeklySchedule
           if (courseData.weeklySchedule && courseData.weeklySchedule.length > 0) {
-            setSchedule(courseData.weeklySchedule);
+            console.log("Initializing schedule from weeklySchedule:", JSON.stringify(courseData.weeklySchedule, null, 2));
+            
+            // Make a deep copy of the weeklySchedule to avoid reference issues
+            const scheduleData = courseData.weeklySchedule.map(item => ({
+              day: item.day,
+              startTime: item.startTime,
+              endTime: item.endTime
+            }));
+            
+            setSchedule(scheduleData);
           } else {
             // Add default schedule item if none exists
             setSchedule([{ day: 'Monday', startTime: '09:00', endTime: '11:00' }]);
@@ -155,7 +166,7 @@ const CourseForm = () => {
       // Prepare data for submission
       const courseData = {
         ...course,
-        weeklySchedule: schedule,
+        weeklySchedule: schedule, // Ensure schedule is correctly passed
         totalStudent, // Ensure totalStudent is correctly set
         maxStudents: parseInt(course.maxStudents) || 15 // Ensure maxStudents is a number
       };
@@ -171,6 +182,19 @@ const CourseForm = () => {
       let savedCourse;
       
       if (isEditMode) {
+        // Ensure weeklySchedule is properly formatted for update
+        console.log("Weekly schedule before update:", JSON.stringify(courseData.weeklySchedule, null, 2));
+        
+        // Make sure each schedule item has the required fields
+        const formattedSchedule = courseData.weeklySchedule.map(item => ({
+          day: item.day,
+          startTime: item.startTime,
+          endTime: item.endTime
+        }));
+        
+        courseData.weeklySchedule = formattedSchedule;
+        
+        // Send the update request
         savedCourse = await coursesAPI.update(courseId, courseData);
       } else {
         savedCourse = await coursesAPI.create(courseData);
@@ -178,6 +202,7 @@ const CourseForm = () => {
       
       if (savedCourse && savedCourse.data) {
         console.log("Course saved successfully:", savedCourse.data);
+        console.log("Weekly schedule in saved course:", savedCourse.data.weeklySchedule);
         console.log("Total students in saved course:", savedCourse.data.totalStudent);
       }
       

@@ -23,8 +23,8 @@
 }
 
 .edit-btn {
-  background-color: #f0f0f0;
-  color: #333;
+  background-color: #6d0000;
+  color: #ffffff;
   text-decoration: none;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -37,7 +37,7 @@
 }
 
 .edit-btn:hover {
-  background-color: #e0e0e0;
+  background-color: #3a0000 !important;
 }
 
 .delete-btn {
@@ -56,33 +56,7 @@
 }
 
 .class-tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
-}
-
-.tab-btn {
-  background: none;
-  border: none;
-  padding: 10px 15px;
-  font-size: 1rem;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 4px 4px 0 0;
-}
-
-.tab-btn:hover {
-  background-color: #f9f9f9;
-  color: #333;
-}
-
-.tab-btn.active {
-  color: #4a90e2;
-  font-weight: 500;
-  border-bottom: 2px solid #4a90e2;
+  display: none;
 }
 
 .class-detail-content {
@@ -711,7 +685,7 @@
 /* Quick status change buttons */
 .session-actions {
   display: flex;
-  flex-direction: column;
+  /* flex-direction: column; */
   gap: 0.5rem;
 }
 
@@ -1030,4 +1004,54 @@ input[type="date"] {
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+
+/* New section layouts */
+.class-info-section,
+.sessions-tracking-section {
+  margin-bottom: 30px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  background-color: #f8f9fa;
+  padding: 12px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.section-content {
+  padding: 20px;
+}
+
+.section-content .detail-card {
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.section-content .detail-card:last-child {
+  margin-bottom: 0;
+}
+
+.detail-card h3 {
+  font-size: 1.1rem;
+  color: #444;
+  margin-top: 0;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.sessions-tracking-section {
+  scroll-margin-top: 20px;
+  border-left: 4px solid #4a90e2;
 } 

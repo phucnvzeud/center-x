@@ -110,6 +110,28 @@ router.put('/:id', async (req, res) => {
     const courseId = req.params.id;
     const updateData = req.body;
     
+    console.log(`Updating course ${courseId} with data:`, JSON.stringify(updateData, null, 2));
+    
+    // Ensure weekly schedule is properly formatted
+    if (updateData.weeklySchedule && Array.isArray(updateData.weeklySchedule)) {
+      console.log(`Processing weekly schedule update with ${updateData.weeklySchedule.length} items`);
+      
+      // Validate each schedule item
+      updateData.weeklySchedule = updateData.weeklySchedule.map(item => {
+        // Ensure each item has the required fields
+        if (!item.day || !item.startTime || !item.endTime) {
+          console.error('Invalid schedule item:', item);
+          throw new Error('Weekly schedule items must have day, startTime, and endTime');
+        }
+        
+        return {
+          day: item.day,
+          startTime: item.startTime,
+          endTime: item.endTime
+        };
+      });
+    }
+    
     // Ensure totalStudent is set as a number
     if (updateData.totalStudent !== undefined) {
       updateData.totalStudent = parseInt(updateData.totalStudent);
@@ -132,7 +154,41 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Course not found' });
     }
     
-    console.log(`Course updated successfully with totalStudent: ${updatedCourse.totalStudent}`);
+    console.log(`Course updated successfully. WeeklySchedule: ${JSON.stringify(updatedCourse.weeklySchedule, null, 2)}`);
+    
+    // If sessions need to be regenerated (e.g., schedule changed)
+    if (updateData.weeklySchedule) {
+      console.log('Weekly schedule updated, regenerating sessions...');
+      
+      // Preserve session status for existing sessions
+      const existingSessionsMap = {};
+      if (updatedCourse.sessions && updatedCourse.sessions.length > 0) {
+        updatedCourse.sessions.forEach(session => {
+          const dateKey = new Date(session.date).toISOString().split('T')[0];
+          existingSessionsMap[dateKey] = {
+            status: session.status,
+            notes: session.notes
+          };
+        });
+      }
+      
+      // Regenerate sessions based on new schedule
+      updatedCourse.generateSessions();
+      
+      // Restore status for existing sessions
+      updatedCourse.sessions.forEach(session => {
+        const dateKey = new Date(session.date).toISOString().split('T')[0];
+        if (existingSessionsMap[dateKey]) {
+          session.status = existingSessionsMap[dateKey].status;
+          session.notes = existingSessionsMap[dateKey].notes;
+        }
+      });
+      
+      // Save the updated course with new sessions
+      await updatedCourse.save();
+      
+      console.log(`Sessions regenerated. Total sessions: ${updatedCourse.sessions.length}`);
+    }
     
     res.status(200).json(updatedCourse);
   } catch (error) {

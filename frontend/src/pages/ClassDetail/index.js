@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { kindergartenClassesAPI } from '../../api';
 import './ClassDetail.css';
@@ -18,13 +18,13 @@ const SessionStatusOptions = [
 const ClassDetail = () => {
   const { classId } = useParams();
   const navigate = useNavigate();
+  const sessionsRef = useRef(null);
   
   const [kClass, setKClass] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [sessionStats, setSessionStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('details');
   const [sessionActionLoading, setSessionActionLoading] = useState(false);
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const [sessionToUpdate, setSessionToUpdate] = useState(null);
@@ -46,13 +46,17 @@ const ClassDetail = () => {
         kindergartenClassesAPI.getSessionStats(classId)
       ]);
       
-      const sessionsList = sessionsResponse.data;
+      // Add explicit index to each session
+      const sessionsList = sessionsResponse.data.map((session, idx) => ({
+        ...session,
+        index: idx
+      }));
+      
       setSessions(sessionsList);
       setSessionStats(statsResponse.data);
       
-      // Set the current month to be expanded by default
+      // Get the current month key
       const currentMonth = getCurrentMonthKey();
-      const initialExpandedState = {};
       
       // Get all month keys from the sessions
       const monthKeys = [...new Set(sessionsList.map(session => {
@@ -60,12 +64,24 @@ const ClassDetail = () => {
         return `${date.getFullYear()}-${date.getMonth() + 1}`;
       }))];
       
-      // By default, expand the current month if it exists
-      monthKeys.forEach(monthKey => {
-        initialExpandedState[monthKey] = monthKey === currentMonth;
+      // Preserve expanded states while ensuring current month is expanded
+      setExpandedMonths(prev => {
+        const newExpandedState = { ...prev };
+        
+        // Make sure current month is always expanded
+        if (monthKeys.includes(currentMonth)) {
+          newExpandedState[currentMonth] = true;
+        }
+        
+        // Add any new months that weren't in the previous state
+        monthKeys.forEach(monthKey => {
+          if (newExpandedState[monthKey] === undefined) {
+            newExpandedState[monthKey] = monthKey === currentMonth;
+          }
+        });
+        
+        return newExpandedState;
       });
-      
-      setExpandedMonths(initialExpandedState);
     } catch (err) {
       console.error('Error fetching sessions data:', err);
       setError('Failed to load sessions data. Please try again later.');
@@ -81,12 +97,17 @@ const ClassDetail = () => {
         const classResponse = await kindergartenClassesAPI.getById(classId);
         setKClass(classResponse.data);
         
-        // Fetch sessions data if active tab is sessions
-        if (activeTab === 'sessions') {
-          await fetchSessionsData();
-        }
+        // Always fetch sessions data
+        await fetchSessionsData();
         
         setLoading(false);
+        
+        // Auto-scroll to sessions section after data is loaded
+        setTimeout(() => {
+          if (sessionsRef.current) {
+            sessionsRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 500);
       } catch (err) {
         console.error('Error fetching class data:', err);
         setError('Failed to load class data. Please try again later.');
@@ -95,7 +116,7 @@ const ClassDetail = () => {
     };
 
     fetchClassData();
-  }, [classId, activeTab, fetchSessionsData]);
+  }, [classId, fetchSessionsData]);
   
   const getCurrentMonthKey = () => {
     const today = new Date();
@@ -103,6 +124,11 @@ const ClassDetail = () => {
   };
   
   const toggleMonthExpansion = (monthKey) => {
+    // If the month is the current month, don't allow collapsing
+    if (monthKey === getCurrentMonthKey() && expandedMonths[monthKey]) {
+      return; // Don't allow collapsing the current month
+    }
+    
     setExpandedMonths(prev => ({
       ...prev,
       [monthKey]: !prev[monthKey]
@@ -147,7 +173,7 @@ const ClassDetail = () => {
       setSessionModalOpen(false);
       setSessionActionLoading(false);
       
-      // Refresh data
+      // Refresh data while preserving expanded state
       await fetchSessionsData();
       const classResponse = await kindergartenClassesAPI.getById(classId);
       setKClass(classResponse.data);
@@ -165,6 +191,14 @@ const ClassDetail = () => {
     
     try {
       const session = sessions[sessionIndex];
+      
+      // Check if session exists
+      if (!session) {
+        console.error(`No session found at index ${sessionIndex}`);
+        toast.error('Session not found. Please refresh the page and try again.');
+        setUpdatingSessionId(null);
+        return;
+      }
       
       // Set add compensatory flag if canceling a session
       const addCompensatory = newStatus === 'Canceled';
@@ -242,7 +276,7 @@ const ClassDetail = () => {
           notes: ''
         });
         
-        // Refresh session data
+        // Refresh session data while preserving expanded states
         await fetchSessionsData();
         const classResponse = await kindergartenClassesAPI.getById(classId);
         setKClass(classResponse.data);
@@ -510,25 +544,14 @@ const ClassDetail = () => {
   };
 
   const openSessionEditModal = (sessionIndex) => {
-    handleAdvancedUpdate(sessions[sessionIndex], sessionIndex);
-  };
-
-  // Set the current month to be expanded by default when sessions are loaded
-  useEffect(() => {
-    if (sessions.length > 0) {
-      // Initialize with current month expanded by default
-      const currentDate = new Date();
-      const currentMonthKey = `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}`;
-      
-      // Only set if not already set to avoid infinite re-renders
-      if (expandedMonths[currentMonthKey] === undefined) {
-        setExpandedMonths(prev => ({
-          ...prev,
-          [currentMonthKey]: true
-        }));
-      }
+    const session = sessions[sessionIndex];
+    if (!session) {
+      console.error(`No session found at index ${sessionIndex}`);
+      toast.error('Session not found. Please refresh the page and try again.');
+      return;
     }
-  }, [sessions]);
+    handleAdvancedUpdate(session, sessionIndex);
+  };
 
   const sessionsByMonth = useMemo(() => {
     if (!sessions.length) return {};
@@ -598,332 +621,332 @@ const ClassDetail = () => {
         </div>
       </div>
 
-      <div className="class-tabs">
-        <button 
-          className={`tab-btn ${activeTab === 'details' ? 'active' : ''}`}
-          onClick={() => setActiveTab('details')}
-        >
-          Details
-        </button>
-        <button 
-          className={`tab-btn ${activeTab === 'schedule' ? 'active' : ''}`}
-          onClick={() => setActiveTab('schedule')}
-        >
-          Schedule
-        </button>
-        <button 
-          className={`tab-btn ${activeTab === 'sessions' ? 'active' : ''}`}
-          onClick={() => setActiveTab('sessions')}
-        >
-          Sessions Tracking
-        </button>
-      </div>
-
-      <div className="class-detail-content">
-        {activeTab === 'details' && (
-          <div className="class-details-tab">
-            <div className="detail-card">
-              <h2>Basic Information</h2>
-              <div className="detail-grid">
-                <div className="detail-item">
-                  <span className="detail-label">Class Name:</span>
-                  <span className="detail-value">{kClass.name}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">School:</span>
-                  <span className="detail-value">{kClass.school?.name || 'N/A'}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Teacher:</span>
-                  <span className="detail-value">
-                    {kClass.teacher ? (
-                      <span className="teacher-info">
-                        {kClass.teacher.name}
-                      </span>
-                    ) : (
-                      kClass.teacherName || 'N/A'
-                    )}
-                  </span>
-                </div>
-                {kClass.teacher && kClass.teacher.email && (
-                  <div className="detail-item">
-                    <span className="detail-label">Teacher Email:</span>
-                    <span className="detail-value">
-                      <a href={`mailto:${kClass.teacher.email}`}>{kClass.teacher.email}</a>
+      {/* Class Information Section */}
+      <div className="class-info-section">
+        <div className="section-header">
+          <h2>Class Information</h2>
+        </div>
+        
+        <div className="section-content">
+          {/* Basic Information */}
+          <div className="detail-card">
+            <h3>Basic Information</h3>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <span className="detail-label">Class Name:</span>
+                <span className="detail-value">{kClass.name}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">School:</span>
+                <span className="detail-value">{kClass.school?.name || 'N/A'}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Teacher:</span>
+                <span className="detail-value">
+                  {kClass.teacher ? (
+                    <span className="teacher-info">
+                      {kClass.teacher.name}
                     </span>
-                  </div>
-                )}
-                {kClass.teacher && kClass.teacher.phone && (
-                  <div className="detail-item">
-                    <span className="detail-label">Teacher Phone:</span>
-                    <span className="detail-value">{kClass.teacher.phone}</span>
-                  </div>
-                )}
+                  ) : (
+                    kClass.teacherName || 'N/A'
+                  )}
+                </span>
+              </div>
+              {kClass.teacher && kClass.teacher.email && (
                 <div className="detail-item">
-                  <span className="detail-label">Age Group:</span>
-                  <span className="detail-value">{kClass.ageGroup}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Student Count:</span>
-                  <span className="detail-value">{kClass.studentCount}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Status:</span>
-                  <span className={`class-status status-${kClass.status?.toLowerCase()}`}>
-                    {kClass.status}
+                  <span className="detail-label">Teacher Email:</span>
+                  <span className="detail-value">
+                    <a href={`mailto:${kClass.teacher.email}`}>{kClass.teacher.email}</a>
                   </span>
                 </div>
+              )}
+              {kClass.teacher && kClass.teacher.phone && (
                 <div className="detail-item">
-                  <span className="detail-label">Start Date:</span>
-                  <span className="detail-value">{formatDate(kClass.startDate)}</span>
+                  <span className="detail-label">Teacher Phone:</span>
+                  <span className="detail-value">{kClass.teacher.phone}</span>
                 </div>
-                <div className="detail-item">
-                  <span className="detail-label">Total Sessions:</span>
-                  <span className="detail-value">{kClass.totalSessions}</span>
-                </div>
+              )}
+              <div className="detail-item">
+                <span className="detail-label">Age Group:</span>
+                <span className="detail-value">{kClass.ageGroup}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Student Count:</span>
+                <span className="detail-value">{kClass.studentCount}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Status:</span>
+                <span className={`class-status status-${kClass.status?.toLowerCase()}`}>
+                  {kClass.status}
+                </span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Start Date:</span>
+                <span className="detail-value">{formatDate(kClass.startDate)}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Total Sessions:</span>
+                <span className="detail-value">{kClass.totalSessions}</span>
               </div>
             </div>
           </div>
-        )}
 
-        {activeTab === 'schedule' && (
-          <div className="class-schedule-tab">
-            <div className="detail-card">
-              <h2>Weekly Schedule</h2>
-              {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
-                <div className="schedule-list">
-                  {kClass.weeklySchedule.map((schedule, index) => (
-                    <div key={index} className="schedule-item">
-                      <div className="schedule-day">{schedule.day}</div>
-                      <div className="schedule-time">
-                        {schedule.startTime} - {schedule.endTime}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="no-data-message">
-                  No schedule has been set for this class.
-                </div>
-              )}
-            </div>
-
-            <div className="detail-card">
-              <h2>Holidays & Breaks</h2>
-              {kClass.holidays && kClass.holidays.length > 0 ? (
-                <div className="holidays-list">
-                  {kClass.holidays.map((holiday, index) => (
-                    <div key={index} className="holiday-item">
-                      <div className="holiday-date">{formatDate(holiday.date)}</div>
-                      <div className="holiday-name">{holiday.name}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="no-data-message">
-                  No holidays or breaks have been set for this class.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {activeTab === 'sessions' && (
-          <div className="class-sessions-tab">
-            {sessionStats && (
-              <div className="detail-card session-stats-card">
-                <h2>Session Statistics</h2>
-                <div className="session-stats">
-                  <div className="stat-item">
-                    <div className="stat-label">Total Sessions</div>
-                    <div className="stat-value">{sessionStats.total}</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-label">Completed</div>
-                    <div className="stat-value stat-completed">{sessionStats.completed}</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-label">Scheduled</div>
-                    <div className="stat-value stat-scheduled">{sessionStats.scheduled}</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-label">Canceled</div>
-                    <div className="stat-value stat-canceled">{sessionStats.canceled}</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-label">Holiday Breaks</div>
-                    <div className="stat-value stat-holiday">{sessionStats.holidayBreak}</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-label">Compensatory</div>
-                    <div className="stat-value stat-compensatory">{sessionStats.compensatory}</div>
-                  </div>
-                </div>
-                
-                <div className="session-progress">
-                  <div className="progress-info">
-                    <div className="progress-label">Progress</div>
-                    <div className="progress-value">{sessionStats.progress}%</div>
-                  </div>
-                  <div className="progress-bar-container">
-                    <div 
-                      className="progress-bar"
-                      style={{ width: `${sessionStats.progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div className="session-remaining">
-                  <div className="remaining-info">
-                    <div className="remaining-label">Remaining</div>
-                    <div className="remaining-value">
-                      {sessionStats.remainingWeeks} weeks ({sessionStats.remainingDays} days)
+          {/* Weekly Schedule */}
+          <div className="detail-card">
+            <h3>Weekly Schedule</h3>
+            {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
+              <div className="schedule-list">
+                {kClass.weeklySchedule.map((schedule, index) => (
+                  <div key={index} className="schedule-item">
+                    <div className="schedule-day">{schedule.day}</div>
+                    <div className="schedule-time">
+                      {schedule.startTime} - {schedule.endTime}
                     </div>
                   </div>
-                  <div className="completion-status">
-                    {sessionStats.isFinished ? (
-                      <span className="status-completed">Class Complete</span>
-                    ) : (
-                      <span className="status-ongoing">In Progress</span>
-                    )}
-                  </div>
-                </div>
+                ))}
+              </div>
+            ) : (
+              <div className="no-data-message">
+                No schedule has been set for this class.
               </div>
             )}
-            
-            <div className="detail-card">
-              <h2>Sessions</h2>
-              <div className="sessions-header">
-                <button
-                  className="add-custom-session-btn"
-                  onClick={() => setCustomSessionModalOpen(true)}
-                >
-                  Add Custom Session
-                </button>
-                <button
-                  className="export-excel-btn"
-                  onClick={exportSessionsToExcel}
-                  title="Export sessions to Excel"
-                >
-                  <FaFileExcel /> Export to Excel
-                </button>
-              </div>
-              {Object.keys(sessionsByMonth).length > 0 ? (
-                <div className="sessions-by-month">
-                  {Object.entries(sessionsByMonth).map(([monthKey, { label, sessions: monthSessions }]) => (
-                    <Card className="month-card" key={monthKey}>
-                      <Card.Header 
-                        onClick={() => toggleMonthExpansion(monthKey)}
-                        className={`month-header ${expandedMonths[monthKey] ? 'expanded' : 'collapsed'}`}
-                      >
-                        <div className="month-header-content">
-                          <span className="month-toggle-icon">
-                            {expandedMonths[monthKey] ? <FaChevronDown /> : <FaChevronRight />}
-                          </span>
-                          <span className="month-title">{label}</span>
-                          <span className="session-count">{monthSessions.length} sessions</span>
-                        </div>
-                      </Card.Header>
-                      
-                      {expandedMonths[monthKey] && (
-                        <Card.Body className="month-sessions">
-                          <Table className="sessions-table" responsive>
-                            <thead>
-                              <tr>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Status</th>
-                                <th>Notes</th>
-                                <th>Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {monthSessions.map((session) => (
-                                <tr key={session.index} className={`session-row ${session.status.toLowerCase()}`}>
-                                  <td>{formatDate(session.date)}</td>
-                                  <td>
-                                    {session.startTime} - {session.endTime}
-                                  </td>
-                                  <td>
-                                    <Badge className="status-badge" bg={getStatusVariant(session.status)}>
-                                      {getStatusLabel(session.status)}
-                                    </Badge>
-                                    {session.isCompensatory && 
-                                      <span className="compensatory-badge">Compensatory</span>}
-                                  </td>
-                                  <td className="notes-cell">{session.notes || '-'}</td>
-                                  <td>
-                                    <div className="action-buttons-group">
-                                      {session.status !== 'Completed' && (
-                                        <Button
-                                          variant="outline-success"
-                                          size="sm"
-                                          className="action-button"
-                                          onClick={() => handleQuickStatusUpdate(session.index, 'Completed')}
-                                          disabled={updatingSessionId === session.index}
-                                        >
-                                          <span className="button-content">
-                                            {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCheck />}
-                                            <span className="button-label">Complete</span>
-                                          </span>
-                                        </Button>
-                                      )}
-                                      
-                                      {session.status !== 'Canceled' && (
-                                        <Button
-                                          variant="outline-danger"
-                                          size="sm"
-                                          className="action-button"
-                                          onClick={() => handleQuickStatusUpdate(session.index, 'Canceled')}
-                                          disabled={updatingSessionId === session.index}
-                                        >
-                                          <span className="button-content">
-                                            {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaTimes />}
-                                            <span className="button-label">Cancel</span>
-                                          </span>
-                                        </Button>
-                                      )}
-                                      
-                                      {session.status !== 'Scheduled' && (
-                                        <Button
-                                          variant="outline-primary"
-                                          size="sm"
-                                          className="action-button"
-                                          onClick={() => handleQuickStatusUpdate(session.index, 'Scheduled')}
-                                          disabled={updatingSessionId === session.index}
-                                        >
-                                          <span className="button-content">
-                                            {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCalendarAlt />}
-                                            <span className="button-label">Schedule</span>
-                                          </span>
-                                        </Button>
-                                      )}
-                                      
-                                      <Button
-                                        variant="light"
-                                        size="sm"
-                                        className="edit-button"
-                                        onClick={() => openSessionEditModal(session.index)}
-                                      >
-                                        <FaEdit />
-                                      </Button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </Table>
-                        </Card.Body>
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="no-sessions">No sessions found</div>
-              )}
-            </div>
           </div>
-        )}
+
+          {/* Holidays & Breaks */}
+          <div className="detail-card">
+            <h3>Holidays & Breaks</h3>
+            {kClass.holidays && kClass.holidays.length > 0 ? (
+              <div className="holidays-list">
+                {kClass.holidays.map((holiday, index) => (
+                  <div key={index} className="holiday-item">
+                    <div className="holiday-date">{formatDate(holiday.date)}</div>
+                    <div className="holiday-name">{holiday.name}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="no-data-message">
+                No holidays or breaks have been set for this class.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Sessions Tracking Section */}
+      <div ref={sessionsRef} className="sessions-tracking-section">
+        <div className="section-header">
+          <h2>Sessions Tracking</h2>
+        </div>
+        
+        <div className="section-content">
+          {/* Session Statistics */}
+          {sessionStats && (
+            <div className="detail-card session-stats-card">
+              <h3>Session Statistics</h3>
+              <div className="session-stats">
+                <div className="stat-item">
+                  <div className="stat-label">Total Sessions</div>
+                  <div className="stat-value">{sessionStats.total}</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-label">Completed</div>
+                  <div className="stat-value stat-completed">{sessionStats.completed}</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-label">Scheduled</div>
+                  <div className="stat-value stat-scheduled">{sessionStats.scheduled}</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-label">Canceled</div>
+                  <div className="stat-value stat-canceled">{sessionStats.canceled}</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-label">Holiday Breaks</div>
+                  <div className="stat-value stat-holiday">{sessionStats.holidayBreak}</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-label">Compensatory</div>
+                  <div className="stat-value stat-compensatory">{sessionStats.compensatory}</div>
+                </div>
+              </div>
+              
+              <div className="session-progress">
+                <div className="progress-info">
+                  <div className="progress-label">Progress</div>
+                  <div className="progress-value">{sessionStats.progress}%</div>
+                </div>
+                <div className="progress-bar-container">
+                  <div 
+                    className="progress-bar"
+                    style={{ width: `${sessionStats.progress}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div className="session-remaining">
+                <div className="remaining-info">
+                  <div className="remaining-label">Remaining</div>
+                  <div className="remaining-value">
+                    {sessionStats.remainingWeeks} weeks ({sessionStats.remainingDays} days)
+                  </div>
+                </div>
+                <div className="completion-status">
+                  {sessionStats.isFinished ? (
+                    <span className="status-completed">Class Complete</span>
+                  ) : (
+                    <span className="status-ongoing">In Progress</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Sessions List */}
+          <div className="detail-card">
+            <h3>Sessions</h3>
+            <div className="sessions-header">
+              <button
+                className="add-custom-session-btn"
+                onClick={() => setCustomSessionModalOpen(true)}
+              >
+                Add Custom Session
+              </button>
+              <button
+                className="export-excel-btn"
+                onClick={exportSessionsToExcel}
+                title="Export sessions to Excel"
+              >
+                <FaFileExcel /> Export to Excel
+              </button>
+            </div>
+            {Object.keys(sessionsByMonth).length > 0 ? (
+              <div className="sessions-by-month">
+                {Object.entries(sessionsByMonth).map(([monthKey, { label, sessions: monthSessions }]) => (
+                  <Card className="month-card" key={monthKey}>
+                    <Card.Header 
+                      onClick={() => toggleMonthExpansion(monthKey)}
+                      className={`month-header ${expandedMonths[monthKey] ? 'expanded' : 'collapsed'}`}
+                    >
+                      <div className="month-header-content">
+                        <span className="month-toggle-icon">
+                          {expandedMonths[monthKey] ? <FaChevronDown /> : <FaChevronRight />}
+                        </span>
+                        <span className="month-title">{label}</span>
+                        <span className="session-count">{monthSessions.length} sessions</span>
+                      </div>
+                    </Card.Header>
+                    
+                    {expandedMonths[monthKey] && (
+                      <Card.Body className="month-sessions">
+                        <Table className="sessions-table" responsive>
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Time</th>
+                              <th>Status</th>
+                              <th>Notes</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {monthSessions.map((session) => (
+                              <tr key={session.index} className={`session-row ${session.status.toLowerCase()}`}>
+                                <td>{formatDate(session.date)}</td>
+                                <td>
+                                  {session.startTime} - {session.endTime}
+                                </td>
+                                <td>
+                                  <Badge className="status-badge" bg={getStatusVariant(session.status)}>
+                                    {getStatusLabel(session.status)}
+                                  </Badge>
+                                  {session.isCompensatory && 
+                                    <span className="compensatory-badge">Compensatory</span>}
+                                </td>
+                                <td className="notes-cell">{session.notes || '-'}</td>
+                                <td>
+                                  <div className="action-buttons-group">
+                                    {session.status !== 'Completed' && (
+                                      <Button
+                                        variant="outline-success"
+                                        size="sm"
+                                        className="action-button"
+                                        onClick={() => {
+                                          const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
+                                          handleQuickStatusUpdate(validIndex, 'Completed');
+                                        }}
+                                        disabled={updatingSessionId === session.index}
+                                      >
+                                        <span className="button-content">
+                                          {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCheck />}
+                                          <span className="button-label">Complete</span>
+                                        </span>
+                                      </Button>
+                                    )}
+                                    
+                                    {session.status !== 'Canceled' && (
+                                      <Button
+                                        variant="outline-danger"
+                                        size="sm"
+                                        className="action-button"
+                                        onClick={() => {
+                                          const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
+                                          handleQuickStatusUpdate(validIndex, 'Canceled');
+                                        }}
+                                        disabled={updatingSessionId === session.index}
+                                      >
+                                        <span className="button-content">
+                                          {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaTimes />}
+                                          <span className="button-label">Cancel</span>
+                                        </span>
+                                      </Button>
+                                    )}
+                                    
+                                    {session.status !== 'Scheduled' && (
+                                      <Button
+                                        variant="outline-primary"
+                                        size="sm"
+                                        className="action-button"
+                                        onClick={() => {
+                                          const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
+                                          handleQuickStatusUpdate(validIndex, 'Scheduled');
+                                        }}
+                                        disabled={updatingSessionId === session.index}
+                                      >
+                                        <span className="button-content">
+                                          {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCalendarAlt />}
+                                          <span className="button-label">Schedule</span>
+                                        </span>
+                                      </Button>
+                                    )}
+                                    
+                                    <Button
+                                      variant="light"
+                                      size="sm"
+                                      className="edit-button"
+                                      onClick={() => {
+                                        const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
+                                        openSessionEditModal(validIndex);
+                                      }}
+                                    >
+                                      <FaEdit />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </Table>
+                      </Card.Body>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="no-sessions">No sessions found</div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="breadcrumb-navigation">

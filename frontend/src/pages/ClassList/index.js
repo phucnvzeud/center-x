@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams, useLocation } from 'react-router-dom';
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { kindergartenClassesAPI, schoolsAPI, regionsAPI, teachersAPI } from '../../api';
 import './ClassList.css';
 
 const ClassList = () => {
   const { schoolId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   
   const [classes, setClasses] = useState([]);
   const [school, setSchool] = useState(null);
@@ -187,6 +188,20 @@ const ClassList = () => {
     setOpenDropdownId(openDropdownId === classId ? null : classId);
   };
 
+  // Handle click on class item to navigate to class details
+  const handleClassClick = (classId, event) => {
+    // If the click is on a button or link (action buttons), don't navigate
+    if (event.target.closest('button') || 
+        event.target.closest('a') || 
+        event.target.closest('.action-dropdown-container') ||
+        event.target.closest('.action-dropdown-menu')) {
+      return;
+    }
+    
+    // Navigate to class details page
+    navigate(`/kindergarten/classes/${classId}`);
+  };
+
   if (loading) {
     return <div className="loading-spinner">Loading classes...</div>;
   }
@@ -313,7 +328,12 @@ const ClassList = () => {
             // Mobile compact view
             <div className="classes-mobile-grid">
               {filteredClasses.map(kClass => (
-                <div key={kClass._id} className="class-mobile-card">
+                <div 
+                  key={kClass._id} 
+                  className="class-mobile-card" 
+                  onClick={(e) => handleClassClick(kClass._id, e)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="class-mobile-header">
                     <h3>{kClass.name}</h3>
                     <span className={`class-status status-${kClass.status.toLowerCase()}`}>
@@ -389,7 +409,11 @@ const ClassList = () => {
               </thead>
               <tbody>
                 {filteredClasses.map(kClass => (
-                  <tr key={kClass._id}>
+                  <tr 
+                    key={kClass._id} 
+                    onClick={(e) => handleClassClick(kClass._id, e)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td>{kClass.name}</td>
                     {!isSchoolSpecific && (
                       <td>{kClass.school ? kClass.school.name : 'Unknown'}</td>

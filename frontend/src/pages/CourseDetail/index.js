@@ -31,6 +31,7 @@ const CourseDetail = () => {
   const [showTaughtSessions, setShowTaughtSessions] = useState(false);
   const [updatingSessionIndex, setUpdatingSessionIndex] = useState(null);
   const [activeAbsenceDropdown, setActiveAbsenceDropdown] = useState(null);
+  const [showCollapsedFutureSessions, setShowCollapsedFutureSessions] = useState(false);
 
   // Enrolled Students state
   const [enrollments, setEnrollments] = useState([]);
@@ -191,6 +192,11 @@ const CourseDetail = () => {
   };
 
   const openUpdateModal = (session, index) => {
+    // Prevent opening modal for future sessions
+    if (isFutureSession(session.date)) {
+      return;
+    }
+    
     setSelectedSession({ ...session, index });
     setOriginalStatus(session.status);
     setIsModalOpen(true);
@@ -255,8 +261,10 @@ const CourseDetail = () => {
   };
   
   const isFutureSession = (dateString) => {
-    // Always return false to allow all sessions to be marked with status
-    return false;
+    const sessionDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return sessionDate > today;
   };
 
   // Quick status update function
@@ -299,6 +307,10 @@ const CourseDetail = () => {
   // Toggle show/hide taught sessions
   const toggleTaughtSessions = () => {
     setShowTaughtSessions(!showTaughtSessions);
+  };
+
+  const toggleFutureSessions = () => {
+    setShowCollapsedFutureSessions(!showCollapsedFutureSessions);
   };
 
   // Toggle absence dropdown
@@ -693,10 +705,10 @@ const CourseDetail = () => {
       return { percent: 0, paid: 0, total: 0 };
     }
     
-    const totalAmountSum = allEnrollments.reduce((sum, enrollment) => sum + enrollment.totalAmount, 0);
-    const amountPaidSum = allEnrollments.reduce((sum, enrollment) => sum + enrollment.amountPaid, 0);
+    const totalAmountSum = allEnrollments.reduce((sum, enrollment) => sum + (enrollment.totalAmount || 0), 0);
+    const amountPaidSum = allEnrollments.reduce((sum, enrollment) => sum + (enrollment.amountPaid || 0), 0);
     
-    const percent = totalAmountSum > 0 ? Math.round((amountPaidSum / totalAmountSum) * 100) : 100;
+    const percent = totalAmountSum > 0 ? Math.round((amountPaidSum / totalAmountSum) * 100) : 0;
     
     return {
       percent,
@@ -912,6 +924,219 @@ const CourseDetail = () => {
     }
   };
 
+  // Check if session is canceled (absent)
+  const isCanceledSession = (status) => {
+    return status.startsWith('Absent');
+  };
+
+  // Get the 4 nearest future sessions
+  const getNearestFutureSessions = (sessions) => {
+    if (!sessions || sessions.length === 0) return [];
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const futureSessions = sessions
+      .filter(session => new Date(session.date) > today)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    return futureSessions.slice(0, 4);
+  };
+
+  const renderSessionsContent = () => {
+    if (!course || !course.sessions || course.sessions.length === 0) {
+      return (
+        <div className="no-data-message">
+          <p>No sessions found for this course.</p>
+        </div>
+      );
+    }
+
+    // Current date for comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Get all sessions
+    const allSessions = [...course.sessions];
+    
+    // Sort sessions by date
+    const sortedSessions = allSessions.sort((a, b) => 
+      new Date(a.date) - new Date(b.date)
+    );
+    
+    // Separate sessions into categories
+    const taughtSessions = sortedSessions.filter(session => 
+      session.status === 'Taught'
+    );
+    
+    const canceledSessions = sortedSessions.filter(session => 
+      session.status.startsWith('Absent')
+    );
+    
+    const untaughtPastSessions = sortedSessions.filter(session => 
+      session.status === 'Pending' && new Date(session.date) <= today
+    );
+    
+    const futureSessions = sortedSessions.filter(session => 
+      session.status === 'Pending' && new Date(session.date) > today
+    ).sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Get the 4 nearest future sessions
+    const nearestFutureSessions = futureSessions.slice(0, 4);
+    const otherFutureSessions = futureSessions.slice(4);
+    
+    // Combine sessions in the desired order
+    let visibleSessions = [...untaughtPastSessions, ...nearestFutureSessions];
+    
+    // Add taught sessions if toggle is on
+    if (showTaughtSessions) {
+      visibleSessions = [...visibleSessions, ...taughtSessions, ...canceledSessions];
+    }
+    
+    // Add remaining future sessions if toggle is on
+    if (showCollapsedFutureSessions) {
+      visibleSessions = [...visibleSessions, ...otherFutureSessions];
+    }
+    
+    // Sort by date
+    visibleSessions.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    return (
+      <div>
+        <div className="session-controls">
+          <div className="control-group">
+            <button 
+              className={`toggle-button ${showTaughtSessions ? 'active' : ''}`}
+              onClick={toggleTaughtSessions}
+            >
+              {showTaughtSessions ? 'Hide Taught & Canceled Sessions' : 'Show Taught & Canceled Sessions'}
+            </button>
+            
+            {otherFutureSessions.length > 0 && (
+              <button 
+                className={`toggle-button ${showCollapsedFutureSessions ? 'active' : ''}`}
+                onClick={toggleFutureSessions}
+              >
+                {showCollapsedFutureSessions ? 'Hide Future Sessions' : `Show ${otherFutureSessions.length} More Future Sessions`}
+              </button>
+            )}
+            
+            <button 
+              className="export-button"
+              onClick={exportSessionsToExcel}
+            >
+              Export to Excel
+            </button>
+          </div>
+          
+          {nearestFutureSessions.length > 0 && (
+            <div className="nearest-sessions-label">
+              Showing {nearestFutureSessions.length} nearest upcoming sessions
+            </div>
+          )}
+        </div>
+        
+        <table className="session-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>Day & Time</th>
+              <th>Status</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleSessions.map((session, index) => {
+              const originalIndex = course.sessions.findIndex(s => 
+                s._id === session._id
+              );
+              const isUpdateLoading = updatingSessionIndex === originalIndex;
+              const isThisSessionFuture = isFutureSession(session.date);
+              const isNearestFuture = nearestFutureSessions.some(s => s._id === session._id);
+              
+              // Find the original session number in the full course sessions array
+              const sessionNumber = course.sessions.findIndex(s => s._id === session._id) + 1;
+              
+              return (
+                <tr 
+                  key={session._id || index}
+                  className={`
+                    ${session.status === 'Taught' ? 'taught-session' : ''}
+                    ${session.status.startsWith('Absent') ? 'absent-session' : ''}
+                    ${isThisSessionFuture ? 'future-session' : ''}
+                    ${isNearestFuture ? 'nearest-future-session' : ''}
+                  `}
+                >
+                  <td>{sessionNumber}</td>
+                  <td>{formatDate(session.date)}</td>
+                  <td>{getSessionDayAndTime(session.date)}</td>
+                  <td>
+                    <span className={`session-status ${getStatusClass(session.status)}`}>
+                      {session.status}
+                    </span>
+                  </td>
+                  <td className="notes-cell">{session.notes || '-'}</td>
+                  <td>
+                    {isUpdateLoading ? (
+                      <span className="loading-spinner-small"></span>
+                    ) : (
+                      <div className="session-actions">
+                        {!isThisSessionFuture && session.status === 'Pending' && (
+                          <div className="quick-update-buttons">
+                            <button 
+                              className="quick-update taught"
+                              onClick={() => handleQuickStatusUpdate(originalIndex, 'Taught')}
+                            >
+                              Mark Taught
+                            </button>
+                            
+                            <div className="absence-dropdown-container">
+                              <button 
+                                className="quick-update absent"
+                                onClick={(e) => toggleAbsenceDropdown(originalIndex, e)}
+                              >
+                                Mark Absent
+                              </button>
+                              
+                              {activeAbsenceDropdown === originalIndex && (
+                                <div className="absence-dropdown">
+                                  <button onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Personal Reason)')}>
+                                    Personal Reason
+                                  </button>
+                                  <button onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Holiday)')}>
+                                    Holiday
+                                  </button>
+                                  <button onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Other Reason)')}>
+                                    Other Reason
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <button 
+                          className="edit-btn"
+                          onClick={() => openUpdateModal(session, originalIndex)}
+                          disabled={isThisSessionFuture}
+                          title={isThisSessionFuture ? "Cannot update future sessions" : "Edit session"}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="loading-spinner">
@@ -989,7 +1214,7 @@ const CourseDetail = () => {
         </div>
 
         <div className="info-card">
-          <div className="info-label">Actual End Date (with compensatory)</div>
+          <div className="info-label">Actual End Date</div>
           <div className="info-value">
             {calculateActualEndDate().formattedDate}
             {calculateActualEndDate().daysLeft > 0 && (
@@ -1008,7 +1233,7 @@ const CourseDetail = () => {
         <div className="info-card">
           <div className="info-label">Sessions</div>
           <div className="info-value">
-            {course.sessions ? course.sessions.length : 0} sessions
+            {course.sessions ? course.sessions.length : 0} total
             {course.sessions && course.sessions.length > course.totalSessions && (
               <span className="compensatory-count"> 
                 (includes {course.sessions.length - course.totalSessions} compensatory)
@@ -1028,10 +1253,10 @@ const CourseDetail = () => {
             <div className="progress-bar">
               <div 
                 className="progress-bar-fill"
-                style={{ width: `${course.progress || 0}%` }}
+                style={{ width: `${isNaN(course.progress) ? 0 : (course.progress || 0)}%` }}
               ></div>
             </div>
-            <span className="progress-text">{course.progress || 0}%</span>
+            <span className="progress-text">{isNaN(course.progress) ? 0 : (course.progress || 0)}%</span>
           </div>
         </div>
         
@@ -1045,11 +1270,14 @@ const CourseDetail = () => {
                   <div className="progress-bar payment-progress-bar">
                     <div 
                       className="progress-bar-fill"
-                      style={{ width: `${payment.percent}%` }}
+                      style={{ width: `${payment.percent || 0}%` }}
                     ></div>
                   </div>
                   <span className="progress-text">
-                    {payment.percent}% (${payment.paid}/${payment.total})
+                    {payment.percent || 0}% 
+                    <span className="payment-details">
+                      ${(payment.paid || 0).toFixed(2)} / ${(payment.total || 0).toFixed(2)}
+                    </span>
                   </span>
                 </>
               );
@@ -1082,168 +1310,7 @@ const CourseDetail = () => {
 
         <div className="tab-content">
           {activeTab === 'sessions' && (
-            <div className="sessions-table-view">
-              <div className="sessions-header">
-                <div className="sessions-info">
-                  <span className="info-label">Total Regular Sessions:</span> {course.totalSessions} | 
-                  <span className="info-label">All Sessions (including compensatory):</span> {course.sessions?.length || 0}
-                  {!showTaughtSessions && course.sessions?.filter(s => s.status === 'Taught').length > 0 && (
-                    <span className="info-label hidden-info">
-                      ({course.sessions.filter(s => s.status === 'Taught').length} taught sessions hidden)
-                    </span>
-                  )}
-                </div>
-                <div className="sessions-controls">
-                  <button 
-                    className="toggle-taught-btn"
-                    onClick={toggleTaughtSessions}
-                  >
-                    {showTaughtSessions ? 'Hide Taught Sessions' : 'Show Taught Sessions'}
-                  </button>
-                  <div className="status-legend">
-                    <div className="legend-item">
-                      <span className="status-dot status-taught"></span>
-                      <span>Taught</span>
-                    </div>
-                    <div className="legend-item">
-                      <span className="status-dot status-pending"></span>
-                      <span>Pending</span>
-                    </div>
-                    <div className="legend-item">
-                      <span className="status-dot status-absent-personal"></span>
-                      <span>Personal</span>
-                    </div>
-                    <div className="legend-item">
-                      <span className="status-dot status-absent-holiday"></span>
-                      <span>Holiday</span>
-                    </div>
-                    <div className="legend-item">
-                      <span className="status-dot status-absent-other"></span>
-                      <span>Other</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {course.sessions && course.sessions.length > 0 ? (
-                <div className="sessions-table-container all-sessions">
-                  <table className="sessions-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Date</th>
-                        <th>Day & Time</th>
-                        <th>Status</th>
-                        <th>Notes</th>
-                        <th>Quick Update</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sessionsToDisplay.map((session, idx) => {
-                        const originalIndex = course.sessions.findIndex(s => 
-                          s.date === session.date && s.status === session.status && s.notes === session.notes
-                        );
-                        return (
-                          <tr 
-                            key={originalIndex} 
-                            className={`${originalIndex >= course.totalSessions ? 'compensatory-session' : ''} ${session.status === 'Taught' ? 'taught-session' : ''}`}
-                          >
-                            <td>{originalIndex + 1}</td>
-                            <td>{formatDate(session.date)}</td>
-                            <td>{getSessionDayAndTime(session.date)}</td>
-                            <td>
-                              <span className={`session-status ${getStatusClass(session.status)}`}>
-                                {session.status}
-                              </span>
-                            </td>
-                            <td className="notes-cell">
-                              {session.notes ? (
-                                <div className="session-notes">{session.notes}</div>
-                              ) : (
-                                <span className="no-notes">No notes</span>
-                              )}
-                            </td>
-                            <td className="quick-status-buttons">
-                              {!isFutureSession(session.date) && (
-                                <div className="status-button-group">
-                                  <button 
-                                    className={`quick-status-btn ${session.status === 'Taught' ? 'active' : ''}`}
-                                    onClick={() => handleQuickStatusUpdate(originalIndex, 'Taught')}
-                                    disabled={updatingSessionIndex === originalIndex || session.status === 'Taught'}
-                                  >
-                                    ✓
-                                  </button>
-                                  <button 
-                                    className={`quick-status-btn ${session.status === 'Pending' ? 'active' : ''}`}
-                                    onClick={() => handleQuickStatusUpdate(originalIndex, 'Pending')}
-                                    disabled={updatingSessionIndex === originalIndex || session.status === 'Pending'}
-                                  >
-                                    ⌛
-                                  </button>
-                                  <div className="absence-dropdown-container">
-                                    <button 
-                                      className={`quick-status-btn absence-btn ${session.status.startsWith('Absent') ? 'active' : ''}`}
-                                      onClick={(e) => toggleAbsenceDropdown(originalIndex, e)}
-                                      disabled={updatingSessionIndex === originalIndex}
-                                    >
-                                      ✗
-                                    </button>
-                                    {activeAbsenceDropdown === originalIndex && (
-                                      <div className="absence-dropdown">
-                                        <button 
-                                          className={`dropdown-item ${session.status === 'Absent (Personal Reason)' ? 'active' : ''}`}
-                                          onClick={() => {
-                                            handleQuickStatusUpdate(originalIndex, 'Absent (Personal Reason)');
-                                            setActiveAbsenceDropdown(null);
-                                          }}
-                                        >
-                                          Personal
-                                        </button>
-                                        <button 
-                                          className={`dropdown-item ${session.status === 'Absent (Holiday)' ? 'active' : ''}`}
-                                          onClick={() => {
-                                            handleQuickStatusUpdate(originalIndex, 'Absent (Holiday)');
-                                            setActiveAbsenceDropdown(null);
-                                          }}
-                                        >
-                                          Holiday
-                                        </button>
-                                        <button 
-                                          className={`dropdown-item ${session.status === 'Absent (Other Reason)' ? 'active' : ''}`}
-                                          onClick={() => {
-                                            handleQuickStatusUpdate(originalIndex, 'Absent (Other Reason)');
-                                            setActiveAbsenceDropdown(null);
-                                          }}
-                                        >
-                                          Other
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </td>
-                            <td className="actions-cell">
-                              <button 
-                                className="action-btn update-btn"
-                                onClick={() => openUpdateModal(session, originalIndex)}
-                              >
-                                Detail
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="no-data-message">
-                  <p>No sessions found for this course.</p>
-                </div>
-              )}
-            </div>
+            renderSessionsContent()
           )}
           
           {activeTab === 'enrollments' && (
