@@ -15,7 +15,7 @@ console.log(`Checking if frontend directory exists: ${fs.existsSync(frontendDir)
 try {
   // Install frontend dependencies
   console.log('Installing frontend dependencies...');
-  execSync('cd frontend && npm install', { stdio: 'inherit' });
+  execSync('cd frontend && npm install --legacy-peer-deps', { stdio: 'inherit' });
   
   // Fix permissions for react-scripts
   console.log('Fixing permissions for react-scripts...');

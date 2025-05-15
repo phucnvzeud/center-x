@@ -10,14 +10,14 @@
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "test": "cd backend && npm test",
     "build": "cd frontend && npm run build",
-    "render-build": "npm install && cd backend && npm install && cd .. && node build-frontend.js",
+    "render-build": "npm install --legacy-peer-deps && cd backend && npm install --legacy-peer-deps && cd .. && node scripts/build-frontend.js",
     "render-start": "cd backend && NODE_ENV=production npm start"
   },
   "dependencies": {
     "@chakra-ui/anatomy": "^2.3.4",
     "@chakra-ui/card": "^2.2.0",
     "@chakra-ui/icons": "^2.2.4",
-    "@chakra-ui/react": "^1.8.9",
+    "@chakra-ui/react": "^2.8.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fontsource/inter": "^5.2.5",
