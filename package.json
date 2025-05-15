@@ -10,7 +10,7 @@
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "test": "cd backend && npm test",
     "build": "cd frontend && npm run build",
-    "render-build": "npm install --legacy-peer-deps && cd backend && npm install --legacy-peer-deps && cd .. && node scripts/build-frontend.js",
+    "render-build": "npm install --legacy-peer-deps && cd backend && npm install --legacy-peer-deps && cd ../frontend && rm -rf node_modules && cd .. && node scripts/build-frontend.js",
     "render-start": "cd backend && NODE_ENV=production npm start"
   },
   "dependencies": {
@@ -26,7 +26,7 @@
     "axios": "^1.8.4",
     "canvas": "^3.1.0",
     "canvas-constructor": "^7.0.2",
-    "framer-motion": "^4.1.17",
+    "framer-motion": "^6.5.1",
     "react-icons": "^5.5.0",
     "sharp": "^0.34.1"
   },

@@ -17,6 +17,10 @@ try {
   console.log('Installing frontend dependencies...');
   execSync('cd frontend && npm install --legacy-peer-deps', { stdio: 'inherit' });
   
+  // Override problematic ajv dependencies
+  console.log('Overriding ajv dependencies...');
+  execSync('cd frontend && npm install ajv@8.12.0 ajv-keywords@5.1.0 --legacy-peer-deps', { stdio: 'inherit' });
+  
   // Fix permissions for react-scripts
   console.log('Fixing permissions for react-scripts...');
   execSync('cd frontend && chmod +x node_modules/.bin/react-scripts', { stdio: 'inherit' });
