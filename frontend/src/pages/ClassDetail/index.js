@@ -1,18 +1,93 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { kindergartenClassesAPI } from '../../api';
-import './ClassDetail.css';
-import { FaChevronDown, FaChevronRight, FaCalendarAlt, FaFileExcel, FaCheck, FaTimes, FaEdit } from 'react-icons/fa';
+import { 
+  FaChevronDown, 
+  FaChevronRight, 
+  FaCalendarAlt, 
+  FaFileExcel, 
+  FaCheck, 
+  FaTimes, 
+  FaEdit,
+  FaGraduationCap,
+  FaSchool,
+  FaUser,
+  FaEnvelope,
+  FaPhone,
+  FaClock,
+  FaUsers,
+  FaRegCalendarAlt,
+  FaListAlt,
+  FaHourglass,
+  FaCalendarCheck,
+  FaCalendarTimes,
+  FaCalendarPlus,
+  FaRegClock,
+  FaArrowLeft,
+  FaTrash
+} from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import { Button, Badge, Table, Spinner, Card } from 'react-bootstrap';
+import {
+  Box,
+  Flex,
+  Text,
+  Heading,
+  Button,
+  Badge,
+  Spinner,
+  IconButton,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
+  VStack,
+  HStack,
+  Stack,
+  Grid,
+  GridItem,
+  Divider,
+  Progress,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  Input,
+  Textarea,
+  Select,
+  Switch,
+  Tooltip,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  Container,
+  SimpleGrid,
+  Checkbox,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  Icon,
+  Image,
+  useColorModeValue,
+  Link
+} from '@chakra-ui/react';
 
 const SessionStatusOptions = [
-  { value: 'Scheduled', label: 'Scheduled', color: '#4a90e2' },
-  { value: 'Completed', label: 'Completed', color: '#4caf50' },
-  { value: 'Canceled', label: 'Canceled', color: '#e74c3c' },
-  { value: 'Holiday Break', label: 'Holiday Break', color: '#9c27b0' },
-  { value: 'Compensatory', label: 'Compensatory', color: '#ff9800' }
+  { value: 'Scheduled', label: 'Scheduled', color: 'blue.500', colorScheme: 'blue' },
+  { value: 'Completed', label: 'Completed', color: 'green.500', colorScheme: 'green' },
+  { value: 'Canceled', label: 'Canceled', color: 'red.500', colorScheme: 'red' },
+  { value: 'Holiday Break', label: 'Holiday Break', color: 'purple.500', colorScheme: 'purple' },
+  { value: 'Compensatory', label: 'Compensatory', color: 'orange.500', colorScheme: 'orange' }
 ];
 
 const ClassDetail = () => {
@@ -38,6 +113,76 @@ const ClassDetail = () => {
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
+  const [deleteSessionModalOpen, setDeleteSessionModalOpen] = useState(false);
+  const [sessionToDeleteId, setSessionToDeleteId] = useState(null);
+
+  const bgColor = useColorModeValue('gray.50', 'gray.800');
+  const cardBgColor = useColorModeValue('white', 'gray.700');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const headingColor = useColorModeValue('gray.700', 'whiteAlpha.900');
+  const textColor = useColorModeValue('gray.600', 'gray.400');
+  const subtleTextColor = useColorModeValue('gray.500', 'gray.300');
+  const primaryGradient = useColorModeValue('linear(to-r, blue.500, purple.500)', 'linear(to-r, blue.300, purple.300)');
+
+  const backButtonHoverBg = useColorModeValue('gray.100', 'gray.700');
+  const listItemBg = useColorModeValue('gray.50', 'gray.800');
+  const scheduleDayBg = useColorModeValue('blue.100', 'blue.700');
+  const scheduleDayColor = useColorModeValue('blue.700', 'blue.100');
+  const holidayDateBg = useColorModeValue('orange.100', 'orange.700');
+  const holidayDateColor = useColorModeValue('orange.700', 'orange.100');
+
+  // New color values for sessions list to fix hook errors
+  const monthHeaderBg = useColorModeValue('gray.50', 'gray.700');
+  const monthHeaderHoverBg = useColorModeValue('gray.100', 'gray.600');
+  const chevronIconColor = useColorModeValue('gray.500', 'gray.300');
+  const tableHeadBg = useColorModeValue('gray.50', 'gray.700');
+  const todaySessionTrBg = useColorModeValue('blue.50', 'blue.900');
+  const noSessionsBoxBg = useColorModeValue('gray.50', 'gray.700');
+  const progressTextColor = useColorModeValue('blue.600', 'blue.300');
+
+  const checkAndUpdateClassStatus = useCallback(async (currentClassData, currentStatsData) => {
+    if (!currentClassData || !currentStatsData || 
+        typeof currentClassData.totalSessions !== 'number' || 
+        typeof currentStatsData.completed !== 'number' ||
+        !currentClassData.status // Ensure status field exists
+    ) {
+      // console.warn('checkAndUpdateClassStatus: Essential data missing for status check.');
+      return; // Silently return if data isn't ready
+    }
+
+    const { totalSessions, status: currentStatus } = currentClassData;
+    const { completed } = currentStatsData;
+    let newStatus = currentStatus;
+
+    if (totalSessions > 0) {
+      const progress = (completed / totalSessions) * 100;
+      if (progress >= 100) {
+        if (currentStatus !== 'Finished') {
+          newStatus = 'Finished';
+        }
+      } else { // Progress < 100
+        if (currentStatus === 'Finished') {
+          newStatus = 'Active'; // Revert to Active if it was Finished
+        }
+      }
+    } else { // totalSessions <= 0
+      if (currentStatus === 'Finished') {
+        newStatus = 'Active'; // A class with no sessions cannot be 'Finished'
+      }
+    }
+
+    if (newStatus !== currentStatus) {
+      try {
+        toast.loading(`Updating class status to ${newStatus}...`, { id: 'class-status-toast' });
+        const updatedClassFromAPI = await kindergartenClassesAPI.update(classId, { status: newStatus });
+        setKClass(updatedClassFromAPI.data); 
+        toast.success(`Class status automatically updated to ${newStatus}.`, { id: 'class-status-toast' });
+      } catch (err) {
+        console.error('Error auto-updating class status:', err);
+        toast.error(`Failed to auto-update class status to ${newStatus}. Please ensure 'Finished' is a valid status.`, { id: 'class-status-toast' });
+      }
+    }
+  }, [classId, setKClass]); // kindergartenClassesAPI.update is stable, toast is stable
 
   const fetchSessionsData = useCallback(async () => {
     try {
@@ -46,7 +191,9 @@ const ClassDetail = () => {
         kindergartenClassesAPI.getSessionStats(classId)
       ]);
       
-      // Add explicit index to each session
+      // Log the raw stats response to check its structure and values
+      console.log('Raw session stats from API:', statsResponse.data);
+
       const sessionsList = sessionsResponse.data.map((session, idx) => ({
         ...session,
         index: idx
@@ -55,35 +202,27 @@ const ClassDetail = () => {
       setSessions(sessionsList);
       setSessionStats(statsResponse.data);
       
-      // Get the current month key
       const currentMonth = getCurrentMonthKey();
-      
-      // Get all month keys from the sessions
       const monthKeys = [...new Set(sessionsList.map(session => {
         const date = new Date(session.date);
         return `${date.getFullYear()}-${date.getMonth() + 1}`;
       }))];
       
-      // Preserve expanded states while ensuring current month is expanded
       setExpandedMonths(prev => {
         const newExpandedState = { ...prev };
-        
-        // Make sure current month is always expanded
         if (monthKeys.includes(currentMonth)) {
           newExpandedState[currentMonth] = true;
         }
-        
-        // Add any new months that weren't in the previous state
-        monthKeys.forEach(monthKey => {
+      monthKeys.forEach(monthKey => {
           if (newExpandedState[monthKey] === undefined) {
             newExpandedState[monthKey] = monthKey === currentMonth;
           }
-        });
-        
+      });
         return newExpandedState;
       });
     } catch (err) {
       console.error('Error fetching sessions data:', err);
+      toast.error('Failed to load sessions data.');
       setError('Failed to load sessions data. Please try again later.');
     }
   }, [classId]);
@@ -92,31 +231,32 @@ const ClassDetail = () => {
     const fetchClassData = async () => {
       try {
         setLoading(true);
-        
-        // Fetch class details
         const classResponse = await kindergartenClassesAPI.getById(classId);
         setKClass(classResponse.data);
-        
-        // Always fetch sessions data
-        await fetchSessionsData();
-        
+          await fetchSessionsData();
         setLoading(false);
-        
-        // Auto-scroll to sessions section after data is loaded
         setTimeout(() => {
           if (sessionsRef.current) {
-            sessionsRef.current.scrollIntoView({ behavior: 'smooth' });
+            sessionsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
           }
-        }, 500);
+        }, 100); // Keep a small delay to ensure DOM is ready after expandedMonths update
       } catch (err) {
         console.error('Error fetching class data:', err);
+        toast.error('Failed to load class details.');
         setError('Failed to load class data. Please try again later.');
         setLoading(false);
       }
     };
-
     fetchClassData();
-  }, [classId, fetchSessionsData]);
+  }, [classId, fetchSessionsData]); // Keep fetchSessionsData if it's stable or memoized
+
+  // Effect to automatically update class status based on progress
+  useEffect(() => {
+    if (kClass && sessionStats && !loading) {
+      // Ensure we don't run this if kClass or sessionStats are null (e.g. during initial load error)
+      checkAndUpdateClassStatus(kClass, sessionStats);
+    }
+  }, [kClass, sessionStats, loading, checkAndUpdateClassStatus]);
   
   const getCurrentMonthKey = () => {
     const today = new Date();
@@ -124,24 +264,21 @@ const ClassDetail = () => {
   };
   
   const toggleMonthExpansion = (monthKey) => {
-    // If the month is the current month, don't allow collapsing
     if (monthKey === getCurrentMonthKey() && expandedMonths[monthKey]) {
-      return; // Don't allow collapsing the current month
+      return; 
     }
-    
-    setExpandedMonths(prev => ({
-      ...prev,
-      [monthKey]: !prev[monthKey]
-    }));
+    setExpandedMonths(prev => ({ ...prev, [monthKey]: !prev[monthKey] }));
   };
 
   const handleDeleteClass = async () => {
-    if (window.confirm('Are you sure you want to delete this class?')) {
+    if (window.confirm('Are you sure you want to delete this class? This action cannot be undone.')) {
       try {
         await kindergartenClassesAPI.remove(classId);
+        toast.success('Class deleted successfully.');
         navigate('/kindergarten/classes');
       } catch (err) {
         console.error('Error deleting class:', err);
+        toast.error('Failed to delete class.');
         setError('Failed to delete class. Please try again later.');
       }
     }
@@ -205,11 +342,7 @@ const ClassDetail = () => {
       
       // Add a note based on the status change
       let notes = session.notes || '';
-      if (newStatus === 'Completed') {
-        notes = notes ? `${notes}\nMarked as completed.` : 'Marked as completed.';
-      } else if (newStatus === 'Canceled') {
-        notes = notes ? `${notes}\nSession canceled.` : 'Session canceled.';
-      } else if (newStatus === 'Holiday Break') {
+      if (newStatus === 'Holiday Break') {
         notes = notes ? `${notes}\nMarked as holiday break.` : 'Holiday break.';
       }
       
@@ -250,6 +383,31 @@ const ClassDetail = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleConfirmDeleteSession = async () => {
+    if (sessionToDeleteId === null) return;
+
+    setSessionActionLoading(true);
+    try {
+      // Assuming kindergartenClassesAPI.deleteSession(classId, sessionIndex) exists
+      await kindergartenClassesAPI.deleteSession(classId, sessionToDeleteId);
+      toast.success('Session deleted permanently.');
+      
+      setDeleteSessionModalOpen(false);
+      setSessionToDeleteId(null);
+
+      // Refresh data
+      await fetchSessionsData();
+      const classResponse = await kindergartenClassesAPI.getById(classId);
+      setKClass(classResponse.data); // Also refresh class-level data like totalSessions if it might change
+
+    } catch (err) {
+      console.error('Error deleting session permanently:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete session. Please ensure this action is supported.');
+    } finally {
+      setSessionActionLoading(false);
+    }
   };
 
   const handleCustomSessionSubmit = async () => {
@@ -515,7 +673,14 @@ const ClassDetail = () => {
                     {session.status}
                   </Badge>
                 </td>
-                <td>{session.notes || '-'}</td>
+                <Td 
+                  maxWidth="250px" 
+                  whiteSpace="normal" 
+                  wordBreak="break-word"
+                  fontSize="sm"
+                >
+                  {session.notes || '-'}
+                </Td>
                 <td>
                   {renderSessionStatusButtons(session, session.index || idx)}
                   <Button 
@@ -578,538 +743,734 @@ const ClassDetail = () => {
   }, [sessions]);
 
   if (loading) {
-    return <div className="loading-spinner">Loading class details...</div>;
+    return (
+      <Flex direction="column" align="center" justify="center" minH="80vh" bg={bgColor}>
+        <Spinner size="xl" color="blue.500" thickness="4px" speed="0.65s" />
+        <Text mt={4} fontSize="lg" color={textColor}>Loading class details...</Text>
+      </Flex>
+    );
   }
 
   if (error) {
     return (
-      <div className="error-message">
-        <h2>Error</h2>
-        <p>{error}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-      </div>
+      <Container maxW="container.md" centerContent py={10} bg={bgColor} minH="80vh">
+        <Box p={8} bg={cardBgColor} boxShadow="xl" borderRadius="lg" textAlign="center">
+          <Heading as="h2" size="lg" color="red.500" mb={4}>Error Occurred</Heading>
+          <Text fontSize="md" color={textColor} mb={6}>{error}</Text>
+          <Button colorScheme="blue" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </Box>
+      </Container>
     );
   }
 
   if (!kClass) {
     return (
-      <div className="error-message">
-        <h2>Class Not Found</h2>
-        <p>The requested class could not be found.</p>
-        <Link to="/kindergarten/classes" className="back-link">Return to Classes</Link>
-      </div>
+      <Container maxW="container.md" centerContent py={10} bg={bgColor} minH="80vh">
+        <Box p={8} bg={cardBgColor} boxShadow="xl" borderRadius="lg" textAlign="center">
+          <Heading as="h2" size="lg" color="orange.500" mb={4}>Class Not Found</Heading>
+          <Text fontSize="md" color={textColor} mb={6}>The requested class could not be found.</Text>
+          <Button as={RouterLink} to="/kindergarten/classes" colorScheme="blue">
+            Return to Classes List
+          </Button>
+        </Box>
+      </Container>
     );
   }
 
   return (
-    <div className="class-detail-container">
-      <div className="class-detail-header">
-        <h1>{kClass.name}</h1>
-        <div className="action-buttons">
-          <Link 
-            to={`/kindergarten/classes/edit/${classId}`} 
-            className="edit-btn"
+    <Box bg={bgColor} minH="100vh" py={{ base: 6, md: 8 }} px={{ base: 4, md: 6 }}>
+      <Container maxW="container.xl">
+        {/* Breadcrumbs and Back Button */}
+        <Flex justify="space-between" align="center" mb={4}>
+          <Breadcrumb spacing="8px" separator={<FaChevronRight color="gray.500" />} fontSize="sm">
+            <BreadcrumbItem>
+              <BreadcrumbLink as={RouterLink} to="/kindergarten" color={subtleTextColor} _hover={{ color: 'blue.500' }}>Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbItem>
+              <BreadcrumbLink as={RouterLink} to="/kindergarten/classes" color={subtleTextColor} _hover={{ color: 'blue.500' }}>Classes</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbItem isCurrentPage>
+              <Text color={headingColor} fontWeight="medium">{kClass.name}</Text>
+            </BreadcrumbItem>
+          </Breadcrumb>
+          <Button 
+            leftIcon={<FaArrowLeft />} 
+            onClick={() => navigate(-1)} 
+            variant="outline"
+            size="sm"
+            borderColor={borderColor}
+            color={textColor}
+            _hover={{ bg: backButtonHoverBg }}
           >
-            Edit Class
-          </Link>
-          <button 
-            onClick={handleDeleteClass} 
-            className="delete-btn"
-          >
-            Delete Class
-          </button>
-        </div>
-      </div>
+            Back
+          </Button>
+        </Flex>
 
-      {/* Class Information Section */}
-      <div className="class-info-section">
-        <div className="section-header">
-          <h2>Class Information</h2>
-        </div>
-        
-        <div className="section-content">
-          {/* Basic Information */}
-          <div className="detail-card">
-            <h3>Basic Information</h3>
-            <div className="detail-grid">
-              <div className="detail-item">
-                <span className="detail-label">Class Name:</span>
-                <span className="detail-value">{kClass.name}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">School:</span>
-                <span className="detail-value">{kClass.school?.name || 'N/A'}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Teacher:</span>
-                <span className="detail-value">
-                  {kClass.teacher ? (
-                    <span className="teacher-info">
-                      {kClass.teacher.name}
-                    </span>
-                  ) : (
-                    kClass.teacherName || 'N/A'
-                  )}
-                </span>
-              </div>
-              {kClass.teacher && kClass.teacher.email && (
-                <div className="detail-item">
-                  <span className="detail-label">Teacher Email:</span>
-                  <span className="detail-value">
-                    <a href={`mailto:${kClass.teacher.email}`}>{kClass.teacher.email}</a>
-                  </span>
-                </div>
-              )}
-              {kClass.teacher && kClass.teacher.phone && (
-                <div className="detail-item">
-                  <span className="detail-label">Teacher Phone:</span>
-                  <span className="detail-value">{kClass.teacher.phone}</span>
-                </div>
-              )}
-              <div className="detail-item">
-                <span className="detail-label">Age Group:</span>
-                <span className="detail-value">{kClass.ageGroup}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Student Count:</span>
-                <span className="detail-value">{kClass.studentCount}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Status:</span>
-                <span className={`class-status status-${kClass.status?.toLowerCase()}`}>
-                  {kClass.status}
-                </span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Start Date:</span>
-                <span className="detail-value">{formatDate(kClass.startDate)}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Total Sessions:</span>
-                <span className="detail-value">{kClass.totalSessions}</span>
-              </div>
-            </div>
-          </div>
+        {/* Header Section */}
+        <Flex 
+          direction={{ base: 'column', md: 'row' }} 
+          justify="space-between" 
+          align={{ base: 'flex-start', md: 'center' }}
+          mb={6}
+          p={6}
+          bg={cardBgColor}
+          borderRadius="lg"
+          boxShadow="md"
+        >
+          <Box mb={{ base: 4, md: 0 }}>
+            <Heading 
+              as="h1" 
+              size="xl" 
+              bgGradient={primaryGradient}
+              bgClip="text"
+              fontWeight="extrabold"
+            >
+              {kClass.name}
+            </Heading>
+            <Text fontSize="lg" color={subtleTextColor} mt={1}>
+              <Icon as={FaSchool} mr={2} verticalAlign="middle" />
+              {kClass.school?.name || 'No School Assigned'}
+            </Text>
+          </Box>
+          <HStack spacing={3}>
+            <Button
+              as={RouterLink}
+              to={`/kindergarten/classes/edit/${classId}`} 
+              leftIcon={<FaEdit />}
+              colorScheme="yellow"
+              variant="solid"
+              size="md"
+            >
+              Edit Class
+            </Button>
+            <Button
+              leftIcon={<FaTimes />}
+              colorScheme="red"
+              variant="outline"
+              size="md"
+              onClick={handleDeleteClass} 
+            >
+              Delete Class
+            </Button>
+          </HStack>
+        </Flex>
 
-          {/* Weekly Schedule */}
-          <div className="detail-card">
-            <h3>Weekly Schedule</h3>
-            {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
-              <div className="schedule-list">
-                {kClass.weeklySchedule.map((schedule, index) => (
-                  <div key={index} className="schedule-item">
-                    <div className="schedule-day">{schedule.day}</div>
-                    <div className="schedule-time">
-                      {schedule.startTime} - {schedule.endTime}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-data-message">
-                No schedule has been set for this class.
-              </div>
-            )}
-          </div>
-
-          {/* Holidays & Breaks */}
-          <div className="detail-card">
-            <h3>Holidays & Breaks</h3>
-            {kClass.holidays && kClass.holidays.length > 0 ? (
-              <div className="holidays-list">
-                {kClass.holidays.map((holiday, index) => (
-                  <div key={index} className="holiday-item">
-                    <div className="holiday-date">{formatDate(holiday.date)}</div>
-                    <div className="holiday-name">{holiday.name}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-data-message">
-                No holidays or breaks have been set for this class.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Sessions Tracking Section */}
-      <div ref={sessionsRef} className="sessions-tracking-section">
-        <div className="section-header">
-          <h2>Sessions Tracking</h2>
-        </div>
-        
-        <div className="section-content">
-          {/* Session Statistics */}
-          {sessionStats && (
-            <div className="detail-card session-stats-card">
-              <h3>Session Statistics</h3>
-              <div className="session-stats">
-                <div className="stat-item">
-                  <div className="stat-label">Total Sessions</div>
-                  <div className="stat-value">{sessionStats.total}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Completed</div>
-                  <div className="stat-value stat-completed">{sessionStats.completed}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Scheduled</div>
-                  <div className="stat-value stat-scheduled">{sessionStats.scheduled}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Canceled</div>
-                  <div className="stat-value stat-canceled">{sessionStats.canceled}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Holiday Breaks</div>
-                  <div className="stat-value stat-holiday">{sessionStats.holidayBreak}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Compensatory</div>
-                  <div className="stat-value stat-compensatory">{sessionStats.compensatory}</div>
-                </div>
-              </div>
-              
-              <div className="session-progress">
-                <div className="progress-info">
-                  <div className="progress-label">Progress</div>
-                  <div className="progress-value">{sessionStats.progress}%</div>
-                </div>
-                <div className="progress-bar-container">
-                  <div 
-                    className="progress-bar"
-                    style={{ width: `${sessionStats.progress}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <div className="session-remaining">
-                <div className="remaining-info">
-                  <div className="remaining-label">Remaining</div>
-                  <div className="remaining-value">
-                    {sessionStats.remainingWeeks} weeks ({sessionStats.remainingDays} days)
-                  </div>
-                </div>
-                <div className="completion-status">
-                  {sessionStats.isFinished ? (
-                    <span className="status-completed">Class Complete</span>
-                  ) : (
-                    <span className="status-ongoing">In Progress</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+        {/* Class Information Section */}
+        <Box 
+          bg={cardBgColor}
+          p={{ base: 4, md: 6 }}
+          borderRadius="lg"
+          boxShadow="md"
+          mb={8} 
+        >
+          <Flex align="center" mb={6}>
+             <Icon as={FaGraduationCap} fontSize="2xl" color="blue.500" mr={3} />
+            <Heading size="lg" color={headingColor} fontWeight="semibold">
+                Class Information
+            </Heading>
+                  </Flex>
           
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={{ base: 5, md: 8 }}>
+            {/* Left Column: Basic Information */}
+            <VStack align="stretch" spacing={4}>
+              <InfoItem label="Class Name" value={kClass.name} />
+              <InfoItem label="School" value={kClass.school?.name || 'N/A'} />
+              <InfoItem label="Teacher" value={kClass.teacher ? kClass.teacher.name : (kClass.teacherName || 'N/A')} />
+              {kClass.teacher?.email && (
+                <InfoItem 
+                  label="Teacher Email" 
+                  value={kClass.teacher.email} 
+                  isLink={`mailto:${kClass.teacher.email}`}
+                />
+                )}
+              {kClass.teacher?.phone && <InfoItem label="Teacher Phone" value={kClass.teacher.phone} />}
+              <InfoItem label="Age Group" value={kClass.ageGroup} />
+              <InfoItem label="Student Count" value={String(kClass.studentCount || 0)} />
+              <InfoItem label="Status">
+                <Badge colorScheme={kClass.status === 'Active' ? 'green' : 'orange'} px={3} py={1} borderRadius="md">
+                    {kClass.status}
+                    </Badge>
+              </InfoItem>
+              <InfoItem label="Start Date" value={formatDate(kClass.startDate)} />
+              <InfoItem label="Total Sessions" value={String(kClass.totalSessions || 0)} />
+                </VStack>
+
+            {/* Right Column: Weekly Schedule & Holidays */}
+            <VStack align="stretch" spacing={6}>
+              <Box>
+                <Heading as="h4" size="md" mb={3} color={headingColor} borderBottomWidth="1px" borderColor={borderColor} pb={2}>
+                  Weekly Schedule
+                </Heading>
+              {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
+                  <VStack align="stretch" spacing={3}>
+                  {kClass.weeklySchedule.map((schedule, index) => (
+                      <Flex 
+                        key={index} 
+                        p={3} 
+                        bg={listItemBg}
+                        borderRadius="md" 
+                        align="center"
+                        borderWidth="1px"
+                        borderColor={borderColor}
+                        _hover={{ borderColor: 'blue.300', boxShadow: 'sm' }}
+                      >
+                        <Box 
+                          bg={scheduleDayBg}
+                          color={scheduleDayColor}
+                          borderRadius="md" 
+                          px={3} 
+                          py={1}
+                          fontWeight="medium"
+                          mr={4}
+                          minW="100px"
+                          textAlign="center"
+                        >
+                          {schedule.day}
+                        </Box>
+                        <Flex align="center" color={textColor}>
+                          <Icon as={FaClock} color={subtleTextColor} mr={2} />
+                          <Text>{schedule.startTime} - {schedule.endTime}</Text>
+                        </Flex>
+                      </Flex>
+                    ))}
+                  </VStack>
+                ) : (
+                  <Text color={subtleTextColor} p={3} bg={listItemBg} borderRadius="md" textAlign="center">
+                  No schedule has been set for this class.
+                    </Text>
+              )}
+              </Box>
+
+              <Box>
+                <Heading as="h4" size="md" mb={3} color={headingColor} borderBottomWidth="1px" borderColor={borderColor} pb={2}>
+                  Holidays & Breaks
+                </Heading>
+              {kClass.holidays && kClass.holidays.length > 0 ? (
+                  <VStack align="stretch" spacing={3}>
+                  {kClass.holidays.map((holiday, index) => (
+                      <Flex 
+                        key={index} 
+                        p={3} 
+                        bg={listItemBg}
+                        borderRadius="md" 
+                        align="center"
+                        borderWidth="1px"
+                        borderColor={borderColor}
+                        _hover={{ borderColor: 'orange.300', boxShadow: 'sm' }}
+                      >
+                        <Box 
+                          bg={holidayDateBg}
+                          color={holidayDateColor}
+                          borderRadius="md" 
+                          px={3} 
+                          py={1}
+                          fontWeight="medium"
+                          mr={4}
+                          minW="110px"
+                          textAlign="center"
+                        >
+                          {formatDate(holiday.date)}
+                        </Box>
+                        <Text color={textColor}>{holiday.name}</Text>
+                      </Flex>
+                    ))}
+                  </VStack>
+                ) : (
+                  <Text color={subtleTextColor} p={3} bg={listItemBg} borderRadius="md" textAlign="center">
+                  No holidays or breaks have been set for this class.
+                    </Text>
+                )}
+              </Box>
+            </VStack>
+            </SimpleGrid>
+        </Box>
+
+        {/* Sessions Tracking Section */}
+        <Box 
+          ref={sessionsRef} 
+          mb={8} 
+          id="sessions-tracking"
+          bg={cardBgColor}
+          p={{ base: 4, md: 6 }}
+                  borderRadius="lg"
+          boxShadow="md"
+        >
+          <Flex justify="space-between" align="center" mb={6}>
+                  <Flex align="center">
+              <Icon as={FaCalendarAlt} fontSize="2xl" color="blue.500" mr={3} />
+              <Heading size="lg" color={headingColor} fontWeight="semibold">
+                    Sessions
+                </Heading>
+            </Flex>
+            <HStack spacing={3}>
+                  <Button
+                    leftIcon={<FaCalendarPlus />}
+                colorScheme="green"
+                    onClick={() => setCustomSessionModalOpen(true)}
+                size="sm"
+                  >
+                    Add Custom Session
+                  </Button>
+                  <Button
+                    leftIcon={<FaFileExcel />}
+                colorScheme="teal"
+                    onClick={exportSessionsToExcel}
+                size="sm"
+                  >
+                    Export to Excel
+                  </Button>
+                </HStack>
+              </Flex>
+
+          {/* Session Stats */}
+          {sessionStats && kClass && (
+            <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4} mb={6}>
+              <StatCard 
+                label="Total Sessions" 
+                value={kClass.totalSessions ?? 0} 
+                icon={FaCalendarAlt}
+                color="blue"
+              />
+              <StatCard 
+                label="Completed" 
+                value={sessionStats.completed ?? 0} 
+                icon={FaCalendarCheck}
+                color="green"
+              />
+              <StatCard 
+                label="Remaining" 
+                value={Math.max(0, (kClass.totalSessions ?? 0) - (sessionStats.completed ?? 0))} 
+                icon={FaRegCalendarAlt}
+                color="purple"
+              />
+              <StatCard 
+                label="Canceled" 
+                value={sessionStats.canceled ?? 0} 
+                icon={FaCalendarTimes}
+                color="red"
+              />
+            </SimpleGrid>
+          )}
+
+          {/* Progress Bar for Session Completion */}
+          {sessionStats && kClass && 
+            typeof kClass.totalSessions === 'number' &&
+            typeof sessionStats.completed === 'number' &&
+          (() => {
+            const effectiveTotal = kClass.totalSessions; // Use kClass.totalSessions
+            const calculatedProgress = effectiveTotal > 0 ? (sessionStats.completed / effectiveTotal) * 100 : 0;
+            const displayProgress = Math.min(100, Math.max(0, calculatedProgress)); // Ensure progress is between 0 and 100
+            const roundedProgress = parseFloat(displayProgress.toFixed(1));
+
+            return (
+              <Box mt={6} mb={6}> 
+                <Flex justify="space-between" align="center" mb={1}>
+                  <Text fontSize="sm" color={textColor}>Class Progress</Text>
+                  <Text fontSize="sm" fontWeight="bold" color={progressTextColor}>
+                    {roundedProgress}%
+                  </Text>
+                </Flex>
+                <Progress 
+                  value={roundedProgress} 
+                  size="sm" 
+                  colorScheme="blue" 
+                  borderRadius="md" 
+                  hasStripe 
+                  isAnimated
+                />
+            </Box>
+            );
+          })()}
+
           {/* Sessions List */}
-          <div className="detail-card">
-            <h3>Sessions</h3>
-            <div className="sessions-header">
-              <button
-                className="add-custom-session-btn"
+          {sessions.length > 0 ? (
+            <Box borderWidth="1px" borderRadius="md" borderColor={borderColor} overflow="hidden">
+              {Object.entries(sessionsByMonth).map(([monthKey, monthData]) => (
+                <Box key={monthKey}>
+                      <Flex
+                        p={4}
+                    bg={monthHeaderBg}
+                    borderBottomWidth={expandedMonths[monthKey] ? "1px" : "0"}
+                    borderColor={borderColor}
+                        cursor="pointer"
+                    onClick={() => toggleMonthExpansion(monthKey)}
+                    _hover={{ bg: monthHeaderHoverBg }}
+                    align="center"
+                    justify="space-between"
+                      >
+                        <Flex align="center">
+                          <Icon 
+                            as={expandedMonths[monthKey] ? FaChevronDown : FaChevronRight} 
+                            mr={2} 
+                        color={chevronIconColor}
+                          />
+                      <Text fontWeight="semibold" color={headingColor}>
+                        {monthData.label}
+                          </Text>
+                      <Badge ml={2} colorScheme="blue" borderRadius="full">
+                        {monthData.sessions.length}
+                        </Badge>
+                    </Flex>
+                      </Flex>
+                      
+                      {expandedMonths[monthKey] && (
+                    <Box p={4}>
+                      <TableContainer>
+                        <Table variant="simple" size="sm">
+                          <Thead bg={tableHeadBg}>
+                              <Tr>
+                              <Th width="5%">#</Th>
+                              <Th width="15%">Date</Th>
+                              <Th width="10%">Day</Th>
+                              <Th width="10%">Time</Th>
+                              <Th width="15%">Status</Th>
+                              <Th width="25%">Notes</Th>
+                              <Th width="20%">Actions</Th>
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                            {monthData.sessions.map((session, idx) => {
+                              const dateObj = new Date(session.date);
+                              const formattedDate = formatDate(dateObj);
+                              const dayName = getDayName(dateObj);
+                              const isToday = isSameDay(dateObj, new Date());
+                              const isPast = dateObj < new Date();
+                              const statusOption = SessionStatusOptions.find(opt => opt.value === session.status) || {};
+                                
+                                return (
+                                  <Tr 
+                                  key={`${monthKey}-${idx}`}
+                                  bg={isToday ? todaySessionTrBg : undefined}
+                                  >
+                                  <Td>{idx + 1}</Td>
+                                  <Td fontWeight={isToday ? "bold" : "normal"}>
+                                    {formattedDate}
+                                    </Td>
+                                  <Td>{dayName}</Td>
+                                    <Td>
+                                    {session.startTime} - {session.endTime}
+                                    </Td>
+                                    <Td>
+                                    <Badge 
+                                      colorScheme={statusOption.colorScheme || 'gray'} 
+                                      fontSize="xs"
+                                      px={2}
+                                      py={1}
+                                      borderRadius="full"
+                                    >
+                                      {session.status}
+                                    </Badge>
+                                    </Td>
+                                  <Td 
+                                    maxWidth="250px" 
+                                    whiteSpace="normal" 
+                                    wordBreak="break-word"
+                                    fontSize="sm"
+                                  >
+                                    {session.notes || '-'}
+                                    </Td>
+                                    <Td>
+                                      <HStack spacing={2}>
+                                      {session.status !== 'Completed' && (
+                                        <Tooltip label="Mark Complete" placement="top">
+                                            <IconButton
+                                              icon={updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCheck />}
+                                              colorScheme="green"
+                                            variant="outline"
+                                            size="xs"
+                                            isDisabled={updatingSessionId !== null}
+                                            onClick={() => handleQuickStatusUpdate(session.index, 'Completed')}
+                                              aria-label="Mark as completed"
+                                            />
+                                          </Tooltip>
+                                      )}
+                                      
+                                      {session.status !== 'Canceled' && (
+                                        <Tooltip label="Mark Canceled" placement="top">
+                                            <IconButton
+                                              icon={updatingSessionId === session.index ? <Spinner size="sm" /> : <FaTimes />}
+                                              colorScheme="red"
+                                            variant="outline"
+                                            size="xs"
+                                            isDisabled={updatingSessionId !== null}
+                                            onClick={() => handleQuickStatusUpdate(session.index, 'Canceled')}
+                                              aria-label="Mark as canceled"
+                                            />
+                                          </Tooltip>
+                                      )}
+                                      
+                                      <Tooltip label="Advanced Edit" placement="top">
+                                            <IconButton
+                                          icon={<FaEdit />}
+                                              colorScheme="blue"
+                                          variant="outline"
+                                          size="xs"
+                                          onClick={() => handleAdvancedUpdate(session, session.index)}
+                                          aria-label="Advanced edit"
+                                            />
+                                          </Tooltip>
+                                        
+                                      <Tooltip label="Delete Session Permanently" placement="top">
+                                          <IconButton
+                                          icon={<FaTrash />}
+                                          colorScheme="red"
+                                            variant="ghost"
+                                          size="xs"
+                                            onClick={() => {
+                                            setSessionToDeleteId(session.index);
+                                            setDeleteSessionModalOpen(true);
+                                            }}
+                                          aria-label="Delete session permanently"
+                                          isDisabled={updatingSessionId !== null}
+                                          />
+                                        </Tooltip>
+                                      </HStack>
+                                    </Td>
+                                  </Tr>
+                                );
+                              })}
+                            </Tbody>
+                          </Table>
+                      </TableContainer>
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+            <Box 
+              p={8} 
+              textAlign="center" 
+              borderWidth="1px" 
+              borderRadius="lg" 
+              borderColor={borderColor}
+              bg={noSessionsBoxBg}
+            >
+              <Icon as={FaRegCalendarAlt} boxSize={10} color="gray.400" mb={4} />
+              <Heading size="md" mb={2} color={subtleTextColor}>No Sessions Available</Heading>
+              <Text color={subtleTextColor}>
+                There are no scheduled sessions for this class yet.
+              </Text>
+              <Button 
+                mt={4} 
+                colorScheme="blue" 
+                leftIcon={<FaCalendarPlus />}
                 onClick={() => setCustomSessionModalOpen(true)}
               >
                 Add Custom Session
-              </button>
-              <button
-                className="export-excel-btn"
-                onClick={exportSessionsToExcel}
-                title="Export sessions to Excel"
-              >
-                <FaFileExcel /> Export to Excel
-              </button>
-            </div>
-            {Object.keys(sessionsByMonth).length > 0 ? (
-              <div className="sessions-by-month">
-                {Object.entries(sessionsByMonth).map(([monthKey, { label, sessions: monthSessions }]) => (
-                  <Card className="month-card" key={monthKey}>
-                    <Card.Header 
-                      onClick={() => toggleMonthExpansion(monthKey)}
-                      className={`month-header ${expandedMonths[monthKey] ? 'expanded' : 'collapsed'}`}
-                    >
-                      <div className="month-header-content">
-                        <span className="month-toggle-icon">
-                          {expandedMonths[monthKey] ? <FaChevronDown /> : <FaChevronRight />}
-                        </span>
-                        <span className="month-title">{label}</span>
-                        <span className="session-count">{monthSessions.length} sessions</span>
-                      </div>
-                    </Card.Header>
-                    
-                    {expandedMonths[monthKey] && (
-                      <Card.Body className="month-sessions">
-                        <Table className="sessions-table" responsive>
-                          <thead>
-                            <tr>
-                              <th>Date</th>
-                              <th>Time</th>
-                              <th>Status</th>
-                              <th>Notes</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {monthSessions.map((session) => (
-                              <tr key={session.index} className={`session-row ${session.status.toLowerCase()}`}>
-                                <td>{formatDate(session.date)}</td>
-                                <td>
-                                  {session.startTime} - {session.endTime}
-                                </td>
-                                <td>
-                                  <Badge className="status-badge" bg={getStatusVariant(session.status)}>
-                                    {getStatusLabel(session.status)}
-                                  </Badge>
-                                  {session.isCompensatory && 
-                                    <span className="compensatory-badge">Compensatory</span>}
-                                </td>
-                                <td className="notes-cell">{session.notes || '-'}</td>
-                                <td>
-                                  <div className="action-buttons-group">
-                                    {session.status !== 'Completed' && (
-                                      <Button
-                                        variant="outline-success"
-                                        size="sm"
-                                        className="action-button"
-                                        onClick={() => {
-                                          const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
-                                          handleQuickStatusUpdate(validIndex, 'Completed');
-                                        }}
-                                        disabled={updatingSessionId === session.index}
-                                      >
-                                        <span className="button-content">
-                                          {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCheck />}
-                                          <span className="button-label">Complete</span>
-                                        </span>
-                                      </Button>
-                                    )}
-                                    
-                                    {session.status !== 'Canceled' && (
-                                      <Button
-                                        variant="outline-danger"
-                                        size="sm"
-                                        className="action-button"
-                                        onClick={() => {
-                                          const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
-                                          handleQuickStatusUpdate(validIndex, 'Canceled');
-                                        }}
-                                        disabled={updatingSessionId === session.index}
-                                      >
-                                        <span className="button-content">
-                                          {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaTimes />}
-                                          <span className="button-label">Cancel</span>
-                                        </span>
-                                      </Button>
-                                    )}
-                                    
-                                    {session.status !== 'Scheduled' && (
-                                      <Button
-                                        variant="outline-primary"
-                                        size="sm"
-                                        className="action-button"
-                                        onClick={() => {
-                                          const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
-                                          handleQuickStatusUpdate(validIndex, 'Scheduled');
-                                        }}
-                                        disabled={updatingSessionId === session.index}
-                                      >
-                                        <span className="button-content">
-                                          {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCalendarAlt />}
-                                          <span className="button-label">Schedule</span>
-                                        </span>
-                                      </Button>
-                                    )}
-                                    
-                                    <Button
-                                      variant="light"
-                                      size="sm"
-                                      className="edit-button"
-                                      onClick={() => {
-                                        const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
-                                        openSessionEditModal(validIndex);
-                                      }}
-                                    >
-                                      <FaEdit />
-                                    </Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </Table>
-                      </Card.Body>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="no-sessions">No sessions found</div>
-            )}
-          </div>
-        </div>
-      </div>
+              </Button>
+                </Box>
+              )}
+        </Box>
 
-      <div className="breadcrumb-navigation">
-        <Link to="/kindergarten" className="breadcrumb-link">Dashboard</Link>
-        <span className="breadcrumb-separator">/</span>
-        <Link to="/kindergarten/classes" className="breadcrumb-link">Classes</Link>
-        <span className="breadcrumb-separator">/</span>
-        <span className="breadcrumb-current">{kClass.name}</span>
-      </div>
-      
-      {/* Session Update Modal */}
-      {sessionModalOpen && sessionToUpdate && (
-        <div className="session-modal-backdrop">
-          <div className="session-modal">
-            <div className="session-modal-header">
-              <h3>Update Session Status</h3>
-              <button 
-                className="close-modal-btn"
-                onClick={() => setSessionModalOpen(false)}
-                disabled={sessionActionLoading}
-              >
-                ×
-              </button>
-            </div>
-            <div className="session-modal-body">
-              <div className="session-date-info">
-                <p><strong>Date:</strong> {formatDate(sessionToUpdate.date)} ({getDayName(sessionToUpdate.date)})</p>
-                <p><strong>Current Status:</strong> {getStatusLabel(sessionToUpdate.status)}</p>
-              </div>
-              
-              <div className="session-form">
-                <div className="form-group">
-                  <label htmlFor="session-status">New Status</label>
-                  <select
-                    id="session-status"
+        {/* Session Status Update Modal */}
+        <Modal isOpen={sessionModalOpen} onClose={() => setSessionModalOpen(false)}>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Update Session Status</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+            {sessionToUpdate && (
+                <VStack spacing={4} align="stretch">
+                  <FormControl>
+                    <FormLabel>Date</FormLabel>
+                    <Input value={formatDate(sessionToUpdate.date)} isReadOnly />
+                  </FormControl>
+                
+                  <FormControl>
+                    <FormLabel>Status</FormLabel>
+                  <Select
                     value={newSessionStatus}
                     onChange={(e) => setNewSessionStatus(e.target.value)}
-                    disabled={sessionActionLoading}
                   >
                     {SessionStatusOptions.map(option => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
-                  </select>
-                </div>
+                  </Select>
+                </FormControl>
                 
-                <div className="form-group">
-                  <label htmlFor="session-notes">Notes</label>
-                  <textarea
-                    id="session-notes"
+                  <FormControl>
+                    <FormLabel>Notes</FormLabel>
+                  <Textarea
                     value={sessionNotes}
                     onChange={(e) => setSessionNotes(e.target.value)}
-                    placeholder="Add notes about this session..."
-                    disabled={sessionActionLoading}
+                    rows={4}
                   />
-                </div>
+                </FormControl>
                 
                 {newSessionStatus === 'Canceled' && (
-                  <div className="form-group checkbox-group">
-                    <input
-                      type="checkbox"
+                    <FormControl display="flex" alignItems="center">
+                      <FormLabel htmlFor="add-compensatory" mb="0">
+                        Add compensatory session
+                      </FormLabel>
+                      <Switch 
                       id="add-compensatory"
-                      checked={addCompensatory}
-                      onChange={(e) => setAddCompensatory(e.target.checked)}
-                      disabled={sessionActionLoading}
-                    />
-                    <label htmlFor="add-compensatory">
-                      Add compensatory session for this cancellation
-                    </label>
-                  </div>
+                      isChecked={addCompensatory}
+                        onChange={() => setAddCompensatory(!addCompensatory)}
+                      />
+                  </FormControl>
                 )}
-              </div>
-            </div>
-            <div className="session-modal-footer">
-              <button
-                className="cancel-btn"
-                onClick={() => setSessionModalOpen(false)}
-                disabled={sessionActionLoading}
-              >
+                </VStack>
+            )}
+          </ModalBody>
+          <ModalFooter>
+              <Button variant="ghost" mr={3} onClick={() => setSessionModalOpen(false)}>
                 Cancel
-              </button>
-              <button
-                className="save-btn"
+            </Button>
+            <Button
+                colorScheme="blue" 
                 onClick={handleSessionStatusUpdate}
-                disabled={sessionActionLoading}
-              >
-                {sessionActionLoading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              isLoading={sessionActionLoading}
+            >
+                Update
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
       
       {/* Custom Session Modal */}
-      {customSessionModalOpen && (
-        <div className="session-modal-backdrop">
-          <div className="session-modal">
-            <div className="session-modal-header">
-              <h3>Add Custom Session</h3>
-              <button 
-                className="close-modal-btn"
-                onClick={() => setCustomSessionModalOpen(false)}
-                disabled={sessionActionLoading}
-              >
-                ×
-              </button>
-            </div>
-            <div className="session-modal-body">
-              <div className="session-form">
-                <div className="form-group">
-                  <label htmlFor="custom-session-date">Date</label>
-                  <input
+        <Modal isOpen={customSessionModalOpen} onClose={() => setCustomSessionModalOpen(false)}>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Add Custom Session</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <VStack spacing={4} align="stretch">
+                <FormControl isRequired>
+                  <FormLabel>Date</FormLabel>
+              <Input
                     type="date"
-                    id="custom-session-date"
                     name="date"
                     value={customSessionForm.date}
                     onChange={handleCustomSessionFormChange}
-                    disabled={sessionActionLoading}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="custom-session-notes">Notes (optional)</label>
-                  <textarea
-                    id="custom-session-notes"
+              />
+            </FormControl>
+                <FormControl>
+                  <FormLabel>Notes</FormLabel>
+              <Textarea
                     name="notes"
                     value={customSessionForm.notes}
                     onChange={handleCustomSessionFormChange}
-                    placeholder="Add notes about this custom session..."
-                    disabled={sessionActionLoading}
+                    placeholder="Reason for adding this custom session"
+                rows={4}
                   />
-                </div>
-                
-                <div className="custom-session-info">
-                  <p>
-                    <strong>Note:</strong> Custom sessions are automatically marked as "Completed". 
-                    If a compensatory session exists, the most recent one will be removed to keep the total session count the same.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="session-modal-footer">
-              <button
-                className="cancel-btn"
-                onClick={() => setCustomSessionModalOpen(false)}
-                disabled={sessionActionLoading}
-              >
+            </FormControl>
+              </VStack>
+          </ModalBody>
+          <ModalFooter>
+              <Button variant="ghost" mr={3} onClick={() => setCustomSessionModalOpen(false)}>
                 Cancel
-              </button>
-              <button
-                className="save-btn"
+            </Button>
+            <Button
+                colorScheme="blue"
                 onClick={handleCustomSessionSubmit}
-                disabled={sessionActionLoading}
+              isLoading={sessionActionLoading}
+            >
+              Add Session
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+        {/* Delete Session Confirmation Modal */}
+        <Modal isOpen={deleteSessionModalOpen} onClose={() => setDeleteSessionModalOpen(false)} isCentered>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Confirm Permanent Deletion</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <Text>Are you sure you want to permanently delete this session?</Text>
+              <Text fontWeight="bold" color="red.500">This action cannot be undone and will not create a compensatory session.</Text>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="ghost" mr={3} onClick={() => setDeleteSessionModalOpen(false)} isDisabled={sessionActionLoading}>
+                Cancel
+              </Button>
+              <Button 
+                colorScheme="red" 
+                onClick={handleConfirmDeleteSession}
+                isLoading={sessionActionLoading}
+                leftIcon={<FaTrash />}
               >
-                {sessionActionLoading ? 'Adding...' : 'Add Session'}
-              </button>
-            </div>
-          </div>
-        </div>
+                Delete Permanently
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+      </Container>
+    </Box>
+  );
+};
+
+// StatCard component for displaying session statistics
+const StatCard = ({ label, value, icon, color = 'blue' }) => {
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const statBorderColor = useColorModeValue(`${color}.100`, `${color}.800`);
+  const iconBg = useColorModeValue(`${color}.100`, `${color}.800`);
+  const iconColor = useColorModeValue(`${color}.500`, `${color}.200`);
+  const statLabelColor = useColorModeValue('gray.600', 'gray.400');
+  const statValueColor = useColorModeValue(`${color}.600`, `${color}.300`);
+  
+  return (
+    <Box 
+      p={3}
+      bg={cardBg} 
+      borderRadius="lg" 
+      borderWidth="1px" 
+      borderColor={statBorderColor}
+      overflow="hidden"
+      boxShadow="sm"
+      transition="all 0.3s"
+      _hover={{ 
+        boxShadow: 'md',
+        transform: 'translateY(-2px)'
+      }}
+    >
+      <Flex alignItems="center" mb={1}>
+        <Box
+          mr={2}
+          p={1.5}
+          borderRadius="full"
+          bg={iconBg}
+          color={iconColor}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Icon as={icon} boxSize={4} />
+        </Box>
+        <Text fontWeight="normal" fontSize="xs" color={statLabelColor}>{label}</Text>
+      </Flex>
+      <Text fontSize="xl" fontWeight="bold" color={statValueColor}>
+        {value}
+      </Text>
+    </Box>
+  );
+};
+
+// Helper component for Info Items to reduce repetition
+const InfoItem = ({ label, value, children, isLink = null }) => {
+  const itemTextColor = useColorModeValue('gray.700', 'gray.200');
+  const itemLabelColor = useColorModeValue('gray.500', 'gray.400');
+  
+  return (
+    <Flex direction={{ base: 'column', sm: 'row' }} justify="space-between">
+      <Text fontWeight="medium" color={itemLabelColor} minW={{ sm: '140px' }} mb={{ base: 1, sm: 0 }}>{label}:</Text>
+      {children ? (
+        <Box flex={1} textAlign={{ sm: 'left' }}>{children}</Box>
+      ) : isLink ? (
+        <Link href={isLink} color="blue.500" _hover={{ textDecoration: 'underline' }} isExternal={isLink.startsWith('mailto:')}>
+          {value}
+        </Link>
+      ) : (
+        <Text color={itemTextColor} flex={1} textAlign={{ sm: 'left' }}>{value}</Text>
       )}
-    </div>
+    </Flex>
   );
 };
 

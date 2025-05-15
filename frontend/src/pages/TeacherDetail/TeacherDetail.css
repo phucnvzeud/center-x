@@ -1,0 +1,70 @@
+.teacher-detail {
+  transition: all 0.3s ease;
+}
+
+.teacher-detail-avatar {
+  border: 3px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.teacher-detail-avatar:hover {
+  transform: scale(1.05);
+}
+
+.teacher-info-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .teacher-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.action-buttons button {
+  transition: all 0.2s ease;
+}
+
+.action-buttons button:hover {
+  transform: translateY(-2px);
+}
+
+.badge-specialization {
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.badge-specialization:hover {
+  transform: scale(1.05);
+}
+
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Alert dialog customizations */
+.alert-dialog-content {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.alert-dialog-header {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.alert-dialog-footer {
+  border-top: 1px solid #e2e8f0;
+} 

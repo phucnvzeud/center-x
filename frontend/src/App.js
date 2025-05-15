@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import './App.css';
+import AOS from 'aos';
 import Dashboard from './pages/Dashboard';
 import Teachers from './pages/Teachers';
 import Courses from './pages/Courses';
@@ -18,57 +19,215 @@ import SchoolForm from './pages/SchoolForm';
 import ClassList from './pages/ClassList';
 import ClassForm from './pages/ClassForm';
 import ClassDetail from './pages/ClassDetail';
+import TestComponent from './pages/ClassDetail/TestComponent';
 import Notifications from './pages/Notifications';
 import { NotificationProvider } from './context/NotificationContext';
-import NotificationIcon from './components/NotificationIcon';
 import KindergartenNavBar from './components/KindergartenNavBar';
+import { Box, Flex, Text, Input, InputGroup, InputLeftElement, Button, IconButton, Drawer, DrawerBody, DrawerHeader, DrawerOverlay, DrawerContent, DrawerCloseButton, useDisclosure, VStack, HStack, Heading, Divider, useColorModeValue, Image } from '@chakra-ui/react';
+import { FaGraduationCap, FaUserTie, FaBook, FaBuilding, FaHome, FaBell, FaBars, FaSearch } from 'react-icons/fa';
+import TeacherDetail from './pages/TeacherDetail';
+import TeacherEdit from './pages/TeacherEdit';
 
-function App() {
-  const [menuOpen, setMenuOpen] = useState(false);
+// Layout component with sidebar
+function Layout({ children }) {
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const toggleMenu = () => {
-    setMenuOpen(!menuOpen);
+  return (
+    <Flex w="100%" h="100vh">
+      {/* Desktop Sidebar */}
+      <Box 
+        as="nav" 
+        display={{ base: 'none', md: 'block' }}
+        w="250px" 
+        variant="sidebar"
+        borderRightWidth="1px"
+        borderColor="gray.200"
+        bg="white"
+        py={4}
+        overflowY="auto"
+      >
+        <SidebarContent />
+      </Box>
+      
+      {/* Mobile Sidebar Drawer */}
+      <Drawer isOpen={isOpen} placement="left" onClose={onClose} size="xs">
+        <DrawerOverlay />
+        <DrawerContent>
+          <DrawerCloseButton />
+          <DrawerHeader borderBottomWidth="1px">Center X</DrawerHeader>
+          <DrawerBody p={0}>
+            <SidebarContent />
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
+      
+      {/* Main Content */}
+      <Box flex="1" bg="gray.50" overflowY="auto">
+        {/* Top Bar */}
+        <Flex
+          as="header"
+          align="center"
+          justify="space-between"
+          px={4}
+          py={2}
+          bg="white"
+          borderBottomWidth="1px"
+          borderColor="gray.200"
+        >
+          <IconButton
+            display={{ base: 'flex', md: 'none' }}
+            aria-label="Open menu"
+            variant="ghost"
+            icon={<FaBars />}
+            onClick={onOpen}
+            size="md"
+          />
+          
+          <InputGroup maxW="400px" display={{ base: 'none', md: 'block' }}>
+            <InputLeftElement pointerEvents="none">
+              <FaSearch color="gray.400" />
+            </InputLeftElement>
+            <Input placeholder="Search..." borderColor="gray.200" />
+          </InputGroup>
+          
+          <HStack spacing={4}>
+            <Button 
+              size="sm" 
+              variant="outline"
+            >
+              Upgrade
+            </Button>
+          </HStack>
+        </Flex>
+        
+        {/* Page Content */}
+        <Box as="main" p={6}>
+          {children}
+        </Box>
+      </Box>
+    </Flex>
+  );
+}
+
+// Sidebar content component
+function SidebarContent() {
+  const location = useLocation();
+  
+  const NavItem = ({ icon, children, to, section }) => {
+    const isActive = location.pathname === to || (section && location.pathname.startsWith(section));
+    
+    return (
+      <Flex
+        align="center"
+        px={4}
+        py={3}
+        mb={1}
+        cursor="pointer"
+        role="group"
+        fontSize="sm"
+        fontWeight="medium"
+        color={isActive ? "brand.500" : "gray.600"}
+        bg={isActive ? "brand.50" : "transparent"}
+        borderLeftWidth={isActive ? "3px" : "0"}
+        borderColor="brand.500"
+        transition="all 0.2s"
+        _hover={{
+          bg: "gray.100",
+        }}
+        as={Link}
+        to={to}
+      >
+        <Box mr={3} color={isActive ? "brand.500" : "gray.500"}>
+          {icon}
+        </Box>
+        {children}
+      </Flex>
+    );
   };
 
   return (
+    <Box>
+      <Flex px={6} py={4} align="center" mb={6}>
+        <Box mr={2} color="brand.500">
+          <FaGraduationCap size="24px" />
+        </Box>
+        <Heading size="md" fontWeight="semibold">Center X</Heading>
+      </Flex>
+      
+      <Box px={4} mb={8}>
+        <Text color="gray.500" fontSize="xs" fontWeight="medium" mb={2} textTransform="uppercase">
+          Projects
+        </Text>
+        <NavItem icon={<FaHome />} to="/">
+          Dashboard
+        </NavItem>
+        <NavItem icon={<FaUserTie />} to="/teachers" section="/teachers">
+          Teachers
+        </NavItem>
+        <NavItem icon={<FaBook />} to="/courses" section="/courses">
+          Courses
+        </NavItem>
+        <NavItem icon={<FaGraduationCap />} to="/kindergarten" section="/kindergarten">
+          Kindergarten
+        </NavItem>
+        <NavItem icon={<FaBuilding />} to="/branches">
+          Branches
+        </NavItem>
+        <NavItem icon={<FaBell />} to="/notifications">
+          Notifications
+        </NavItem>
+      </Box>
+      
+      <Divider mb={8} />
+      
+      <Box px={4}>
+        <Text color="gray.500" fontSize="xs" fontWeight="medium" mb={2} textTransform="uppercase">
+          Workspace
+        </Text>
+        <NavItem icon={<Box as="span" w="4px" h="4px" bg="gray.400" />} to="/billing">
+          Billing
+        </NavItem>
+        <NavItem icon={<Box as="span" w="4px" h="4px" bg="gray.400" />} to="/settings">
+          Settings
+        </NavItem>
+      </Box>
+    </Box>
+  );
+}
+
+function App() {
+  useEffect(() => {
+    // Initialize AOS animation library
+    AOS.init({
+      duration: 800,
+      easing: 'ease-out-cubic',
+      once: false,
+      mirror: true,
+    });
+  }, []);
+
+  return (
     <NotificationProvider>
-      <Router>
-        <div className="app">
-          <header className="app-header">
-            <div className="header-top">
-              <div className="logo">
-                <span className="logo-icon">🏫</span>
-                <h1>Language Center Management</h1>
-              </div>
-              <div className="header-actions">
-                <NotificationIcon />
-                <button className="menu-toggle" onClick={toggleMenu}>
-                  <span className="hamburger-icon">
-                    <span className={`bar ${menuOpen ? 'open' : ''}`}></span>
-                    <span className={`bar ${menuOpen ? 'open' : ''}`}></span>
-                    <span className={`bar ${menuOpen ? 'open' : ''}`}></span>
-                  </span>
-                </button>
-              </div>
-            </div>
-            <nav className={`main-nav ${menuOpen ? 'open' : ''}`}>
-              <ul>
-                <li><Link to="/" onClick={() => setMenuOpen(false)}>Dashboard</Link></li>
-                <li><Link to="/teachers" onClick={() => setMenuOpen(false)}>Teachers</Link></li>
-                <li><Link to="/teachers/manage" onClick={() => setMenuOpen(false)}>Manage Teachers</Link></li>
-                <li><Link to="/courses" onClick={() => setMenuOpen(false)}>Courses</Link></li>
-                <li><Link to="/kindergarten" onClick={() => setMenuOpen(false)}>Kindergarten Classes</Link></li>
-                <li><Link to="/branches" onClick={() => setMenuOpen(false)}>Branches</Link></li>
-              </ul>
-            </nav>
-          </header>
+      <Router
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
+        <Layout>
+          {/* Conditional Kindergarten NavBar */}
+          {window.location.pathname.includes('/kindergarten') && (
+            <Box mb={6}>
+              <KindergartenNavBar />
+            </Box>
+          )}
           
-          <KindergartenNavBar />
-          
-          <main className="app-content">
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/test" element={<TestComponent />} />
               <Route path="/teachers" element={<Teachers />} />
+            <Route path="/teachers/:teacherId" element={<TeacherDetail />} />
+            <Route path="/teachers/:teacherId/edit" element={<TeacherEdit />} />
               <Route path="/teachers/manage" element={<TeachersManagement />} />
               <Route path="/teachers/:teacherId/schedule" element={<TeacherSchedule />} />
               <Route path="/courses" element={<Courses />} />
@@ -92,12 +251,7 @@ function App() {
               <Route path="/branches" element={<Branches />} />
               <Route path="/notifications" element={<Notifications />} />
             </Routes>
-          </main>
-          
-          <footer className="app-footer">
-            <p>&copy; 2024 Language Center Management System</p>
-          </footer>
-        </div>
+        </Layout>
       </Router>
     </NotificationProvider>
   );

@@ -1,11 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { kindergartenClassesAPI, schoolsAPI, regionsAPI, teachersAPI } from '../../api';
-import './ClassList.css';
+import {
+  Box,
+  Heading,
+  Text,
+  Button,
+  Flex,
+  Grid,
+  SimpleGrid,
+  HStack,
+  VStack,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Select,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  IconButton,
+  Badge,
+  Spinner,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  useColorModeValue,
+  useBreakpointValue
+} from '@chakra-ui/react';
+import { FaSearch, FaPlus, FaFilter, FaEllipsisV, FaEdit, FaTrash, FaEye, FaCalendarAlt, FaChalkboardTeacher, FaSchool } from 'react-icons/fa';
 
 const ClassList = () => {
   const { schoolId } = useParams();
-  const location = useLocation();
   const navigate = useNavigate();
   
   const [classes, setClasses] = useState([]);
@@ -23,25 +49,14 @@ const ClassList = () => {
   const [regions, setRegions] = useState([]);
   const [schools, setSchools] = useState([]);
   const [loadingFilters, setLoadingFilters] = useState(true);
-  
-  // For responsive design
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isFiltersVisible, setIsFiltersVisible] = useState(true);
   
   // Determine if we're viewing classes for a specific school
   const isSchoolSpecific = !!schoolId;
 
-  // State to track which dropdown is open
-  const [openDropdownId, setOpenDropdownId] = useState(null);
-
-  // Check window size for responsive design
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
   // Load filter data
   useEffect(() => {
@@ -152,6 +167,10 @@ const ClassList = () => {
     }
   };
 
+  const toggleFilters = () => {
+    setIsFiltersVisible(!isFiltersVisible);
+  };
+
   // Filter classes based on search term
   const filteredClasses = classes.filter(kClass => 
     kClass.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -168,335 +187,303 @@ const ClassList = () => {
     return kClass.teacherName || 'Not assigned';
   };
 
-  // Handle closing dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (openDropdownId && !event.target.closest('.action-dropdown-container')) {
-        setOpenDropdownId(null);
-      }
+  // Helper function to get status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Active': return { bg: 'green.100', color: 'green.700' };
+      case 'Planning': return { bg: 'blue.100', color: 'blue.700' };
+      case 'Completed': return { bg: 'gray.100', color: 'gray.700' };
+      case 'Cancelled': return { bg: 'red.100', color: 'red.700' };
+      default: return { bg: 'gray.100', color: 'gray.700' };
     }
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [openDropdownId]);
-
-  // Toggle dropdown
-  const toggleDropdown = (classId, event) => {
-    event.stopPropagation();
-    setOpenDropdownId(openDropdownId === classId ? null : classId);
   };
 
   // Handle click on class item to navigate to class details
-  const handleClassClick = (classId, event) => {
-    // If the click is on a button or link (action buttons), don't navigate
-    if (event.target.closest('button') || 
-        event.target.closest('a') || 
-        event.target.closest('.action-dropdown-container') ||
-        event.target.closest('.action-dropdown-menu')) {
-      return;
-    }
-    
-    // Navigate to class details page
+  const handleClassClick = (classId) => {
     navigate(`/kindergarten/classes/${classId}`);
   };
 
   if (loading) {
-    return <div className="loading-spinner">Loading classes...</div>;
+    return (
+      <Box p={4} textAlign="center">
+        <Spinner color="brand.500" size="lg" />
+        <Text mt={2} color="gray.500">Loading classes...</Text>
+      </Box>
+    );
   }
 
   if (error) {
     return (
-      <div className="error-message">
-        <h2>Error</h2>
-        <p>{error}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-      </div>
+      <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
+        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Text mb={4}>{error}</Text>
+        <Button colorScheme="red" variant="outline" onClick={() => window.location.reload()}>
+          Retry
+        </Button>
+      </Box>
     );
   }
 
   return (
-    <div className="class-list-container">
-      <div className="class-list-header">
-        <h1>
+    <Box>
+      <Breadcrumb mb={4} fontSize="sm" color="gray.500">
+        <BreadcrumbItem>
+          <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
+        </BreadcrumbItem>
+        {isSchoolSpecific && school ? (
+          <>
+            <BreadcrumbItem>
+              <BreadcrumbLink as={Link} to="/kindergarten/schools">Schools</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbItem isCurrentPage>
+              <BreadcrumbLink>{school.name}</BreadcrumbLink>
+            </BreadcrumbItem>
+          </>
+        ) : (
+          <BreadcrumbItem isCurrentPage>
+            <BreadcrumbLink>Classes</BreadcrumbLink>
+          </BreadcrumbItem>
+        )}
+      </Breadcrumb>
+      
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading fontSize="xl" fontWeight="semibold">
           {isSchoolSpecific && school ? `Classes in ${school.name}` : 'All Kindergarten Classes'}
-        </h1>
-        <Link to="/kindergarten/classes/new" 
-          className="new-class-btn"
+        </Heading>
+        <HStack spacing={2}>
+          <Button 
+            leftIcon={<FaFilter />}
+            size="sm"
+            onClick={toggleFilters}
+            colorScheme="gray"
+            variant="outline"
+          >
+            {isFiltersVisible ? 'Hide Filters' : 'Show Filters'}
+          </Button>
+          <Button 
+            as={Link} 
+            to="/kindergarten/classes/new" 
+            leftIcon={<FaPlus />} 
+            colorScheme="brand"
+            size="sm"
           state={{ schoolId: schoolId }}
         >
-          + New Class
-        </Link>
-      </div>
+            New Class
+          </Button>
+        </HStack>
+      </Flex>
       
-      <div className="class-filters">
-        <div className="search-filter-bar">
-          <div className="filter-group">
-            <input
-              type="text"
+      {isFiltersVisible && (
+        <Box bg={bgColor} p={4} borderRadius="md" mb={6} borderWidth="1px" borderColor={borderColor}>
+          <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(5, 1fr)" }} gap={4}>
+            <Box>
+              <InputGroup>
+                <InputLeftElement pointerEvents="none">
+                  <FaSearch color="gray.300" />
+                </InputLeftElement>
+                <Input
               placeholder="Search classes or teachers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
             />
-          </div>
+              </InputGroup>
+            </Box>
           
-          <div className="filter-group">
-            <select 
+            <Box>
+              <Select 
+                placeholder="All Statuses" 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="status-filter"
             >
-              <option value="">All Statuses</option>
               <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
-        </div>
+                <option value="Planning">Planning</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+              </Select>
+            </Box>
         
-        <div className="advanced-filters">
-          <div className="filter-group">
-            <label>Teacher</label>
-            <select
+            <Box>
+              <Select 
+                placeholder="All Teachers" 
               value={teacherFilter}
               onChange={(e) => setTeacherFilter(e.target.value)}
-              className="filter-select"
-              disabled={loadingFilters}
+                isDisabled={loadingFilters}
             >
-              <option value="">All Teachers</option>
               {teachers.map(teacher => (
-                <option key={teacher._id} value={teacher._id}>{teacher.name}</option>
+                  <option key={teacher._id} value={teacher._id}>
+                    {teacher.name}
+                  </option>
               ))}
-            </select>
-          </div>
+              </Select>
+            </Box>
           
-          <div className="filter-group">
-            <label>Region</label>
-            <select
+            {!isSchoolSpecific && (
+              <>
+                <Box>
+                  <Select 
+                    placeholder="All Regions" 
               value={regionFilter}
               onChange={(e) => setRegionFilter(e.target.value)}
-              className="filter-select"
-              disabled={loadingFilters || isSchoolSpecific}
+                    isDisabled={loadingFilters}
             >
-              <option value="">All Regions</option>
               {regions.map(region => (
-                <option key={region._id} value={region._id}>{region.name}</option>
+                      <option key={region._id} value={region._id}>
+                        {region.name}
+                      </option>
               ))}
-            </select>
-          </div>
+                  </Select>
+                </Box>
           
-          <div className="filter-group">
-            <label>School</label>
-            <select
+                <Box>
+                  <Select 
+                    placeholder="All Schools" 
               value={schoolFilter}
               onChange={(e) => setSchoolFilter(e.target.value)}
-              className="filter-select"
-              disabled={loadingFilters || isSchoolSpecific}
+                    isDisabled={loadingFilters}
             >
-              <option value="">All Schools</option>
-              {schools
-                .filter(school => !regionFilter || 
-                  school.region === regionFilter || 
-                  (school.region && school.region._id === regionFilter))
-                .map(school => (
-                  <option key={school._id} value={school._id}>{school.name}</option>
-                ))
-              }
-            </select>
-          </div>
+                    {schools.map(school => (
+                      <option key={school._id} value={school._id}>
+                        {school.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Box>
+              </>
+            )}
+          </Grid>
           
-          <button 
-            className="reset-filters-btn"
+          <Flex justify="flex-end" mt={4}>
+            <Button 
+              variant="outline" 
+              size="sm" 
             onClick={resetFilters}
           >
-            Reset Filters
-          </button>
-        </div>
-      </div>
+              Clear Filters
+            </Button>
+          </Flex>
+        </Box>
+      )}
       
       {filteredClasses.length === 0 ? (
-        <div className="no-data-message">
-          {searchTerm || statusFilter || teacherFilter || regionFilter || schoolFilter ? 
-            <p>No classes found with the current filters. Try different filters or add a new class.</p> :
-            <p>No classes found. Add your first class to get started.</p>
+        <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" textAlign="center" borderRadius="md">
+          <Text color="gray.500" mb={4}>
+            {searchTerm || statusFilter || teacherFilter || regionFilter || (!isSchoolSpecific && schoolFilter) ? 
+              'No classes match your filters. Try adjusting your search criteria.' :
+              'No classes found. Add your first class to get started.'
           }
-        </div>
+          </Text>
+          {!(searchTerm || statusFilter || teacherFilter || regionFilter || (!isSchoolSpecific && schoolFilter)) && (
+            <Button 
+              as={Link} 
+              to="/kindergarten/classes/new" 
+              leftIcon={<FaPlus />} 
+              colorScheme="brand"
+              size="sm"
+              state={{ schoolId: schoolId }}
+            >
+              Add Class
+            </Button>
+          )}
+        </Box>
       ) : (
-        <div className="classes-table-container">
-          {isMobile ? (
-            // Mobile compact view
-            <div className="classes-mobile-grid">
-              {filteredClasses.map(kClass => (
-                <div 
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+          {filteredClasses.map(kClass => {
+            const statusColorScheme = getStatusColor(kClass.status);
+            
+            return (
+              <Box 
                   key={kClass._id} 
-                  className="class-mobile-card" 
-                  onClick={(e) => handleClassClick(kClass._id, e)}
-                  style={{ cursor: 'pointer' }}
+                bg={bgColor}
+                borderWidth="1px" 
+                borderColor={borderColor}
+                borderRadius="md"
+                p={4}
+                transition="all 0.2s"
+                cursor="pointer"
+                onClick={() => handleClassClick(kClass._id)}
+                _hover={{ shadow: "md", borderColor: "brand.200", transform: "translateY(-2px)" }}
                 >
-                  <div className="class-mobile-header">
-                    <h3>{kClass.name}</h3>
-                    <span className={`class-status status-${kClass.status.toLowerCase()}`}>
+                <Flex mb={2} justify="space-between" align="flex-start">
+                  <Box>
+                    <Heading size="sm" mb={1}>{kClass.name}</Heading>
+                    <Badge px={2} py={1} mb={2} bg={statusColorScheme.bg} color={statusColorScheme.color}>
                       {kClass.status}
-                    </span>
-                  </div>
-                  
-                  <div className="class-mobile-details">
-                    {!isSchoolSpecific && (
-                      <div className="detail-item">
-                        <span className="detail-label">School:</span>
-                        <span className="detail-value">{kClass.school ? kClass.school.name : 'Unknown'}</span>
-                      </div>
-                    )}
-                    
-                    <div className="detail-item">
-                      <span className="detail-label">Teacher:</span>
-                      <span className="detail-value">{getTeacherName(kClass)}</span>
-                    </div>
-                    
-                    <div className="detail-item">
-                      <span className="detail-label">Students:</span>
-                      <span className="detail-value">{kClass.studentCount}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="class-mobile-actions">
-                    <div className="action-dropdown-container">
-                      <button 
-                        className="action-dropdown-toggle"
-                        onClick={(e) => toggleDropdown(kClass._id, e)}
+                    </Badge>
+                  </Box>
+                  <Menu>
+                    <MenuButton
+                      as={IconButton}
+                      aria-label="Options"
+                      icon={<FaEllipsisV />}
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <MenuList onClick={(e) => e.stopPropagation()}>
+                      <MenuItem 
+                        as={Link} 
+                        to={`/kindergarten/classes/${kClass._id}`}
+                        icon={<FaEye />}
                       >
-                        Actions <span className="dropdown-caret">▼</span>
-                      </button>
-                      {openDropdownId === kClass._id && (
-                        <div className="action-dropdown-menu">
-                          <Link to={`/kindergarten/classes/${kClass._id}`} className="dropdown-item">
-                            <span className="dropdown-icon">👁️</span> View
-                          </Link>
-                          <Link to={`/kindergarten/classes/edit/${kClass._id}`} className="dropdown-item">
-                            <span className="dropdown-icon">✏️</span> Edit
-                          </Link>
-                          <button 
+                        View Details
+                      </MenuItem>
+                      <MenuItem 
+                        as={Link} 
+                        to={`/kindergarten/classes/edit/${kClass._id}`}
+                        icon={<FaEdit />}
+                      >
+                        Edit
+                      </MenuItem>
+                      <MenuItem 
+                        as={Link} 
+                        to={`/kindergarten/classes/${kClass._id}/schedule`}
+                        icon={<FaCalendarAlt />}
+                      >
+                        Schedule
+                      </MenuItem>
+                      <MenuItem 
+                        icon={<FaTrash />} 
+                        color="red.500"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteClass(kClass._id);
                             }} 
-                            className="dropdown-item delete-action"
-                          >
-                            <span className="dropdown-icon">🗑️</span> Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            // Desktop view - table
-            <table className={`classes-table ${!isSchoolSpecific ? 'with-school' : ''}`}>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  {!isSchoolSpecific && <th>School</th>}
-                  <th>Teacher</th>
-                  <th>Students</th>
-                  <th>Age Group</th>
-                  <th>Schedule</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredClasses.map(kClass => (
-                  <tr 
-                    key={kClass._id} 
-                    onClick={(e) => handleClassClick(kClass._id, e)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <td>{kClass.name}</td>
-                    {!isSchoolSpecific && (
-                      <td>{kClass.school ? kClass.school.name : 'Unknown'}</td>
-                    )}
-                    <td>{getTeacherName(kClass)}</td>
-                    <td className="center-align">{kClass.studentCount}</td>
-                    <td>{kClass.ageGroup}</td>
-                    <td>
-                      {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
-                        <div className="schedule-info">
-                          {kClass.weeklySchedule.map((schedule, index) => {
-                            // Get first 3 letters of day and capitalize
-                            const shortDay = schedule.day.substring(0, 3);
-                            
-                            return (
-                              <div key={index} className="schedule-day">
-                                <span className="day">{shortDay}:</span>
-                                <span className="time">{schedule.startTime} - {schedule.endTime}</span>
-                              </div>
+                      >
+                        Delete
+                      </MenuItem>
+                    </MenuList>
+                  </Menu>
+                </Flex>
+                
+                <VStack align="stretch" spacing={2} fontSize="sm">
+                  <Flex align="center">
+                    <Box as={FaChalkboardTeacher} color="brand.500" mr={2} />
+                    <Text fontWeight="medium">Teacher:</Text>
+                    <Text ml={1}>{getTeacherName(kClass)}</Text>
+                  </Flex>
+                  
+                  {kClass.school && (
+                    <Flex align="center">
+                      <Box as={FaSchool} color="green.500" mr={2} />
+                      <Text fontWeight="medium">School:</Text>
+                      <Text ml={1}>{kClass.school.name}</Text>
+                    </Flex>
+                  )}
+                  
+                  {kClass.daySchedule && (
+                    <Flex align="center">
+                      <Box as={FaCalendarAlt} color="blue.500" mr={2} />
+                      <Text fontWeight="medium">Schedule:</Text>
+                      <Text ml={1}>{kClass.daySchedule}</Text>
+                    </Flex>
+                  )}
+                </VStack>
+              </Box>
                             );
                           })}
-                        </div>
-                      ) : (
-                        'No schedule set'
-                      )}
-                    </td>
-                    <td>
-                      <span className={`class-status status-${kClass.status.toLowerCase()}`}>
-                        {kClass.status}
-                      </span>
-                    </td>
-                    <td className="actions-cell">
-                      <div className="action-dropdown-container">
-                        <button 
-                          className="action-dropdown-toggle"
-                          onClick={(e) => toggleDropdown(kClass._id, e)}
-                        >
-                          Actions <span className="dropdown-caret">▼</span>
-                        </button>
-                        {openDropdownId === kClass._id && (
-                          <div className="action-dropdown-menu">
-                            <Link to={`/kindergarten/classes/${kClass._id}`} className="dropdown-item">
-                              <span className="dropdown-icon">👁️</span> View
-                            </Link>
-                            <Link to={`/kindergarten/classes/edit/${kClass._id}`} className="dropdown-item">
-                              <span className="dropdown-icon">✏️</span> Edit
-                            </Link>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClass(kClass._id);
-                              }} 
-                              className="dropdown-item delete-action"
-                            >
-                              <span className="dropdown-icon">🗑️</span> Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        </SimpleGrid>
       )}
-      
-      <div className="breadcrumb-navigation">
-        <Link to="/kindergarten" className="breadcrumb-link">Dashboard</Link>
-        <span className="breadcrumb-separator">/</span>
-        {isSchoolSpecific && school && (
-          <>
-            <Link to="/kindergarten/schools" className="breadcrumb-link">Schools</Link>
-            <span className="breadcrumb-separator">/</span>
-            <span className="breadcrumb-current">{school.name}</span>
-          </>
-        )}
-        {!isSchoolSpecific && (
-          <span className="breadcrumb-current">Classes</span>
-        )}
-      </div>
-    </div>
+    </Box>
   );
 };
 

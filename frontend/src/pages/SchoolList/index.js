@@ -1,11 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams, useLocation } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { schoolsAPI, regionsAPI } from '../../api';
-import './SchoolList.css';
+import {
+  Box,
+  Heading,
+  Text,
+  Button,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Flex,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  HStack,
+  VStack,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  IconButton,
+  Spinner,
+  useColorModeValue
+} from '@chakra-ui/react';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaChalkboardTeacher, FaEnvelope, FaPhone } from 'react-icons/fa';
 
 const SchoolList = () => {
   const { regionId } = useParams();
-  const location = useLocation();
   
   const [schools, setSchools] = useState([]);
   const [region, setRegion] = useState(null);
@@ -15,6 +38,10 @@ const SchoolList = () => {
   
   // Determine if we're viewing schools for a specific region
   const isRegionSpecific = !!regionId;
+
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const tableHeaderBg = useColorModeValue('gray.50', 'gray.700');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -77,125 +104,185 @@ const SchoolList = () => {
   );
 
   if (loading) {
-    return <div className="loading-spinner">Loading schools...</div>;
+    return (
+      <Box p={4} textAlign="center">
+        <Spinner color="brand.500" size="lg" />
+        <Text mt={2} color="gray.500">Loading schools...</Text>
+      </Box>
+    );
   }
 
   if (error) {
     return (
-      <div className="error-message">
-        <h2>Error</h2>
-        <p>{error}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-      </div>
+      <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
+        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Text mb={4}>{error}</Text>
+        <Button colorScheme="red" variant="outline" onClick={() => window.location.reload()}>
+          Retry
+        </Button>
+      </Box>
     );
   }
 
   return (
-    <div className="school-list-container">
-      <div className="school-list-header">
-        <h1>
-          {isRegionSpecific && region ? `Schools in ${region.name}` : 'All Schools'}
-        </h1>
-        <Link to="/kindergarten/schools/new" 
-          className="new-school-btn"
-          state={{ regionId: regionId }}
-        >
-          + New School
-        </Link>
-      </div>
-      
-      <div className="search-filter-bar">
-        <input
-          type="text"
-          placeholder="Search schools..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
-        />
-      </div>
-      
-      {filteredSchools.length === 0 ? (
-        <div className="no-data-message">
-          {searchTerm ? 
-            <p>No schools found matching "{searchTerm}". Try a different search term or add a new school.</p> :
-            <p>No schools found. Add your first school to get started.</p>
-          }
-        </div>
-      ) : (
-        <div className="schools-table-container">
-          <table className="schools-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                {!isRegionSpecific && <th>Region</th>}
-                <th>Contact Person</th>
-                <th>Contact Info</th>
-                <th>Address</th>
-                <th>Classes</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSchools.map(school => (
-                <tr key={school._id}>
-                  <td>{school.name}</td>
-                  {!isRegionSpecific && (
-                    <td>{school.region ? school.region.name : 'Unknown'}</td>
-                  )}
-                  <td>{school.contactPerson || 'Not specified'}</td>
-                  <td>
-                    {school.contactEmail && (
-                      <div className="contact-info">
-                        <span className="info-label">Email:</span>
-                        <span className="info-value">{school.contactEmail}</span>
-                      </div>
-                    )}
-                    {school.contactPhone && (
-                      <div className="contact-info">
-                        <span className="info-label">Phone:</span>
-                        <span className="info-value">{school.contactPhone}</span>
-                      </div>
-                    )}
-                    {!school.contactEmail && !school.contactPhone && 'Not specified'}
-                  </td>
-                  <td>{school.address || 'Not specified'}</td>
-                  <td className="classes-cell">
-                    <Link to={`/kindergarten/schools/${school._id}/classes`}>
-                      View Classes
-                    </Link>
-                  </td>
-                  <td className="actions-cell">
-                    <Link to={`/kindergarten/schools/edit/${school._id}`} className="edit-btn">
-                      Edit
-                    </Link>
-                    <button 
-                      onClick={() => handleDeleteSchool(school._id)} 
-                      className="delete-btn"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      
-      <div className="breadcrumb-navigation">
-        <Link to="/kindergarten" className="breadcrumb-link">Dashboard</Link>
-        <span className="breadcrumb-separator">/</span>
+    <Box>
+      <Breadcrumb mb={4} fontSize="sm" color="gray.500">
+        <BreadcrumbItem>
+          <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
+        </BreadcrumbItem>
         {isRegionSpecific && region ? (
           <>
-            <Link to="/kindergarten/regions" className="breadcrumb-link">Regions</Link>
-            <span className="breadcrumb-separator">/</span>
-            <span className="breadcrumb-current">{region.name}</span>
+            <BreadcrumbItem>
+              <BreadcrumbLink as={Link} to="/kindergarten/regions">Regions</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbItem>
+              <BreadcrumbLink>{region.name}</BreadcrumbLink>
+            </BreadcrumbItem>
           </>
         ) : (
-          <span className="breadcrumb-current">Schools</span>
+          <BreadcrumbItem isCurrentPage>
+            <BreadcrumbLink>Schools</BreadcrumbLink>
+          </BreadcrumbItem>
         )}
-      </div>
-    </div>
+      </Breadcrumb>
+      
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading fontSize="xl" fontWeight="semibold">
+          {isRegionSpecific && region ? `Schools in ${region.name}` : 'All Schools'}
+        </Heading>
+        <Button 
+          as={Link} 
+          to="/kindergarten/schools/new" 
+          leftIcon={<FaPlus />} 
+          colorScheme="green" 
+          size="sm"
+          state={{ regionId: regionId }}
+        >
+          New School
+        </Button>
+      </Flex>
+      
+      <Box mb={6}>
+        <InputGroup>
+          <InputLeftElement pointerEvents="none">
+            <FaSearch color="gray.300" />
+          </InputLeftElement>
+          <Input
+            placeholder="Search schools..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            borderColor={borderColor}
+          />
+        </InputGroup>
+      </Box>
+      
+      {filteredSchools.length === 0 ? (
+        <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" textAlign="center" borderRadius="md">
+          <Text color="gray.500" mb={4}>
+            {searchTerm ? 
+              `No schools found matching "${searchTerm}". Try a different search term or add a new school.` :
+              'No schools found. Add your first school to get started.'
+            }
+          </Text>
+          {!searchTerm && (
+            <Button 
+              as={Link} 
+              to="/kindergarten/schools/new" 
+              leftIcon={<FaPlus />} 
+              colorScheme="green"
+              size="sm"
+              state={{ regionId: regionId }}
+            >
+              Add School
+            </Button>
+          )}
+        </Box>
+      ) : (
+        <Box 
+          borderWidth="1px" 
+          borderColor={borderColor} 
+          borderRadius="md" 
+          overflow="hidden"
+        >
+          <Table variant="simple">
+            <Thead bg={tableHeaderBg}>
+              <Tr>
+                <Th>Name</Th>
+                {!isRegionSpecific && <Th>Region</Th>}
+                <Th>Contact Person</Th>
+                <Th>Contact Info</Th>
+                <Th>Address</Th>
+                <Th>Classes</Th>
+                <Th width="150px" textAlign="right">Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {filteredSchools.map(school => (
+                <Tr key={school._id}>
+                  <Td fontWeight="medium">{school.name}</Td>
+                  {!isRegionSpecific && (
+                    <Td>{school.region ? school.region.name : 'Unknown'}</Td>
+                  )}
+                  <Td>{school.contactPerson || 'Not specified'}</Td>
+                  <Td>
+                    {(school.contactEmail || school.contactPhone) ? (
+                      <VStack align="flex-start" spacing={1}>
+                        {school.contactEmail && (
+                          <Flex align="center">
+                            <Box as={FaEnvelope} color="gray.500" mr={1} fontSize="xs" />
+                            <Text fontSize="sm">{school.contactEmail}</Text>
+                          </Flex>
+                        )}
+                        {school.contactPhone && (
+                          <Flex align="center">
+                            <Box as={FaPhone} color="gray.500" mr={1} fontSize="xs" />
+                            <Text fontSize="sm">{school.contactPhone}</Text>
+                          </Flex>
+                        )}
+                      </VStack>
+                    ) : 'Not specified'}
+                  </Td>
+                  <Td>{school.address || 'Not specified'}</Td>
+                  <Td>
+                    <Button
+                      as={Link}
+                      to={`/kindergarten/schools/${school._id}/classes`}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="green"
+                      leftIcon={<FaChalkboardTeacher />}
+                    >
+                      View Classes
+                    </Button>
+                  </Td>
+                  <Td textAlign="right">
+                    <HStack spacing={2} justify="flex-end">
+                      <IconButton
+                        as={Link}
+                        to={`/kindergarten/schools/edit/${school._id}`}
+                        icon={<FaEdit />}
+                        aria-label="Edit school"
+                        size="sm"
+                        colorScheme="blue"
+                        variant="ghost"
+                      />
+                      <IconButton
+                        icon={<FaTrash />}
+                        aria-label="Delete school"
+                        size="sm"
+                        colorScheme="red"
+                        variant="ghost"
+                        onClick={() => handleDeleteSchool(school._id)}
+                      />
+                    </HStack>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Box>
+      )}
+    </Box>
   );
 };
 

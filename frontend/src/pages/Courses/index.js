@@ -1,7 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { coursesAPI, branchesAPI, teachersAPI } from '../../api';
-import './Courses.css';
+import { 
+  Box, 
+  Heading, 
+  Text, 
+  SimpleGrid, 
+  Flex, 
+  Input, 
+  Select, 
+  Button, 
+  Badge, 
+  IconButton, 
+  Stack, 
+  Spinner, 
+  useColorModeValue,
+  HStack
+} from '@chakra-ui/react';
+import { FaSearch, FaFilter, FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaEye, FaUserGraduate } from 'react-icons/fa';
 
 const Courses = () => {
   const navigate = useNavigate();
@@ -21,6 +37,9 @@ const Courses = () => {
   const [branches, setBranches] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [isFiltersVisible, setIsFiltersVisible] = useState(true);
+
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   useEffect(() => {
     fetchCourses();
@@ -94,13 +113,13 @@ const Courses = () => {
     setFilteredCourses(result);
   };
 
-  const getStatusClass = (status) => {
+  const getStatusColor = (status) => {
     switch (status) {
-      case 'Active': return 'status-active';
-      case 'Upcoming': return 'status-upcoming';
-      case 'Finished': return 'status-finished';
-      case 'Cancelled': return 'status-cancelled';
-      default: return '';
+      case 'Active': return { bg: 'green.100', color: 'green.700' };
+      case 'Upcoming': return { bg: 'blue.100', color: 'blue.700' };
+      case 'Finished': return { bg: 'gray.100', color: 'gray.700' };
+      case 'Cancelled': return { bg: 'red.100', color: 'red.700' };
+      default: return { bg: 'gray.100', color: 'gray.700' };
     }
   };
 
@@ -113,7 +132,8 @@ const Courses = () => {
     });
   };
 
-  const handleDeleteCourse = async (courseId) => {
+  const handleDeleteCourse = async (courseId, e) => {
+    e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
       try {
         await coursesAPI.remove(courseId);
@@ -139,230 +159,249 @@ const Courses = () => {
   };
 
   // Handle click on course card to navigate to course details
-  const handleCourseClick = (courseId, event) => {
-    // If the click is on a button or link (action buttons), don't navigate
-    if (event.target.closest('button') || 
-        event.target.closest('a') || 
-        event.target.closest('.course-card-actions')) {
-      return;
-    }
-    
-    // Navigate to course details page
+  const handleCourseClick = (courseId) => {
     navigate(`/courses/${courseId}`);
   };
 
   if (loading) {
-    return <div className="loading-spinner">Loading courses...</div>;
+    return (
+      <Box p={4} textAlign="center">
+        <Spinner color="brand.500" size="lg" />
+        <Text mt={2} color="gray.500">Loading courses...</Text>
+      </Box>
+    );
   }
 
   if (error) {
     return (
-      <div className="error-message">
-        <h2>Error</h2>
-        <p>{error}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-      </div>
+      <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
+        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Text mb={4}>{error}</Text>
+        <Button colorScheme="red" variant="outline" onClick={() => window.location.reload()}>
+          Retry
+        </Button>
+      </Box>
     );
   }
 
   return (
-    <div className="courses-container">
-      <div className="courses-header">
-        <h1>Courses</h1>
-        <div className="header-actions">
-          <button 
-            className="filter-toggle-btn"
+    <Box>
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading fontSize="xl" fontWeight="semibold">Courses</Heading>
+        <HStack spacing={2}>
+          <Button 
+            leftIcon={<FaFilter />}
+            size="sm"
             onClick={toggleFilters}
+            colorScheme="gray"
+            variant="outline"
           >
             {isFiltersVisible ? 'Hide Filters' : 'Show Filters'}
-          </button>
-          <Link to="/courses/new" className="new-course-btn">+ New Course</Link>
-        </div>
-      </div>
+          </Button>
+          <Button 
+            as={Link} 
+            to="/courses/new" 
+            leftIcon={<FaPlus />} 
+            colorScheme="brand"
+            size="sm"
+          >
+            New Course
+          </Button>
+        </HStack>
+      </Flex>
       
       {isFiltersVisible && (
-        <div className="courses-filters">
-          <div className="filter-row">
-            <div className="filter-group">
-              <input
-                type="text"
+        <Box bg={bgColor} p={4} borderRadius="md" mb={6} borderWidth="1px" borderColor={borderColor}>
+          <Stack spacing={4} direction={{ base: 'column', md: 'row' }}>
+            <Box flex="1">
+              <Input
                 placeholder="Search by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
+                leftElement={<FaSearch color="gray.300" />}
               />
-            </div>
+            </Box>
             
-            <div className="filter-group">
-              <select 
+            <Box>
+              <Select 
                 value={statusFilter} 
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="filter-select"
+                placeholder="All Statuses"
               >
-                <option value="">All Statuses</option>
                 <option value="Active">Active</option>
                 <option value="Upcoming">Upcoming</option>
                 <option value="Finished">Finished</option>
                 <option value="Cancelled">Cancelled</option>
-              </select>
-            </div>
+              </Select>
+            </Box>
             
-            <div className="filter-group">
-              <select 
+            <Box>
+              <Select 
                 value={levelFilter} 
                 onChange={(e) => setLevelFilter(e.target.value)}
-                className="filter-select"
+                placeholder="All Levels"
               >
-                <option value="">All Levels</option>
                 <option value="Beginner">Beginner</option>
                 <option value="Elementary">Elementary</option>
                 <option value="Intermediate">Intermediate</option>
                 <option value="Upper Intermediate">Upper Intermediate</option>
                 <option value="Advanced">Advanced</option>
                 <option value="Proficient">Proficient</option>
-              </select>
-            </div>
+              </Select>
+            </Box>
             
-            <div className="filter-group">
-              <select 
+            <Box>
+              <Select 
                 value={branchFilter} 
                 onChange={(e) => setBranchFilter(e.target.value)}
-                className="filter-select"
+                placeholder="All Branches"
               >
-                <option value="">All Branches</option>
                 {branches.map(branch => (
                   <option key={branch._id} value={branch._id}>{branch.name}</option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Box>
             
-            <div className="filter-group">
-              <select 
+            <Box>
+              <Select 
                 value={teacherFilter} 
                 onChange={(e) => setTeacherFilter(e.target.value)}
-                className="filter-select"
+                placeholder="All Teachers"
               >
-                <option value="">All Teachers</option>
                 {teachers.map(teacher => (
                   <option key={teacher._id} value={teacher._id}>{teacher.name}</option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Box>
             
-            <button 
-              className="clear-filters-btn"
-              onClick={clearFilters}
-            >
-              Clear Filters
-            </button>
-          </div>
-          
-          <div className="filter-summary">
-            Showing {filteredCourses.length} of {courses.length} courses
-            {(searchTerm || statusFilter || levelFilter || branchFilter || teacherFilter) && (
-              <span className="active-filters">
-                {searchTerm && <span className="filter-tag">Search: "{searchTerm}"</span>}
-                {statusFilter && <span className="filter-tag">Status: {statusFilter}</span>}
-                {levelFilter && <span className="filter-tag">Level: {levelFilter}</span>}
-                {branchFilter && <span className="filter-tag">Branch: {branches.find(b => b._id === branchFilter)?.name || 'Unknown'}</span>}
-                {teacherFilter && <span className="filter-tag">Teacher: {teachers.find(t => t._id === teacherFilter)?.name || 'Unknown'}</span>}
-              </span>
-            )}
-          </div>
-        </div>
+            <Button onClick={clearFilters} variant="outline" size="md">
+              Clear
+            </Button>
+          </Stack>
+        </Box>
       )}
       
       {filteredCourses.length === 0 ? (
-        <div className="no-data-message">
-          {courses.length === 0 ? (
-            <p>No courses found. Add your first course to get started.</p>
+        <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" textAlign="center" borderRadius="md">
+          <Text color="gray.500">No courses found. Adjust your filters or add a new course to get started.</Text>
+        </Box>
           ) : (
-            <p>No courses match your filter criteria. <button onClick={clearFilters} className="clear-filters-link">Clear filters</button></p>
-          )}
-        </div>
-      ) : (
-        <div className="courses-grid">
-          {filteredCourses.map(course => (
-            <div 
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+          {filteredCourses.map(course => {
+            const statusColorScheme = getStatusColor(course.status);
+            
+            return (
+              <Box 
               key={course._id} 
-              className="course-card" 
-              onClick={(e) => handleCourseClick(course._id, e)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="course-card-header">
-                <div className="course-name-wrapper">
-                  <h3 className="course-name">{course.name}</h3>
-                  <span className="course-level">{course.level}</span>
-                </div>
-                <span className={`course-status ${getStatusClass(course.status)}`}>
+                bg={bgColor}
+                borderWidth="1px" 
+                borderColor={borderColor}
+                borderRadius="md"
+                p={4}
+                transition="all 0.2s"
+                cursor="pointer"
+                onClick={() => handleCourseClick(course._id)}
+                _hover={{ shadow: "md", borderColor: "brand.200", transform: "translateY(-2px)" }}
+              >
+                <Box mb={4}>
+                  <Heading size="sm" mb={1}>{course.name}</Heading>
+                  <Badge px={2} py={1} mb={2} bg={statusColorScheme.bg} color={statusColorScheme.color}>
                   {course.status}
-                </span>
-              </div>
-              
-              <div className="course-card-content">
-                <div className="course-detail">
-                  <span className="detail-label">Branch:</span>
-                  <span className="detail-value">{course.branch?.name || 'Unknown Branch'}</span>
-                </div>
+                  </Badge>
+                  
+                  {course.level && (
+                    <Badge ml={course.status ? 2 : 0} px={2} py={1} bg="purple.100" color="purple.700">
+                      {course.level}
+                    </Badge>
+                  )}
+                </Box>
                 
-                <div className="course-detail">
-                  <span className="detail-label">Teacher:</span>
-                  <span className="detail-value">{course.teacher?.name || 'Unknown Teacher'}</span>
-                </div>
+                <Stack spacing={2} mb={4} fontSize="sm">
+                  {course.teacher && (
+                    <Flex align="center">
+                      <Text fontWeight="medium" width="80px">Teacher:</Text>
+                      <Text>{course.teacher.name}</Text>
+                    </Flex>
+                  )}
+                  
+                  {course.branch && (
+                    <Flex align="center">
+                      <Text fontWeight="medium" width="80px">Branch:</Text>
+                      <Text>{course.branch.name}</Text>
+                    </Flex>
+                  )}
+                  
+                  <Flex align="center">
+                    <Text fontWeight="medium" width="80px">Start:</Text>
+                    <Text>{formatDate(course.startDate)}</Text>
+                  </Flex>
                 
-                <div className="course-detail">
-                  <span className="detail-label">Total enrolled students:</span>
-                  <span className="detail-value">
-                    {course.maxStudents || 0}
-                  </span>
-                </div>
+                  <Flex align="center">
+                    <Text fontWeight="medium" width="80px">End:</Text>
+                    <Text>{formatDate(course.endDate)}</Text>
+                  </Flex>
+                </Stack>
                 
-                <div className="course-detail">
-                  <span className="detail-label">Start Date:</span>
-                  <span className="detail-value">{formatDate(course.startDate)}</span>
-                </div>
-                
-                <div className="course-detail">
-                  <span className="detail-label">End Date:</span>
-                  <span className="detail-value">{formatDate(course.endDate)}</span>
-                </div>
-                
-                <div className="course-detail">
-                  <span className="detail-label">Price:</span>
-                  <span className="detail-value">${course.price}</span>
-                </div>
-                
-                <div className="course-progress">
-                  <span className="detail-label">Progress:</span>
-                  <div className="progress-bar-container">
-                    <div 
-                      className="progress-bar-fill"
-                      style={{ width: `${course.progress || 0}%` }}
-                    ></div>
-                    <span className="progress-text">{course.progress || 0}%</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="course-card-actions">
-                <Link to={`/courses/${course._id}`} className="action-btn view-btn">
-                  View
-                </Link>
-                <Link to={`/courses/edit/${course._id}`} className="action-btn edit-btn">
-                  Edit
-                </Link>
-                <button 
-                  onClick={() => handleDeleteCourse(course._id)} 
-                  className="action-btn delete-btn"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+                <Flex justify="flex-end" mt={4} gap={2}>
+                  <IconButton
+                    icon={<FaEye />}
+                    aria-label="View course details"
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="gray"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/courses/${course._id}`);
+                    }}
+                  />
+                  <IconButton
+                    icon={<FaEdit />}
+                    aria-label="Edit course"
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="blue"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/courses/edit/${course._id}`);
+                    }}
+                  />
+                  <IconButton
+                    icon={<FaCalendarAlt />}
+                    aria-label="Course sessions"
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="green"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/courses/${course._id}/sessions`);
+                    }}
+                  />
+                  <IconButton
+                    icon={<FaUserGraduate />}
+                    aria-label="Students"
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="brand"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/courses/${course._id}?tab=enrollments`);
+                    }}
+                  />
+                  <IconButton
+                    icon={<FaTrash />}
+                    aria-label="Delete course"
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="red"
+                    onClick={(e) => handleDeleteCourse(course._id, e)}
+                  />
+                </Flex>
+              </Box>
+            );
+          })}
+        </SimpleGrid>
       )}
-    </div>
+    </Box>
   );
 };
 

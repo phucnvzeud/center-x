@@ -48,6 +48,15 @@ const KindergartenNavBar = () => {
           >
             Classes
           </NavLink>
+          
+          <NavLink 
+            to="/notifications"
+            className={({ isActive }) => 
+              isActive || location.pathname.includes('/notifications') ? "kinder-nav-link active" : "kinder-nav-link"
+            }
+          >
+            Notifications
+          </NavLink>
         </div>
         
         <div className="kindergarten-navbar-actions">

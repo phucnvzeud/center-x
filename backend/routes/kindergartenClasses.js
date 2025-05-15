@@ -214,6 +214,37 @@ router.put('/:id/sessions/:sessionIndex', async (req, res) => {
   }
 });
 
+// Permanently delete a session by its index
+router.delete('/:id/sessions/:sessionIndex', async (req, res) => {
+  try {
+    const { id, sessionIndex } = req.params;
+    const kClass = await KindergartenClass.findById(id);
+
+    if (!kClass) {
+      return res.status(404).json({ message: 'Kindergarten class not found' });
+    }
+
+    const sessionIdx = parseInt(sessionIndex, 10);
+    if (isNaN(sessionIdx) || sessionIdx < 0 || sessionIdx >= kClass.sessions.length) {
+      return res.status(404).json({ message: 'Session not found at the specified index' });
+    }
+
+    // Remove the session from the array
+    kClass.sessions.splice(sessionIdx, 1);
+
+    // Recalculate session stats if necessary (or ensure your model hooks handle this)
+    // For example, if totalSessions on the kClass model itself needs updating
+    // kClass.totalSessions = kClass.sessions.length; // Or more complex logic
+
+    await kClass.save();
+    res.json({ message: 'Session deleted permanently', updatedClass: kClass });
+
+  } catch (err) {
+    console.error('Error permanently deleting session:', err);
+    res.status(500).json({ message: 'Server error while deleting session' });
+  }
+});
+
 // Get all sessions for a class
 router.get('/:id/sessions', async (req, res) => {
   try {

@@ -103,7 +103,8 @@ export const kindergartenClassesAPI = {
   getSessions: (id) => api.get(`/kindergarten-classes/${id}/sessions`),
   getSessionStats: (id) => api.get(`/kindergarten-classes/${id}/sessions/stats`),
   getStats: () => api.get('/kindergarten-classes/stats/overview'),
-  addCustomSession: (id, data) => api.post(`/kindergarten-classes/${id}/sessions/custom`, data)
+  addCustomSession: (id, data) => api.post(`/kindergarten-classes/${id}/sessions/custom`),
+  deleteSession: (classId, sessionIndex) => api.delete(`/kindergarten-classes/${classId}/sessions/${sessionIndex}`)
 };
 
 // Holidays API for global holiday management

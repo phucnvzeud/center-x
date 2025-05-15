@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { teachersAPI, coursesAPI, studentsAPI, kindergartenClassesAPI, holidaysAPI } from '../../api';
 import { Chart } from 'react-google-charts';
 import NotificationWidget from '../../components/NotificationWidget';
-import { FaUserGraduate, FaChalkboardTeacher, FaBook, FaCalendarAlt, FaSchool, FaUserFriends, FaExclamationTriangle } from 'react-icons/fa';
+import { FaUserGraduate, FaChalkboardTeacher, FaBook, FaCalendarAlt, FaSchool, FaUserFriends, FaExclamationTriangle, FaChartPie, FaChartBar } from 'react-icons/fa';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { Box, Grid, Heading, Text, Flex, Stack, Stat, StatLabel, StatNumber, Badge, Table, Thead, Tbody, Tr, Th, Td, Divider, SimpleGrid, useColorModeValue } from '@chakra-ui/react';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -199,260 +200,300 @@ const Dashboard = () => {
     setTeachersByBranch(chartData);
   };
 
+  const chartOptions = {
+    backgroundColor: 'transparent',
+    colors: ['#805ad5', '#6b46c1', '#9f7aea', '#d6bfff'],
+    legend: { position: 'bottom', textStyle: { color: '#4b5563', fontSize: 12 } },
+    chartArea: { width: '90%', height: '80%' },
+    is3D: false,
+    pieHole: 0.4,
+    sliceVisibilityThreshold: 0.05,
+  };
+
   if (loading) {
     return (
-      <div className="dashboard-container">
-        <div className="loading-spinner">Loading dashboard data...</div>
-      </div>
+      <Box p={4}>
+        <Text color="gray.500">Loading dashboard data...</Text>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <div className="dashboard-container">
-        <div className="error-message">
-          <h3>Error</h3>
-          <p>{error}</p>
-          <button onClick={() => window.location.reload()}>Try Again</button>
-        </div>
-      </div>
+      <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
+        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Text mb={4}>{error}</Text>
+        <Box as="button" bg="red.100" px={4} py={2} color="red.700" fontWeight="medium" _hover={{ bg: "red.200" }} onClick={() => window.location.reload()}>
+          Try Again
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div className="dashboard-container">
-      <h1>Dashboard</h1>
+    <Box>
+      <Heading mb={6} fontSize="xl" fontWeight="semibold">Dashboard</Heading>
       
-      <div className="dashboard-grid">
-        <div className="dashboard-main">
-          {/* Main Stats */}
-          <section className="dashboard-summary">
-            <h2>System Overview</h2>
-            <div className="dashboard-stats">
-              <div className="stat-card">
-                <div className="stat-icon teacher-icon">
-                  <FaChalkboardTeacher />
-                </div>
-                <div className="stat-content">
-                  <div className="stat-value">{stats.teachers || 0}</div>
-                  <div className="stat-label">Teachers</div>
-                </div>
-              </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon student-icon">
-                  <FaUserGraduate />
-                </div>
-                <div className="stat-content">
-                  <div className="stat-value">{stats.students || 0}</div>
-                  <div className="stat-label">Students</div>
-                </div>
-              </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon course-icon">
-                  <FaBook />
-                </div>
-                <div className="stat-content">
-                  <div className="stat-value">{stats.courses || 0}</div>
-                  <div className="stat-label">Courses</div>
-                </div>
-              </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon session-icon">
-                  <FaCalendarAlt />
-                </div>
-                <div className="stat-content">
-                  <div className="stat-value">{stats.totalSessions || 0}</div>
-                  <div className="stat-label">Sessions</div>
-                </div>
-              </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon school-icon">
-                  <FaSchool />
-                </div>
-                <div className="stat-content">
-                  <div className="stat-value">{stats.schools && stats.schools.total ? stats.schools.total : 0}</div>
-                  <div className="stat-label">Schools</div>
-                </div>
-              </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon class-icon">
-                  <FaUserFriends />
-                </div>
-                <div className="stat-content">
-                  <div className="stat-value">{stats.classes && stats.classes.total ? stats.classes.total : 0}</div>
-                  <div className="stat-label">Classes</div>
-                </div>
-              </div>
-            </div>
-          </section>
-          
-          {/* Course Stats Detail */}
-          <section className="dashboard-detail-stats">
-            <h2>Course Status</h2>
-            <div className="detail-stats-container">
-              <div className="detail-stat-card active-stat">
-                <div className="detail-stat-number">{stats.activeCourses || 0}</div>
-                <div className="detail-stat-label">Active Courses</div>
-              </div>
-              <div className="detail-stat-card upcoming-stat">
-                <div className="detail-stat-number">{stats.upcomingCourses || 0}</div>
-                <div className="detail-stat-label">Upcoming Courses</div>
-              </div>
-              <div className="detail-stat-card complete-stat">
-                <div className="detail-stat-number">{stats.completedCourses || 0}</div>
-                <div className="detail-stat-label">Completed Courses</div>
-              </div>
-              <div className="detail-stat-card cancelled-stat">
-                <div className="detail-stat-number">{stats.cancelledCourses || 0}</div>
-                <div className="detail-stat-label">Cancelled Courses</div>
-              </div>
-            </div>
-          </section>
-          
-          {/* Session Progress */}
-          <section className="dashboard-progress">
-            <h2>Session Progress</h2>
-            <div className="progress-bar-container">
-              <div className="progress-info">
-                <span>Completed: {stats.completedSessions}</span>
-                <span>{stats.totalSessions > 0 ? Math.round((stats.completedSessions / stats.totalSessions) * 100) : 0}%</span>
-              </div>
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${stats.totalSessions > 0 ? (stats.completedSessions / stats.totalSessions) * 100 : 0}%` }}>
-                </div>
-              </div>
-              <div className="progress-total">
-                Total Sessions: {stats.totalSessions}
-              </div>
-            </div>
-          </section>
-          
-          {/* Charts */}
-          <section className="dashboard-charts">
-            <div className="chart-container">
-              <h2>Courses by Status</h2>
-              {coursesByStatus.length > 1 ? (
+      {/* Stats Overview */}
+      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
+        <StatCard 
+          icon={<FaChalkboardTeacher />} 
+          title="Teachers" 
+          value={stats.teachers} 
+          iconBg="purple.100" 
+          iconColor="purple.500" 
+          to="/teachers" 
+        />
+        <StatCard 
+          icon={<FaUserGraduate />} 
+          title="Students" 
+          value={stats.students} 
+          iconBg="blue.100" 
+          iconColor="blue.500" 
+          to="/students" 
+        />
+        <StatCard 
+          icon={<FaBook />} 
+          title="Courses" 
+          value={stats.courses} 
+          iconBg="green.100" 
+          iconColor="green.500" 
+          to="/courses" 
+        />
+        <StatCard 
+          icon={<FaSchool />} 
+          title="Schools" 
+          value={stats.schools.total} 
+          iconBg="orange.100" 
+          iconColor="orange.500" 
+          to="/kindergarten/schools" 
+        />
+      </SimpleGrid>
+      
+      <Grid templateColumns={{ base: "1fr", lg: "1fr 350px" }} gap={6}>
+        <Box>
+          {/* Course Status Distribution */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6}>
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                <FaChartPie />
+              </Box>
+              <Heading size="sm">Course Status Distribution</Heading>
+            </Flex>
+            <Box height="300px">
+              {coursesByStatus.length > 1 && (
                 <Chart
-                  width={'100%'}
-                  height={'300px'}
                   chartType="PieChart"
-                  loader={<div>Loading Chart...</div>}
                   data={coursesByStatus}
                   options={{
-                    pieHole: 0.4,
-                    colors: ['#4CAF50', '#2196F3', '#F44336', '#FFC107'],
-                    chartArea: { width: '90%', height: '90%' },
-                    legend: { position: 'right' }
+                    ...chartOptions,
+                    title: '',
                   }}
+                  width="100%"
+                  height="100%"
                 />
-              ) : (
-                <div className="no-data">No course data available</div>
               )}
-            </div>
-            
-            <div className="chart-container">
-              <h2>Teachers by Branch</h2>
-              {teachersByBranch.length > 1 ? (
+            </Box>
+          </Box>
+          
+          {/* Teachers by Branch */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6}>
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                <FaChartBar />
+              </Box>
+              <Heading size="sm">Teachers by Branch</Heading>
+            </Flex>
+            <Box height="300px">
+              {teachersByBranch.length > 1 && (
                 <Chart
-                  width={'100%'}
-                  height={'300px'}
                   chartType="BarChart"
-                  loader={<div>Loading Chart...</div>}
                   data={teachersByBranch}
                   options={{
-                    chartArea: { width: '70%' },
-                    hAxis: { title: 'Teachers' },
-                    vAxis: { title: 'Branch' },
-                    colors: ['#673AB7']
+                    ...chartOptions,
+                    title: '',
+                    hAxis: { title: 'Teachers', titleTextStyle: { color: '#4b5563' } },
+                    vAxis: { title: 'Branch', titleTextStyle: { color: '#4b5563' } },
                   }}
+                  width="100%"
+                  height="100%"
                 />
-              ) : (
-                <div className="no-data">No teacher data available</div>
               )}
-            </div>
-          </section>
+            </Box>
+          </Box>
           
-          {/* Quick Insights */}
-          <section className="dashboard-insights">
-            <div className="insight-column">
-              <h2>Upcoming Sessions</h2>
-              <div className="insight-list">
-                {upcomingSessions.length > 0 ? (
-                  upcomingSessions.map((session, index) => (
-                    <Link to={`/courses/${session.courseId}`} key={index} className="insight-item">
-                      <div className="insight-date">{format(session.date, 'MMM dd')}</div>
-                      <div className="insight-content">
-                        <div className="insight-title">{session.courseName}</div>
-                        <div className="insight-details">{format(session.date, 'h:mm a')}</div>
-                      </div>
+          {/* Recent Courses */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4}>
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                <FaBook />
+              </Box>
+              <Heading size="sm">Recent Courses</Heading>
+            </Flex>
+            <Table variant="simple" size="sm">
+              <Thead>
+                <Tr>
+                  <Th>Course Name</Th>
+                  <Th>Status</Th>
+                  <Th>Students</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {recentCourses.map((course) => (
+                  <Tr key={course._id}>
+                    <Td>
+                      <Link to={`/courses/${course._id}`} style={{ color: '#805ad5' }}>
+                        {course.name}
                     </Link>
-                  ))
-                ) : (
-                  <div className="no-data">No upcoming sessions</div>
+                    </Td>
+                    <Td>
+                      <CourseStatusBadge status={course.status} />
+                    </Td>
+                    <Td>{course.students?.length || 0}</Td>
+                  </Tr>
+                ))}
+                {recentCourses.length === 0 && (
+                  <Tr>
+                    <Td colSpan={3}>No courses found</Td>
+                  </Tr>
                 )}
-              </div>
-            </div>
-            
-            <div className="insight-column">
-              <h2>Recent Courses</h2>
-              <div className="insight-list">
-                {recentCourses.length > 0 ? (
-                  recentCourses.map(course => (
-                    <Link to={`/courses/${course._id}`} key={course._id} className="insight-item">
-                      <div className="insight-icon">
-                        <FaBook />
-                      </div>
-                      <div className="insight-content">
-                        <div className="insight-title">{course.name}</div>
-                        <div className="insight-details">
-                          Status: <span className={`status-badge status-${course.status?.toLowerCase()}`}>{course.status}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="no-data">No courses available</div>
-                )}
-              </div>
-            </div>
-            
-            <div className="insight-column holidays-column">
-              <h2>Upcoming Holidays</h2>
-              <div className="insight-list">
-                {nextHolidays.length > 0 ? (
-                  nextHolidays.map(holiday => (
-                    <div key={holiday._id} className="insight-item holiday-item">
-                      <div className="insight-icon holiday-icon">
-                        <FaExclamationTriangle />
-                      </div>
-                      <div className="insight-content">
-                        <div className="insight-title">{holiday.name}</div>
-                        <div className="insight-details">
-                          {format(new Date(holiday.startDate), 'MMM dd')} - {format(new Date(holiday.endDate), 'MMM dd, yyyy')}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="no-data">No upcoming holidays</div>
-                )}
-              </div>
-            </div>
-          </section>
-        </div>
+              </Tbody>
+            </Table>
+          </Box>
+        </Box>
         
-        <div className="dashboard-sidebar">
-          <NotificationWidget />
-        </div>
-      </div>
-    </div>
+        <Stack spacing={6}>
+          {/* Upcoming Sessions */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4}>
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                <FaCalendarAlt />
+              </Box>
+              <Heading size="sm">Upcoming Sessions</Heading>
+            </Flex>
+            {upcomingSessions.length > 0 ? (
+              <Stack spacing={3}>
+                {upcomingSessions.map((session, index) => (
+                  <Box 
+                    key={index} 
+                    p={3} 
+                    bg="gray.50" 
+                    _hover={{ bg: "gray.100" }}
+                  >
+                    <Text fontWeight="medium" fontSize="sm">
+                      <Link to={`/courses/${session.courseId}`} style={{ color: '#805ad5' }}>
+                        {session.courseName}
+                    </Link>
+                    </Text>
+                    <Text fontSize="xs" color="gray.500">
+                      {format(new Date(session.date), 'MMM dd, yyyy • h:mm a')}
+                    </Text>
+                  </Box>
+                ))}
+              </Stack>
+            ) : (
+              <Text fontSize="sm" color="gray.500">No upcoming sessions</Text>
+            )}
+          </Box>
+          
+          {/* Upcoming Holidays */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4}>
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                <FaExclamationTriangle />
+              </Box>
+              <Heading size="sm">Upcoming Holidays</Heading>
+            </Flex>
+                {nextHolidays.length > 0 ? (
+              <Stack spacing={3}>
+                {nextHolidays.map((holiday) => (
+                  <Box 
+                    key={holiday._id} 
+                    p={3} 
+                    bg="gray.50"
+                  >
+                    <Text fontWeight="medium" fontSize="sm">{holiday.name}</Text>
+                    <Text fontSize="xs" color="gray.500">
+                          {format(new Date(holiday.startDate), 'MMM dd')} - {format(new Date(holiday.endDate), 'MMM dd, yyyy')}
+                    </Text>
+                  </Box>
+                ))}
+              </Stack>
+                ) : (
+              <Text fontSize="sm" color="gray.500">No upcoming holidays</Text>
+                )}
+          </Box>
+          
+          {/* Notifications */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4}>
+            <Flex align="center" mb={4}>
+              <Heading size="sm">Recent Notifications</Heading>
+            </Flex>
+            <NotificationWidget limit={4} />
+          </Box>
+        </Stack>
+      </Grid>
+    </Box>
+  );
+};
+
+// Stat Card Component
+const StatCard = ({ icon, title, value, iconBg, iconColor, to }) => {
+  return (
+    <Box 
+      as={Link}
+      to={to}
+      bg="white" 
+      borderWidth="1px" 
+      borderColor="gray.200"
+      p={4}
+      transition="all 0.2s"
+      _hover={{ shadow: "md", borderColor: "purple.200", transform: "translateY(-2px)" }}
+    >
+      <Flex align="center" mb={3}>
+        <Flex
+          w="36px"
+          h="36px"
+          align="center"
+          justify="center"
+          bg={iconBg}
+          color={iconColor}
+          mr={3}
+          fontSize="lg"
+        >
+          {icon}
+        </Flex>
+        <Text fontWeight="medium" color="gray.600">{title}</Text>
+      </Flex>
+      <Text fontSize="2xl" fontWeight="bold">{value.toLocaleString()}</Text>
+    </Box>
+  );
+};
+
+// Course Status Badge Component
+const CourseStatusBadge = ({ status }) => {
+  let color;
+  switch (status) {
+    case 'Active':
+      color = 'green';
+      break;
+    case 'Upcoming':
+      color = 'blue';
+      break;
+    case 'Completed':
+      color = 'purple';
+      break;
+    case 'Cancelled':
+      color = 'red';
+      break;
+    default:
+      color = 'gray';
+  }
+  
+  return (
+    <Badge colorScheme={color} variant="subtle" px={2}>
+      {status}
+    </Badge>
   );
 };
 

@@ -15,7 +15,6 @@
 .error-message {
   background-color: #fff3f3;
   border: 1px solid #ffcccc;
-  border-radius: 4px;
   padding: 1rem;
   margin: 1rem 0;
   color: #d32f2f;
@@ -26,7 +25,6 @@
   color: white;
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 4px;
   cursor: pointer;
   margin-top: 0.5rem;
 }
@@ -66,7 +64,6 @@
 
 .stat-card {
   background-color: white;
-  border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   text-align: center;
@@ -90,7 +87,6 @@
   justify-content: center;
   width: 50px;
   height: 50px;
-  border-radius: 50%;
   background-color: rgba(0, 0, 0, 0.05);
 }
 
@@ -125,7 +121,6 @@
 .dashboard-charts,
 .dashboard-insights {
   background-color: white;
-  border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -153,7 +148,6 @@
 
 .detail-stat-card {
   padding: 1rem;
-  border-radius: 8px;
   text-align: center;
   color: white;
 }
@@ -201,7 +195,6 @@
 .progress-bar {
   height: 10px;
   background-color: #eee;
-  border-radius: 5px;
   overflow: hidden;
   margin-bottom: 0.75rem;
 }
@@ -209,7 +202,6 @@
 .progress-fill {
   height: 100%;
   background-color: #3498db;
-  border-radius: 5px;
 }
 
 .progress-total {
@@ -262,7 +254,6 @@
   display: flex;
   padding: 0.75rem;
   background-color: #f9f9f9;
-  border-radius: 6px;
   text-decoration: none;
   color: inherit;
   transition: background-color 0.2s;
@@ -277,7 +268,6 @@
 .insight-date {
   background-color: #3498db;
   color: white;
-  border-radius: 4px;
   padding: 0.4rem;
   font-size: 0.8rem;
   text-align: center;
@@ -290,7 +280,6 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
   background-color: #f0f0f0;
   color: #666;
 }
@@ -317,11 +306,10 @@
 }
 
 .status-badge {
-  display: inline-block;
-  padding: 0.15rem 0.5rem;
-  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
-  text-transform: uppercase;
   font-weight: 500;
 }
 
@@ -382,4 +370,66 @@
   .stat-value {
     font-size: 1.5rem;
   }
+}
+
+/* Custom chart styling */
+.chart-wrapper {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+/* Animation for card hover */
+@keyframes lift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-5px);
+  }
+}
+
+/* Dashboard loading styles */
+.dashboard-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--color-gray-400);
+  font-size: 0.875rem;
+}
+
+/* Empty state styling */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--color-gray-400);
+  text-align: center;
+}
+
+.empty-state-icon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--color-gray-300);
+}
+
+.empty-state-text {
+  font-size: 0.875rem;
+}
+
+/* Progress bar custom styling */
+.progress-container {
+  width: 100%;
+  background-color: #f3f4f6;
+  height: 8px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #805ad5;
+  transition: width 0.3s ease;
 } 

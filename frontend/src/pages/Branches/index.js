@@ -1,6 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './Branches.css';
+import {
+  Box,
+  Heading,
+  Text,
+  Button,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Flex,
+  Spinner,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  Input,
+  HStack,
+  useColorModeValue,
+  IconButton
+} from '@chakra-ui/react';
+import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
 const Branches = () => {
   const [branches, setBranches] = useState([]);
@@ -8,7 +36,10 @@ const Branches = () => {
   const [error, setError] = useState(null);
   const [newBranch, setNewBranch] = useState({ name: '', address: '' });
   const [editingBranch, setEditingBranch] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  
+  const tableHeaderBg = useColorModeValue('gray.50', 'gray.700');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   useEffect(() => {
     fetchBranches();
@@ -42,11 +73,11 @@ const Branches = () => {
     } else {
       setNewBranch({ name: '', address: '' });
     }
-    setIsModalOpen(true);
+    onOpen();
   };
 
   const closeModal = () => {
-    setIsModalOpen(false);
+    onClose();
     setEditingBranch(null);
   };
 
@@ -81,106 +112,136 @@ const Branches = () => {
   };
 
   if (loading) {
-    return <div className="loading-spinner">Loading branches...</div>;
+    return (
+      <Box p={4} textAlign="center">
+        <Spinner color="brand.500" size="lg" />
+        <Text mt={2} color="gray.500">Loading branches...</Text>
+      </Box>
+    );
   }
 
   if (error) {
     return (
-      <div className="error-message">
-        <h2>Error</h2>
-        <p>{error}</p>
-        <button onClick={() => fetchBranches()}>Retry</button>
-      </div>
+      <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
+        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Text mb={4}>{error}</Text>
+        <Button colorScheme="red" variant="outline" onClick={() => fetchBranches()}>
+          Retry
+        </Button>
+      </Box>
     );
   }
 
   return (
-    <div className="branches-container">
-      <div className="branches-header">
-        <h1>Branches</h1>
-        <button className="new-branch-btn" onClick={() => openModal()}>+ New Branch</button>
-      </div>
+    <Box>
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading fontSize="xl" fontWeight="semibold">Branches</Heading>
+        <Button 
+          leftIcon={<FaPlus />} 
+          colorScheme="brand" 
+          size="sm" 
+          onClick={() => openModal()}
+        >
+          New Branch
+        </Button>
+      </Flex>
       
       {branches.length === 0 ? (
-        <div className="no-data-message">
-          <p>No branches found. Add your first branch to get started.</p>
-        </div>
+        <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" textAlign="center" borderRadius="md">
+          <Text color="gray.500" mb={4}>No branches found. Add your first branch to get started.</Text>
+          <Button leftIcon={<FaPlus />} colorScheme="brand" size="sm" onClick={() => openModal()}>
+            Add Branch
+          </Button>
+        </Box>
       ) : (
-        <div className="branches-list">
-          <table className="branches-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Address</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+        <Box 
+          borderWidth="1px" 
+          borderColor={borderColor} 
+          borderRadius="md" 
+          overflow="hidden"
+        >
+          <Table variant="simple">
+            <Thead bg={tableHeaderBg}>
+              <Tr>
+                <Th>Name</Th>
+                <Th>Address</Th>
+                <Th width="150px">Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
               {branches.map(branch => (
-                <tr key={branch._id}>
-                  <td>{branch.name}</td>
-                  <td>{branch.address}</td>
-                  <td className="actions-cell">
-                    <button 
-                      className="action-btn edit-btn"
-                      onClick={() => openModal(branch)}
-                    >
-                      Edit
-                    </button>
-                    <button 
-                      className="action-btn delete-btn"
-                      onClick={() => handleDelete(branch._id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
+                <Tr key={branch._id}>
+                  <Td fontWeight="medium">{branch.name}</Td>
+                  <Td>{branch.address}</Td>
+                  <Td>
+                    <HStack spacing={2}>
+                      <IconButton
+                        icon={<FaEdit />}
+                        aria-label="Edit branch"
+                        size="sm"
+                        colorScheme="blue"
+                        variant="ghost"
+                        onClick={() => openModal(branch)}
+                      />
+                      <IconButton
+                        icon={<FaTrash />}
+                        aria-label="Delete branch"
+                        size="sm"
+                        colorScheme="red"
+                        variant="ghost"
+                        onClick={() => handleDelete(branch._id)}
+                      />
+                    </HStack>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </Tbody>
+          </Table>
+        </Box>
       )}
 
-      {isModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-content">
-            <h2>{editingBranch ? 'Edit Branch' : 'Add New Branch'}</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label htmlFor="name">Branch Name</label>
-                <input
-                  type="text"
+      <Modal isOpen={isOpen} onClose={closeModal}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>{editingBranch ? 'Edit Branch' : 'Add New Branch'}</ModalHeader>
+          <ModalCloseButton />
+          <form onSubmit={handleSubmit}>
+            <ModalBody pb={6}>
+              <FormControl isRequired>
+                <FormLabel htmlFor="name">Branch Name</FormLabel>
+                <Input
                   id="name"
                   name="name"
                   value={editingBranch ? editingBranch.name : newBranch.name}
                   onChange={handleInputChange}
-                  required
+                  placeholder="Enter branch name"
                 />
-              </div>
-              <div className="form-group">
-                <label htmlFor="address">Address</label>
-                <input
-                  type="text"
+              </FormControl>
+
+              <FormControl mt={4} isRequired>
+                <FormLabel htmlFor="address">Address</FormLabel>
+                <Input
                   id="address"
                   name="address"
                   value={editingBranch ? editingBranch.address : newBranch.address}
                   onChange={handleInputChange}
-                  required
+                  placeholder="Enter branch address"
                 />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="cancel-btn" onClick={closeModal}>
-                  Cancel
-                </button>
-                <button type="submit" className="save-btn">
-                  {editingBranch ? 'Update' : 'Save'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+              </FormControl>
+            </ModalBody>
+
+            <ModalFooter>
+              <Button colorScheme="gray" mr={3} onClick={closeModal}>
+                Cancel
+              </Button>
+              <Button type="submit" colorScheme="brand">
+                {editingBranch ? 'Update' : 'Save'}
+              </Button>
+            </ModalFooter>
+          </form>
+        </ModalContent>
+      </Modal>
+    </Box>
   );
 };
 
