@@ -2,17 +2,89 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { kindergartenClassesAPI } from '../../api';
 import './ClassDetail.css';
-import { FaChevronDown, FaChevronRight, FaCalendarAlt, FaFileExcel, FaCheck, FaTimes, FaEdit } from 'react-icons/fa';
+import { 
+  FaChevronDown, 
+  FaChevronRight, 
+  FaCalendarAlt, 
+  FaFileExcel, 
+  FaCheck, 
+  FaTimes, 
+  FaEdit,
+  FaGraduationCap,
+  FaSchool,
+  FaUser,
+  FaEnvelope,
+  FaPhone,
+  FaClock,
+  FaUsers,
+  FaRegCalendarAlt,
+  FaListAlt,
+  FaHourglass,
+  FaCalendarCheck,
+  FaCalendarTimes,
+  FaCalendarPlus,
+  FaRegClock
+} from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import { Button, Badge, Table, Spinner, Card } from 'react-bootstrap';
+import {
+  Box,
+  Flex,
+  Text,
+  Heading,
+  Button,
+  Badge,
+  Spinner,
+  IconButton,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
+  VStack,
+  HStack,
+  Stack,
+  Grid,
+  GridItem,
+  Divider,
+  Progress,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  Input,
+  Textarea,
+  Select,
+  Switch,
+  Tooltip,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  Container,
+  SimpleGrid,
+  Checkbox,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  Icon,
+  Image,
+} from '@chakra-ui/react';
 
 const SessionStatusOptions = [
-  { value: 'Scheduled', label: 'Scheduled', color: '#4a90e2' },
-  { value: 'Completed', label: 'Completed', color: '#4caf50' },
-  { value: 'Canceled', label: 'Canceled', color: '#e74c3c' },
-  { value: 'Holiday Break', label: 'Holiday Break', color: '#9c27b0' },
-  { value: 'Compensatory', label: 'Compensatory', color: '#ff9800' }
+  { value: 'Scheduled', label: 'Scheduled', color: 'blue.500', colorScheme: 'blue' },
+  { value: 'Completed', label: 'Completed', color: 'green.500', colorScheme: 'green' },
+  { value: 'Canceled', label: 'Canceled', color: 'red.500', colorScheme: 'red' },
+  { value: 'Holiday Break', label: 'Holiday Break', color: 'purple.500', colorScheme: 'purple' },
+  { value: 'Compensatory', label: 'Compensatory', color: 'orange.500', colorScheme: 'orange' }
 ];
 
 const ClassDetail = () => {
@@ -74,12 +146,12 @@ const ClassDetail = () => {
         }
         
         // Add any new months that weren't in the previous state
-        monthKeys.forEach(monthKey => {
+      monthKeys.forEach(monthKey => {
           if (newExpandedState[monthKey] === undefined) {
             newExpandedState[monthKey] = monthKey === currentMonth;
           }
-        });
-        
+      });
+      
         return newExpandedState;
       });
     } catch (err) {
@@ -98,7 +170,7 @@ const ClassDetail = () => {
         setKClass(classResponse.data);
         
         // Always fetch sessions data
-        await fetchSessionsData();
+          await fetchSessionsData();
         
         setLoading(false);
         
@@ -578,538 +650,835 @@ const ClassDetail = () => {
   }, [sessions]);
 
   if (loading) {
-    return <div className="loading-spinner">Loading class details...</div>;
+    return (
+      <Flex direction="column" align="center" justify="center" h="100vh">
+        <Spinner
+          thickness="4px"
+          speed="0.65s"
+          emptyColor="gray.200"
+          color="primary.500"
+          size="xl"
+          data-aos="fade-up"
+        />
+        <Text mt={4} fontSize="lg" color="gray.600" data-aos="fade-up" data-aos-delay="200">
+          Loading class details...
+        </Text>
+      </Flex>
+    );
   }
 
   if (error) {
     return (
-      <div className="error-message">
-        <h2>Error</h2>
-        <p>{error}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-      </div>
+      <Container maxW="container.md" centerContent py={10}>
+        <Box 
+          p={8} 
+          bg="white" 
+          boxShadow="xl" 
+          borderRadius="xl" 
+          textAlign="center"
+          data-aos="fade-up"
+        >
+          <Heading as="h2" size="lg" color="red.500" mb={4}>Error</Heading>
+          <Text fontSize="md" mb={6}>{error}</Text>
+          <Button colorScheme="blue" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </Box>
+      </Container>
     );
   }
 
   if (!kClass) {
     return (
-      <div className="error-message">
-        <h2>Class Not Found</h2>
-        <p>The requested class could not be found.</p>
-        <Link to="/kindergarten/classes" className="back-link">Return to Classes</Link>
-      </div>
+      <Container maxW="container.md" centerContent py={10}>
+        <Box 
+          p={8} 
+          bg="white" 
+          boxShadow="xl" 
+          borderRadius="xl" 
+          textAlign="center"
+          data-aos="fade-up"
+        >
+          <Heading as="h2" size="lg" color="orange.500" mb={4}>Class Not Found</Heading>
+          <Text fontSize="md" mb={6}>The requested class could not be found.</Text>
+          <Button 
+            as={Link} 
+            to="/kindergarten/classes" 
+            variant="primary"
+          >
+            Return to Classes
+          </Button>
+        </Box>
+      </Container>
     );
   }
 
   return (
-    <div className="class-detail-container">
-      <div className="class-detail-header">
-        <h1>{kClass.name}</h1>
-        <div className="action-buttons">
-          <Link 
-            to={`/kindergarten/classes/edit/${classId}`} 
-            className="edit-btn"
-          >
-            Edit Class
-          </Link>
-          <button 
-            onClick={handleDeleteClass} 
-            className="delete-btn"
-          >
-            Delete Class
-          </button>
-        </div>
-      </div>
+    <Box 
+      className="bg-gradient-animated"
+      minH="100vh" 
+      py={8} 
+      px={{ base: 4, md: 8 }}
+    >
+      <Container maxW="container.xl">
+        {/* Header Section */}
+        <Flex 
+          direction={{ base: 'column', md: 'row' }} 
+          justify="space-between" 
+          align={{ base: 'flex-start', md: 'center' }}
+          mb={8}
+          data-aos="fade-up"
+        >
+          <Box mb={{ base: 4, md: 0 }}>
+            <Heading 
+              as="h1" 
+              size="xl" 
+              className="text-gradient-primary"
+              fontWeight="bold"
+              letterSpacing="tight"
+            >
+              {kClass.name}
+            </Heading>
+            <Text fontSize="lg" color="white" mt={1}>
+              {kClass.school?.name || 'No School Assigned'}
+            </Text>
+          </Box>
+          <HStack spacing={4}>
+            <Button
+              as={Link}
+              to={`/kindergarten/classes/edit/${classId}`} 
+              leftIcon={<FaEdit />}
+              variant="glass"
+              size="md"
+              data-aos="fade-left"
+              data-aos-delay="100"
+            >
+              Edit Class
+            </Button>
+            <Button
+              leftIcon={<FaTimes />}
+              colorScheme="red"
+              variant="outline"
+              size="md"
+              onClick={handleDeleteClass} 
+              data-aos="fade-left"
+              data-aos-delay="200"
+            >
+              Delete Class
+            </Button>
+          </HStack>
+        </Flex>
 
-      {/* Class Information Section */}
-      <div className="class-info-section">
-        <div className="section-header">
-          <h2>Class Information</h2>
-        </div>
-        
-        <div className="section-content">
-          {/* Basic Information */}
-          <div className="detail-card">
-            <h3>Basic Information</h3>
-            <div className="detail-grid">
-              <div className="detail-item">
-                <span className="detail-label">Class Name:</span>
-                <span className="detail-value">{kClass.name}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">School:</span>
-                <span className="detail-value">{kClass.school?.name || 'N/A'}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Teacher:</span>
-                <span className="detail-value">
-                  {kClass.teacher ? (
-                    <span className="teacher-info">
-                      {kClass.teacher.name}
-                    </span>
-                  ) : (
-                    kClass.teacherName || 'N/A'
+        {/* Class Information Section */}
+        <Box 
+          className="glass-card"
+          mb={8} 
+          overflow="hidden"
+          data-aos="fade-up"
+          data-aos-delay="100"
+        >
+          <Box bg="rgba(41, 121, 255, 0.8)" py={4} px={6}>
+            <Heading size="md" color="white">
+              <Flex align="center">
+                <Icon as={FaGraduationCap} mr={2} />
+                Class Information
+              </Flex>
+            </Heading>
+          </Box>
+          <Box p={8}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
+              {/* Basic Information */}
+              <Box>
+                <Heading as="h3" size="md" mb={4} color="gray.700">
+                  Basic Information
+                </Heading>
+                <VStack align="stretch" spacing={3}>
+                  <Flex>
+                    <Text fontWeight="bold" width="140px">Class Name:</Text>
+                    <Text>{kClass.name}</Text>
+                  </Flex>
+                  <Flex>
+                    <Text fontWeight="bold" width="140px">School:</Text>
+                    <Text>{kClass.school?.name || 'N/A'}</Text>
+                  </Flex>
+                  <Flex>
+                    <Text fontWeight="bold" width="140px">Teacher:</Text>
+                    <Text>
+                      {kClass.teacher ? kClass.teacher.name : (kClass.teacherName || 'N/A')}
+                    </Text>
+                  </Flex>
+                {kClass.teacher && kClass.teacher.email && (
+                    <Flex>
+                      <Text fontWeight="bold" width="140px">Teacher Email:</Text>
+                      <Text>
+                        <Link href={`mailto:${kClass.teacher.email}`} color="blue.500">
+                          {kClass.teacher.email}
+                        </Link>
+                      </Text>
+                    </Flex>
+                )}
+                {kClass.teacher && kClass.teacher.phone && (
+                    <Flex>
+                      <Text fontWeight="bold" width="140px">Teacher Phone:</Text>
+                      <Text>{kClass.teacher.phone}</Text>
+                    </Flex>
                   )}
-                </span>
-              </div>
-              {kClass.teacher && kClass.teacher.email && (
-                <div className="detail-item">
-                  <span className="detail-label">Teacher Email:</span>
-                  <span className="detail-value">
-                    <a href={`mailto:${kClass.teacher.email}`}>{kClass.teacher.email}</a>
-                  </span>
-                </div>
+                  <Flex>
+                    <Text fontWeight="bold" width="140px">Age Group:</Text>
+                    <Text>{kClass.ageGroup}</Text>
+                  </Flex>
+                  <Flex>
+                    <Text fontWeight="bold" width="140px">Student Count:</Text>
+                    <Text>{kClass.studentCount}</Text>
+                  </Flex>
+                  <Flex>
+                    <Text fontWeight="bold" width="140px">Status:</Text>
+                    <Badge colorScheme={kClass.status === 'Active' ? 'green' : 'orange'} px={2} py={1}>
+                    {kClass.status}
+                    </Badge>
+                  </Flex>
+                  <Flex>
+                    <Text fontWeight="bold" width="140px">Start Date:</Text>
+                    <Text>{formatDate(kClass.startDate)}</Text>
+                  </Flex>
+                  <Flex>
+                    <Text fontWeight="bold" width="140px">Total Sessions:</Text>
+                    <Text>{kClass.totalSessions}</Text>
+                  </Flex>
+                </VStack>
+              </Box>
+
+              {/* Weekly Schedule & Holidays */}
+              <Box>
+                <Heading as="h3" size="md" mb={4} color="gray.700">
+                  Weekly Schedule
+                </Heading>
+              {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
+                  <VStack align="stretch" spacing={2} mb={6}>
+                  {kClass.weeklySchedule.map((schedule, index) => (
+                      <Flex 
+                        key={index} 
+                        p={2} 
+                        bg="gray.50" 
+                        borderRadius="md" 
+                        align="center"
+                        _hover={{ bg: 'gray.100' }}
+                      >
+                        <Box 
+                          bg="primary.100" 
+                          color="primary.700" 
+                          borderRadius="full" 
+                          px={3} 
+                          py={1}
+                          fontWeight="bold"
+                          mr={3}
+                          minW="100px"
+                          textAlign="center"
+                        >
+                          {schedule.day}
+                        </Box>
+                        <Flex align="center">
+                          <Icon as={FaClock} color="gray.500" mr={2} />
+                          <Text>{schedule.startTime} - {schedule.endTime}</Text>
+                        </Flex>
+                      </Flex>
+                    ))}
+                  </VStack>
+                ) : (
+                  <Box p={4} bg="gray.50" borderRadius="md" mb={6}>
+                    <Text color="gray.500" textAlign="center">
+                  No schedule has been set for this class.
+                    </Text>
+                  </Box>
               )}
-              {kClass.teacher && kClass.teacher.phone && (
-                <div className="detail-item">
-                  <span className="detail-label">Teacher Phone:</span>
-                  <span className="detail-value">{kClass.teacher.phone}</span>
-                </div>
-              )}
-              <div className="detail-item">
-                <span className="detail-label">Age Group:</span>
-                <span className="detail-value">{kClass.ageGroup}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Student Count:</span>
-                <span className="detail-value">{kClass.studentCount}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Status:</span>
-                <span className={`class-status status-${kClass.status?.toLowerCase()}`}>
-                  {kClass.status}
-                </span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Start Date:</span>
-                <span className="detail-value">{formatDate(kClass.startDate)}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Total Sessions:</span>
-                <span className="detail-value">{kClass.totalSessions}</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Weekly Schedule */}
-          <div className="detail-card">
-            <h3>Weekly Schedule</h3>
-            {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
-              <div className="schedule-list">
-                {kClass.weeklySchedule.map((schedule, index) => (
-                  <div key={index} className="schedule-item">
-                    <div className="schedule-day">{schedule.day}</div>
-                    <div className="schedule-time">
-                      {schedule.startTime} - {schedule.endTime}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-data-message">
-                No schedule has been set for this class.
-              </div>
-            )}
-          </div>
+                <Heading as="h3" size="md" mb={4} color="gray.700">
+                  Holidays & Breaks
+                </Heading>
+              {kClass.holidays && kClass.holidays.length > 0 ? (
+                  <VStack align="stretch" spacing={2}>
+                  {kClass.holidays.map((holiday, index) => (
+                      <Flex 
+                        key={index} 
+                        p={2} 
+                        bg="gray.50" 
+                        borderRadius="md" 
+                        align="center"
+                        _hover={{ bg: 'gray.100' }}
+                      >
+                        <Box 
+                          bg="red.100" 
+                          color="red.700" 
+                          borderRadius="full" 
+                          px={3} 
+                          py={1}
+                          fontWeight="medium"
+                          mr={3}
+                          minW="110px"
+                          textAlign="center"
+                        >
+                          {formatDate(holiday.date)}
+                        </Box>
+                        <Text>{holiday.name}</Text>
+                      </Flex>
+                    ))}
+                  </VStack>
+                ) : (
+                  <Box p={4} bg="gray.50" borderRadius="md">
+                    <Text color="gray.500" textAlign="center">
+                  No holidays or breaks have been set for this class.
+                    </Text>
+                  </Box>
+                )}
+              </Box>
+            </SimpleGrid>
+          </Box>
+        </Box>
 
-          {/* Holidays & Breaks */}
-          <div className="detail-card">
-            <h3>Holidays & Breaks</h3>
-            {kClass.holidays && kClass.holidays.length > 0 ? (
-              <div className="holidays-list">
-                {kClass.holidays.map((holiday, index) => (
-                  <div key={index} className="holiday-item">
-                    <div className="holiday-date">{formatDate(holiday.date)}</div>
-                    <div className="holiday-name">{holiday.name}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-data-message">
-                No holidays or breaks have been set for this class.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Sessions Tracking Section */}
-      <div ref={sessionsRef} className="sessions-tracking-section">
-        <div className="section-header">
-          <h2>Sessions Tracking</h2>
-        </div>
-        
-        <div className="section-content">
+        {/* Sessions Tracking Section */}
+        <Box ref={sessionsRef} mb={8} data-aos="fade-up" data-aos-delay="150">
+          <Flex 
+            align="center" 
+            mb={4}
+            className="glass-card"
+            color="white"
+            p={3}
+            borderRadius="lg"
+          >
+            <Icon as={FaListAlt} mr={2} boxSize={5} />
+            <Heading as="h2" size="lg">Sessions Tracking</Heading>
+          </Flex>
+          
           {/* Session Statistics */}
-          {sessionStats && (
-            <div className="detail-card session-stats-card">
-              <h3>Session Statistics</h3>
-              <div className="session-stats">
-                <div className="stat-item">
-                  <div className="stat-label">Total Sessions</div>
-                  <div className="stat-value">{sessionStats.total}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Completed</div>
-                  <div className="stat-value stat-completed">{sessionStats.completed}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Scheduled</div>
-                  <div className="stat-value stat-scheduled">{sessionStats.scheduled}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Canceled</div>
-                  <div className="stat-value stat-canceled">{sessionStats.canceled}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Holiday Breaks</div>
-                  <div className="stat-value stat-holiday">{sessionStats.holidayBreak}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Compensatory</div>
-                  <div className="stat-value stat-compensatory">{sessionStats.compensatory}</div>
-                </div>
-              </div>
-              
-              <div className="session-progress">
-                <div className="progress-info">
-                  <div className="progress-label">Progress</div>
-                  <div className="progress-value">{sessionStats.progress}%</div>
-                </div>
-                <div className="progress-bar-container">
-                  <div 
-                    className="progress-bar"
-                    style={{ width: `${sessionStats.progress}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <div className="session-remaining">
-                <div className="remaining-info">
-                  <div className="remaining-label">Remaining</div>
-                  <div className="remaining-value">
-                    {sessionStats.remainingWeeks} weeks ({sessionStats.remainingDays} days)
-                  </div>
-                </div>
-                <div className="completion-status">
-                  {sessionStats.isFinished ? (
-                    <span className="status-completed">Class Complete</span>
-                  ) : (
-                    <span className="status-ongoing">In Progress</span>
-                  )}
-                </div>
-              </div>
-            </div>
+            {sessionStats && (
+            <Box 
+              className="glass-card"
+              mb={6}
+              data-aos="fade-up"
+              data-aos-delay="200"
+            >
+              <Box bg="rgba(255, 255, 255, 0.2)" py={4} px={6}>
+                <Heading size="md" color="white">
+                  <Flex align="center">
+                    <Icon as={FaHourglass} mr={2} />
+                    Session Statistics
+                  </Flex>
+                </Heading>
+              </Box>
+              <Box p={6}>
+                <SimpleGrid columns={{ base: 2, md: 6 }} spacing={6} mb={6}>
+                  <Stat
+                    className="glass-card hover-float"
+                    p={4}
+                    textAlign="center"
+                    data-aos="zoom-in"
+                    data-aos-delay="100"
+                  >
+                    <StatLabel color="white">Total Sessions</StatLabel>
+                    <StatNumber fontSize="2xl" color="white">{sessionStats.total}</StatNumber>
+                  </Stat>
+                  <Stat
+                    className="glass-card hover-float"
+                    p={4}
+                    textAlign="center"
+                    data-aos="zoom-in"
+                    data-aos-delay="150"
+                  >
+                    <StatLabel color="white">Completed</StatLabel>
+                    <StatNumber fontSize="2xl" color="white">{sessionStats.completed}</StatNumber>
+                  </Stat>
+                  <Stat
+                    className="glass-card hover-float"
+                    p={4}
+                    textAlign="center"
+                    data-aos="zoom-in"
+                    data-aos-delay="200"
+                  >
+                    <StatLabel color="white">Scheduled</StatLabel>
+                    <StatNumber fontSize="2xl" color="white">{sessionStats.scheduled}</StatNumber>
+                  </Stat>
+                  <Stat
+                    className="glass-card hover-float"
+                    p={4}
+                    textAlign="center"
+                    data-aos="zoom-in"
+                    data-aos-delay="250"
+                  >
+                    <StatLabel color="white">Canceled</StatLabel>
+                    <StatNumber fontSize="2xl" color="white">{sessionStats.canceled}</StatNumber>
+                  </Stat>
+                  <Stat
+                    className="glass-card hover-float"
+                    p={4}
+                    textAlign="center"
+                    data-aos="zoom-in"
+                    data-aos-delay="300"
+                  >
+                    <StatLabel color="white">Holiday Breaks</StatLabel>
+                    <StatNumber fontSize="2xl" color="white">{sessionStats.holidayBreak}</StatNumber>
+                  </Stat>
+                  <Stat
+                    className="glass-card hover-float"
+                    p={4}
+                    textAlign="center"
+                    data-aos="zoom-in"
+                    data-aos-delay="350"
+                  >
+                    <StatLabel color="white">Compensatory</StatLabel>
+                    <StatNumber fontSize="2xl" color="white">{sessionStats.compensatory}</StatNumber>
+                  </Stat>
+                </SimpleGrid>
+                
+                <Box 
+                  className="glass-card"
+                  p={4} 
+                  mb={4}
+                  data-aos="fade-up"
+                  data-aos-delay="400"
+                >
+                  <Flex justify="space-between" mb={2}>
+                    <Text fontWeight="semibold" color="white">Progress</Text>
+                    <Text fontWeight="bold" color="white">{sessionStats.progress}%</Text>
+                  </Flex>
+                  <Progress 
+                    value={sessionStats.progress} 
+                    size="lg" 
+                    colorScheme="green" 
+                    borderRadius="md"
+                    hasStripe
+                    isAnimated
+                  />
+                </Box>
+                
+                <Flex 
+                  direction={{ base: 'column', md: 'row' }}
+                  bg="gray.50" 
+                  p={4} 
+                  borderRadius="lg"
+                  justify="space-between"
+                  align="center"
+                  data-aos="fade-up"
+                  data-aos-delay="450"
+                >
+                  <HStack spacing={4}>
+                    <Icon as={FaRegClock} color="gray.500" boxSize={5} />
+                    <Box>
+                      <Text fontWeight="medium" color="gray.600">Remaining</Text>
+                      <Text fontWeight="bold" color="gray.700">
+                      {sessionStats.remainingWeeks} weeks ({sessionStats.remainingDays} days)
+                      </Text>
+                    </Box>
+                  </HStack>
+                  <Badge 
+                    px={4} 
+                    py={2} 
+                    borderRadius="full" 
+                    colorScheme={sessionStats.isFinished ? "green" : "blue"}
+                    fontSize="md"
+                    mt={{ base: 3, md: 0 }}
+                  >
+                    {sessionStats.isFinished ? "Class Complete" : "In Progress"}
+                  </Badge>
+                </Flex>
+              </Box>
+            </Box>
           )}
           
           {/* Sessions List */}
-          <div className="detail-card">
-            <h3>Sessions</h3>
-            <div className="sessions-header">
-              <button
-                className="add-custom-session-btn"
-                onClick={() => setCustomSessionModalOpen(true)}
-              >
-                Add Custom Session
-              </button>
-              <button
-                className="export-excel-btn"
-                onClick={exportSessionsToExcel}
-                title="Export sessions to Excel"
-              >
-                <FaFileExcel /> Export to Excel
-              </button>
-            </div>
-            {Object.keys(sessionsByMonth).length > 0 ? (
-              <div className="sessions-by-month">
-                {Object.entries(sessionsByMonth).map(([monthKey, { label, sessions: monthSessions }]) => (
-                  <Card className="month-card" key={monthKey}>
-                    <Card.Header 
-                      onClick={() => toggleMonthExpansion(monthKey)}
-                      className={`month-header ${expandedMonths[monthKey] ? 'expanded' : 'collapsed'}`}
+          <Box 
+            className="glass-card"
+            data-aos="fade-up"
+            data-aos-delay="300"
+          >
+            <Box bg="rgba(255, 255, 255, 0.2)" py={4} px={6}>
+              <Flex justify="space-between" align="center">
+                <Heading size="md" color="white">
+                  <Flex align="center">
+                    <Icon as={FaCalendarAlt} mr={2} />
+                    Sessions
+                  </Flex>
+                </Heading>
+                <HStack>
+                  <Button
+                    leftIcon={<FaCalendarPlus />}
+                    variant="glass"
+                    size="sm"
+                    onClick={() => setCustomSessionModalOpen(true)}
+                    data-aos="fade-left"
+                    data-aos-delay="350"
+                    className="btn-pulse"
+                  >
+                    Add Custom Session
+                  </Button>
+                  <Button
+                    leftIcon={<FaFileExcel />}
+                    colorScheme="green"
+                    variant="outline"
+                    size="sm"
+                    onClick={exportSessionsToExcel}
+                    data-aos="fade-left"
+                    data-aos-delay="400"
+                  >
+                    Export to Excel
+                  </Button>
+                </HStack>
+              </Flex>
+            </Box>
+            <Box p={0}>
+              {Object.keys(sessionsByMonth).length > 0 ? (
+                <Box>
+                  {Object.entries(sessionsByMonth).map(([monthKey, { label, sessions: monthSessions }]) => (
+                    <Box 
+                      key={monthKey} 
+                      mb={4}
+                      data-aos="fade-up"
+                      data-aos-delay="200"
                     >
-                      <div className="month-header-content">
-                        <span className="month-toggle-icon">
-                          {expandedMonths[monthKey] ? <FaChevronDown /> : <FaChevronRight />}
-                        </span>
-                        <span className="month-title">{label}</span>
-                        <span className="session-count">{monthSessions.length} sessions</span>
-                      </div>
-                    </Card.Header>
-                    
-                    {expandedMonths[monthKey] && (
-                      <Card.Body className="month-sessions">
-                        <Table className="sessions-table" responsive>
-                          <thead>
-                            <tr>
-                              <th>Date</th>
-                              <th>Time</th>
-                              <th>Status</th>
-                              <th>Notes</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {monthSessions.map((session) => (
-                              <tr key={session.index} className={`session-row ${session.status.toLowerCase()}`}>
-                                <td>{formatDate(session.date)}</td>
-                                <td>
-                                  {session.startTime} - {session.endTime}
-                                </td>
-                                <td>
-                                  <Badge className="status-badge" bg={getStatusVariant(session.status)}>
-                                    {getStatusLabel(session.status)}
-                                  </Badge>
-                                  {session.isCompensatory && 
-                                    <span className="compensatory-badge">Compensatory</span>}
-                                </td>
-                                <td className="notes-cell">{session.notes || '-'}</td>
-                                <td>
-                                  <div className="action-buttons-group">
-                                    {session.status !== 'Completed' && (
-                                      <Button
-                                        variant="outline-success"
+                      <Flex
+                        p={4}
+                        bg={expandedMonths[monthKey] ? 'primary.50' : 'gray.50'}
+                        borderBottomWidth={expandedMonths[monthKey] ? '0' : '1px'}
+                        borderColor="gray.200"
+                        justify="space-between"
+                        align="center"
+                        onClick={() => toggleMonthExpansion(monthKey)}
+                        cursor="pointer"
+                        transition="all 0.3s"
+                        _hover={{ bg: expandedMonths[monthKey] ? 'primary.100' : 'gray.100' }}
+                      >
+                        <Flex align="center">
+                          <Icon 
+                            as={expandedMonths[monthKey] ? FaChevronDown : FaChevronRight} 
+                            mr={2} 
+                            color={expandedMonths[monthKey] ? 'primary.500' : 'gray.500'} 
+                          />
+                          <Text fontWeight="semibold" color={expandedMonths[monthKey] ? 'primary.700' : 'gray.700'}>
+                            {label}
+                          </Text>
+                        </Flex>
+                        <Badge colorScheme="primary" variant="subtle">
+                          {monthSessions.length} sessions
+                        </Badge>
+                      </Flex>
+                      
+                      {expandedMonths[monthKey] && (
+                        <Box 
+                          overflowX="auto"
+                          data-aos="fade-down"
+                          data-aos-delay="50"
+                        >
+                          <Table variant="simple" size="md">
+                            <Thead>
+                              <Tr>
+                                <Th>Date</Th>
+                                <Th>Time</Th>
+                                <Th>Status</Th>
+                                <Th>Notes</Th>
+                                <Th>Actions</Th>
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                              {monthSessions.map((session) => {
+                                const sessionDate = new Date(session.date);
+                                const isToday = isSameDay(sessionDate, new Date());
+                                const statusOption = SessionStatusOptions.find(o => o.value === session.status);
+                                
+                                return (
+                                  <Tr 
+                                    key={session.index} 
+                                    bg={isToday ? 'blue.50' : 'transparent'}
+                                    _hover={{ bg: isToday ? 'blue.100' : 'gray.50' }}
+                                  >
+                                    <Td fontWeight={isToday ? 'bold' : 'normal'}>
+                                      {formatDate(session.date)}
+                                    </Td>
+                                    <Td>
+                                    {session.startTime} - {session.endTime}
+                                    </Td>
+                                    <Td>
+                                      <HStack>
+                                        <Badge colorScheme={statusOption?.colorScheme || 'gray'}>
+                                      {getStatusLabel(session.status)}
+                                    </Badge>
+                                        {session.isCompensatory && (
+                                          <Badge colorScheme="orange" variant="outline" fontSize="xs">
+                                            Compensatory
+                                          </Badge>
+                                        )}
+                                      </HStack>
+                                    </Td>
+                                    <Td maxW="300px" isTruncated>
+                                      <Tooltip label={session.notes || 'No notes'} placement="top" hasArrow>
+                                        <Text>{session.notes || '-'}</Text>
+                                      </Tooltip>
+                                    </Td>
+                                    <Td>
+                                      <HStack spacing={2}>
+                                      {session.status !== 'Completed' && (
+                                          <Tooltip label="Mark as Completed" hasArrow>
+                                            <IconButton
+                                              icon={updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCheck />}
+                                              colorScheme="green"
+                                              variant="ghost"
+                                          size="sm"
+                                              onClick={() => {
+                                                const validIndex = typeof session.index === 'number' 
+                                                  ? session.index 
+                                                  : monthSessions.indexOf(session);
+                                                handleQuickStatusUpdate(validIndex, 'Completed');
+                                              }}
+                                              isDisabled={updatingSessionId === session.index}
+                                              aria-label="Mark as completed"
+                                            />
+                                          </Tooltip>
+                                      )}
+                                      
+                                      {session.status !== 'Canceled' && (
+                                          <Tooltip label="Mark as Canceled" hasArrow>
+                                            <IconButton
+                                              icon={updatingSessionId === session.index ? <Spinner size="sm" /> : <FaTimes />}
+                                              colorScheme="red"
+                                              variant="ghost"
+                                          size="sm"
+                                              onClick={() => {
+                                                const validIndex = typeof session.index === 'number' 
+                                                  ? session.index 
+                                                  : monthSessions.indexOf(session);
+                                                handleQuickStatusUpdate(validIndex, 'Canceled');
+                                              }}
+                                              isDisabled={updatingSessionId === session.index}
+                                              aria-label="Mark as canceled"
+                                            />
+                                          </Tooltip>
+                                      )}
+                                      
+                                      {session.status !== 'Scheduled' && (
+                                          <Tooltip label="Mark as Scheduled" hasArrow>
+                                            <IconButton
+                                              icon={updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCalendarAlt />}
+                                              colorScheme="blue"
+                                              variant="ghost"
+                                          size="sm"
+                                              onClick={() => {
+                                                const validIndex = typeof session.index === 'number' 
+                                                  ? session.index 
+                                                  : monthSessions.indexOf(session);
+                                                handleQuickStatusUpdate(validIndex, 'Scheduled');
+                                              }}
+                                              isDisabled={updatingSessionId === session.index}
+                                              aria-label="Mark as scheduled"
+                                            />
+                                          </Tooltip>
+                                        )}
+                                        
+                                        <Tooltip label="Edit Session" hasArrow>
+                                          <IconButton
+                                            icon={<FaEdit />}
+                                            colorScheme="gray"
+                                            variant="ghost"
                                         size="sm"
-                                        className="action-button"
-                                        onClick={() => {
-                                          const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
-                                          handleQuickStatusUpdate(validIndex, 'Completed');
-                                        }}
-                                        disabled={updatingSessionId === session.index}
-                                      >
-                                        <span className="button-content">
-                                          {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCheck />}
-                                          <span className="button-label">Complete</span>
-                                        </span>
-                                      </Button>
-                                    )}
-                                    
-                                    {session.status !== 'Canceled' && (
-                                      <Button
-                                        variant="outline-danger"
-                                        size="sm"
-                                        className="action-button"
-                                        onClick={() => {
-                                          const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
-                                          handleQuickStatusUpdate(validIndex, 'Canceled');
-                                        }}
-                                        disabled={updatingSessionId === session.index}
-                                      >
-                                        <span className="button-content">
-                                          {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaTimes />}
-                                          <span className="button-label">Cancel</span>
-                                        </span>
-                                      </Button>
-                                    )}
-                                    
-                                    {session.status !== 'Scheduled' && (
-                                      <Button
-                                        variant="outline-primary"
-                                        size="sm"
-                                        className="action-button"
-                                        onClick={() => {
-                                          const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
-                                          handleQuickStatusUpdate(validIndex, 'Scheduled');
-                                        }}
-                                        disabled={updatingSessionId === session.index}
-                                      >
-                                        <span className="button-content">
-                                          {updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCalendarAlt />}
-                                          <span className="button-label">Schedule</span>
-                                        </span>
-                                      </Button>
-                                    )}
-                                    
-                                    <Button
-                                      variant="light"
-                                      size="sm"
-                                      className="edit-button"
-                                      onClick={() => {
-                                        const validIndex = typeof session.index === 'number' ? session.index : monthSessions.indexOf(session);
-                                        openSessionEditModal(validIndex);
-                                      }}
-                                    >
-                                      <FaEdit />
-                                    </Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </Table>
-                      </Card.Body>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="no-sessions">No sessions found</div>
-            )}
-          </div>
-        </div>
-      </div>
+                                            onClick={() => {
+                                              const validIndex = typeof session.index === 'number' 
+                                                ? session.index 
+                                                : monthSessions.indexOf(session);
+                                              openSessionEditModal(validIndex);
+                                            }}
+                                            aria-label="Edit session"
+                                          />
+                                        </Tooltip>
+                                      </HStack>
+                                    </Td>
+                                  </Tr>
+                                );
+                              })}
+                            </Tbody>
+                          </Table>
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Box p={8} textAlign="center">
+                  <Text color="gray.500">No sessions found</Text>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </Box>
 
-      <div className="breadcrumb-navigation">
-        <Link to="/kindergarten" className="breadcrumb-link">Dashboard</Link>
-        <span className="breadcrumb-separator">/</span>
-        <Link to="/kindergarten/classes" className="breadcrumb-link">Classes</Link>
-        <span className="breadcrumb-separator">/</span>
-        <span className="breadcrumb-current">{kClass.name}</span>
-      </div>
+        <Breadcrumb 
+          separator="/" 
+          fontSize="sm" 
+          color="gray.500"
+          data-aos="fade-up"
+          data-aos-delay="400"
+        >
+          <BreadcrumbItem>
+            <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbItem>
+            <BreadcrumbLink as={Link} to="/kindergarten/classes">Classes</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage>
+            <Text>{kClass.name}</Text>
+          </BreadcrumbItem>
+        </Breadcrumb>
+      </Container>
       
       {/* Session Update Modal */}
-      {sessionModalOpen && sessionToUpdate && (
-        <div className="session-modal-backdrop">
-          <div className="session-modal">
-            <div className="session-modal-header">
-              <h3>Update Session Status</h3>
-              <button 
-                className="close-modal-btn"
-                onClick={() => setSessionModalOpen(false)}
-                disabled={sessionActionLoading}
-              >
-                ×
-              </button>
-            </div>
-            <div className="session-modal-body">
-              <div className="session-date-info">
-                <p><strong>Date:</strong> {formatDate(sessionToUpdate.date)} ({getDayName(sessionToUpdate.date)})</p>
-                <p><strong>Current Status:</strong> {getStatusLabel(sessionToUpdate.status)}</p>
-              </div>
-              
-              <div className="session-form">
-                <div className="form-group">
-                  <label htmlFor="session-status">New Status</label>
-                  <select
+      <Modal 
+        isOpen={sessionModalOpen && sessionToUpdate} 
+        onClose={() => setSessionModalOpen(false)}
+        size="md"
+      >
+        <ModalOverlay backdropFilter="blur(12px)" />
+        <ModalContent className="glass-card">
+          <ModalHeader bg="brand.500" color="white" borderTopRadius="xl">
+            Update Session Status
+          </ModalHeader>
+          <ModalCloseButton color="white" />
+          <ModalBody py={4}>
+            {sessionToUpdate && (
+              <>
+                <Box mb={4} p={3} bg="gray.50" borderRadius="md">
+                  <Text><strong>Date:</strong> {formatDate(sessionToUpdate.date)} ({getDayName(sessionToUpdate.date)})</Text>
+                  <Text mt={2}><strong>Current Status:</strong> {getStatusLabel(sessionToUpdate.status)}</Text>
+                </Box>
+                
+                <FormControl mb={4}>
+                  <FormLabel htmlFor="session-status">New Status</FormLabel>
+                  <Select
                     id="session-status"
                     value={newSessionStatus}
                     onChange={(e) => setNewSessionStatus(e.target.value)}
-                    disabled={sessionActionLoading}
+                    isDisabled={sessionActionLoading}
                   >
                     {SessionStatusOptions.map(option => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
-                  </select>
-                </div>
+                  </Select>
+                </FormControl>
                 
-                <div className="form-group">
-                  <label htmlFor="session-notes">Notes</label>
-                  <textarea
+                <FormControl mb={4}>
+                  <FormLabel htmlFor="session-notes">Notes</FormLabel>
+                  <Textarea
                     id="session-notes"
                     value={sessionNotes}
                     onChange={(e) => setSessionNotes(e.target.value)}
                     placeholder="Add notes about this session..."
-                    disabled={sessionActionLoading}
+                    isDisabled={sessionActionLoading}
+                    rows={4}
                   />
-                </div>
+                </FormControl>
                 
                 {newSessionStatus === 'Canceled' && (
-                  <div className="form-group checkbox-group">
-                    <input
-                      type="checkbox"
+                  <FormControl mb={4}>
+                    <Checkbox
                       id="add-compensatory"
-                      checked={addCompensatory}
+                      isChecked={addCompensatory}
                       onChange={(e) => setAddCompensatory(e.target.checked)}
-                      disabled={sessionActionLoading}
-                    />
-                    <label htmlFor="add-compensatory">
+                      isDisabled={sessionActionLoading}
+                      colorScheme="green"
+                    >
                       Add compensatory session for this cancellation
-                    </label>
-                  </div>
+                    </Checkbox>
+                  </FormControl>
                 )}
-              </div>
-            </div>
-            <div className="session-modal-footer">
-              <button
-                className="cancel-btn"
+              </>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              variant="outline" 
+              mr={3} 
                 onClick={() => setSessionModalOpen(false)}
-                disabled={sessionActionLoading}
+              isDisabled={sessionActionLoading}
               >
                 Cancel
-              </button>
-              <button
-                className="save-btn"
+            </Button>
+            <Button
+              colorScheme="brand"
                 onClick={handleSessionStatusUpdate}
-                disabled={sessionActionLoading}
-              >
-                {sessionActionLoading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              isLoading={sessionActionLoading}
+              loadingText="Saving..."
+              className="btn-pulse"
+            >
+              Save Changes
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
       
       {/* Custom Session Modal */}
-      {customSessionModalOpen && (
-        <div className="session-modal-backdrop">
-          <div className="session-modal">
-            <div className="session-modal-header">
-              <h3>Add Custom Session</h3>
-              <button 
-                className="close-modal-btn"
-                onClick={() => setCustomSessionModalOpen(false)}
-                disabled={sessionActionLoading}
-              >
-                ×
-              </button>
-            </div>
-            <div className="session-modal-body">
-              <div className="session-form">
-                <div className="form-group">
-                  <label htmlFor="custom-session-date">Date</label>
-                  <input
+      <Modal 
+        isOpen={customSessionModalOpen} 
+        onClose={() => setCustomSessionModalOpen(false)}
+        size="md"
+      >
+        <ModalOverlay backdropFilter="blur(12px)" />
+        <ModalContent className="glass-card">
+          <ModalHeader bg="brand.500" color="white" borderTopRadius="xl">
+            Add Custom Session
+          </ModalHeader>
+          <ModalCloseButton color="white" />
+          <ModalBody py={4}>
+            <FormControl mb={4} isRequired>
+              <FormLabel htmlFor="custom-session-date">Date</FormLabel>
+              <Input
                     type="date"
                     id="custom-session-date"
                     name="date"
                     value={customSessionForm.date}
                     onChange={handleCustomSessionFormChange}
-                    disabled={sessionActionLoading}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="custom-session-notes">Notes (optional)</label>
-                  <textarea
+                isDisabled={sessionActionLoading}
+              />
+            </FormControl>
+            
+            <FormControl mb={4}>
+              <FormLabel htmlFor="custom-session-notes">Notes (optional)</FormLabel>
+              <Textarea
                     id="custom-session-notes"
                     name="notes"
                     value={customSessionForm.notes}
                     onChange={handleCustomSessionFormChange}
                     placeholder="Add notes about this custom session..."
-                    disabled={sessionActionLoading}
+                isDisabled={sessionActionLoading}
+                rows={4}
                   />
-                </div>
+            </FormControl>
                 
-                <div className="custom-session-info">
-                  <p>
+            <Box p={3} bg="blue.50" borderRadius="md">
+              <Text fontSize="sm" color="blue.700">
                     <strong>Note:</strong> Custom sessions are automatically marked as "Completed". 
                     If a compensatory session exists, the most recent one will be removed to keep the total session count the same.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="session-modal-footer">
-              <button
-                className="cancel-btn"
+              </Text>
+            </Box>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              variant="outline" 
+              mr={3} 
                 onClick={() => setCustomSessionModalOpen(false)}
-                disabled={sessionActionLoading}
+              isDisabled={sessionActionLoading}
               >
                 Cancel
-              </button>
-              <button
-                className="save-btn"
+            </Button>
+            <Button
+              colorScheme="brand"
                 onClick={handleCustomSessionSubmit}
-                disabled={sessionActionLoading}
-              >
-                {sessionActionLoading ? 'Adding...' : 'Add Session'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+              isLoading={sessionActionLoading}
+              loadingText="Adding..."
+              className="btn-pulse"
+            >
+              Add Session
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Box>
   );
 };
 

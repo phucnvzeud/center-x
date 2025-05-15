@@ -1,8 +1,184 @@
-/* Main application styles */
+/* Main App Layout */
 .app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background-image: radial-gradient(
+    circle at 80% 10%,
+    rgba(41, 121, 255, 0.1) 0%,
+    rgba(175, 89, 255, 0.05) 40%,
+    rgba(255, 89, 136, 0.03) 60%
+  );
+  position: relative;
+  overflow-x: hidden;
+}
+
+.app::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 10% 10%, rgba(255, 255, 255, 0.03) 0%, transparent 20%),
+    radial-gradient(circle at 90% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 20%),
+    radial-gradient(circle at 50% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 20%),
+    radial-gradient(circle at 80% 90%, rgba(255, 255, 255, 0.03) 0%, transparent 20%);
+  z-index: -1;
+}
+
+.app-content {
+  flex: 1;
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
+  scrollbar-width: thin;
+  animation: fadeContentIn 0.5s ease-in-out;
+}
+
+@keyframes fadeContentIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Glassmorphism adjustment for dark themes */
+@media (prefers-color-scheme: dark) {
+  .glass-card {
+    background: rgba(15, 23, 42, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Decorative elements */
+.decorative-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: -1;
+  opacity: 0.4;
+}
+
+.shape-blue {
+  background: rgba(41, 121, 255, 0.3);
+  width: 300px;
+  height: 300px;
+  top: 10%;
+  left: -5%;
+}
+
+.shape-purple {
+  background: rgba(138, 43, 226, 0.3);
+  width: 250px;
+  height: 250px;
+  top: 40%;
+  right: -5%;
+}
+
+.shape-pink {
+  background: rgba(255, 105, 180, 0.2);
+  width: 200px;
+  height: 200px;
+  bottom: 10%;
+  left: 20%;
+}
+
+/* Hover effects for list items */
+.list-item-hover {
+  transition: all 0.3s ease;
+}
+
+.list-item-hover:hover {
+  transform: translateX(5px);
+}
+
+/* Custom icon animation */
+.icon-rotate {
+  transition: transform 0.3s ease;
+}
+
+.icon-rotate:hover {
+  transform: rotate(15deg);
+}
+
+/* Button animations */
+button {
+  position: relative;
+  overflow: hidden;
+}
+
+button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%);
+  transform-origin: 50% 50%;
+}
+
+button:focus:not(:active)::after {
+  animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  20% {
+    transform: scale(25, 25);
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(40, 40);
+  }
+}
+
+/* Rounded corners for all images */
+img {
+  border-radius: 8px;
+}
+
+/* Page transitions for routes */
+.route-transition-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.route-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 400ms, transform 400ms;
+}
+
+.route-transition-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.route-transition-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .app-content {
+    padding: 1rem;
+  }
 }
 
 /* Header styles */
@@ -122,13 +298,6 @@
 
 .main-nav a:hover::after {
   width: 70%;
-}
-
-/* Main content area */
-.app-content {
-  flex: 1;
-  padding: 2rem;
-  background-color: #f5f5f5;
 }
 
 /* Page container */
