@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
@@ -8,6 +8,30 @@ import getDay from 'date-fns/getDay';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { teachersAPI, coursesAPI, kindergartenClassesAPI } from '../../api';
 import './TeacherSchedule.css';
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  Flex,
+  Spinner,
+  Alert,
+  AlertIcon,
+  Divider,
+  Badge,
+  List,
+  ListItem,
+  Stack,
+  HStack,
+  VStack,
+  Tag,
+  TabList,
+  TabPanels,
+  Tab,
+  Tabs,
+  TabPanel,
+  useColorModeValue
+} from '@chakra-ui/react';
 
 const locales = {
   'en-US': require('date-fns/locale/en-US')
@@ -77,6 +101,11 @@ const TeacherSchedule = () => {
   const [error, setError] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const tooltipRef = useRef(null);
+
+  // Colors
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const cardBg = useColorModeValue('gray.50', 'gray.700');
 
   // Close tooltip when clicking outside
   useEffect(() => {
@@ -454,182 +483,207 @@ const TeacherSchedule = () => {
   };
 
   if (loading) {
-    return <div className="loading-spinner">Loading schedule...</div>;
+    return (
+      <Flex justify="center" align="center" height="50vh">
+        <Spinner size="xl" color="blue.500" thickness="4px" />
+        <Text ml={4} fontSize="lg" color="gray.600">Loading teacher schedule...</Text>
+      </Flex>
+    );
   }
 
   if (error) {
     return (
-      <div className="error-message">
-        <h2>Error</h2>
-        <p>{error}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-      </div>
+      <Container maxW="container.xl" py={6}>
+        <Alert status="error" mb={6} borderRadius="md">
+          <AlertIcon />
+          {error}
+        </Alert>
+      </Container>
     );
   }
 
   return (
-    <div className="teacher-schedule-container">
-      <h1>{teacher ? `${teacher.name}'s Schedule` : 'Teacher Schedule'}</h1>
+    <Container maxW="container.xl" py={6}>
+      <Heading size="lg" mb={4}>
+        {teacher ? `${teacher.name}'s Schedule` : 'Teacher Schedule'}
+      </Heading>
       
-      {courses.length === 0 && kindergartenClasses.length === 0 ? (
-        <div className="no-data-message">
-          <p>No courses or kindergarten classes assigned to this teacher yet.</p>
-        </div>
-      ) : (
-        <div className="schedule-content">
-          <div className="assignments-panel">
-            <h2>Assigned Teaching</h2>
-            
-            {/* Tabs for switching between courses and kindergarten classes */}
-            <div className="assignment-tabs">
-              <button 
-                className={`tab-button ${courses.length > 0 ? 'active' : 'disabled'}`}
-                onClick={() => document.getElementById('courses-section').scrollIntoView({ behavior: 'smooth' })}
-                disabled={courses.length === 0}
-              >
-                Courses ({courses.length})
-              </button>
-              <button 
-                className={`tab-button ${kindergartenClasses.length > 0 ? 'active' : 'disabled'}`}
-                onClick={() => document.getElementById('kindergarten-section').scrollIntoView({ behavior: 'smooth' })}
-                disabled={kindergartenClasses.length === 0}
-              >
-                KG Classes ({kindergartenClasses.length})
-              </button>
-            </div>
-            
-            <div className="assignments-list">
+      {teacher && (
+        <Box mb={6}>
+          <HStack spacing={4} mb={4}>
+            <Badge colorScheme="purple" fontSize="sm" px={2} py={1}>
+              {teacher.specialization || 'No Specialization'}
+            </Badge>
+            {teacher.active !== undefined && (
+              <Badge colorScheme={teacher.active ? "green" : "red"} fontSize="sm" px={2} py={1}>
+                {teacher.active ? 'Active' : 'Inactive'}
+              </Badge>
+            )}
+          </HStack>
+          
+          <Text color="gray.600" fontSize="sm">
+            Email: {teacher.email || 'N/A'} • Phone: {teacher.phone || 'N/A'}
+          </Text>
+        </Box>
+      )}
+      
+      <Tabs variant="enclosed" colorScheme="blue" size="md">
+        <TabList>
+          <Tab>Calendar View</Tab>
+          <Tab>Assignments</Tab>
+        </TabList>
+        
+        <TabPanels>
+          <TabPanel p={4}>
+            <Box 
+              className="calendar-container"
+              bg={bgColor} 
+              borderWidth="1px" 
+              borderColor={borderColor} 
+              borderRadius="md" 
+              p={4} 
+              shadow="sm"
+            >
+              <Flex justify="center" mb={4} wrap="wrap" gap={4}>
+                <Tag size="md" colorScheme="green" borderRadius="full" variant="solid">
+                  Morning Classes (6:00 - 11:59)
+                </Tag>
+                <Tag size="md" colorScheme="orange" borderRadius="full" variant="solid">
+                  Afternoon Classes (12:00 - 16:59)
+                </Tag>
+                <Tag size="md" colorScheme="red" borderRadius="full" variant="solid">
+                  Evening Classes (17:00 - 22:00)
+                </Tag>
+                <Tag size="md" colorScheme="purple" borderRadius="full" variant="solid">
+                  Kindergarten Classes
+                </Tag>
+              </Flex>
+              
+              <Box position="relative">
+                <Calendar
+                  localizer={localizer}
+                  events={events}
+                  startAccessor="start"
+                  endAccessor="end"
+                  style={{ height: '700px' }}
+                  views={['month', 'week', 'day']}
+                  defaultView="week"
+                  eventPropGetter={eventStyleGetter}
+                  onSelectEvent={handleSelectEvent}
+                  components={{
+                    event: EventComponent
+                  }}
+                />
+                
+                {selectedEvent && (
+                  <Box 
+                    position="absolute" 
+                    ref={tooltipRef}
+                    className="event-tooltip-wrapper"
+                  >
+                    <EventTooltip 
+                      event={selectedEvent} 
+                      onClose={() => setSelectedEvent(null)} 
+                    />
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          </TabPanel>
+          
+          <TabPanel p={4}>
+            <VStack spacing={6} align="stretch">
               {courses.length > 0 && (
-                <div id="courses-section" className="assignment-section">
-                  <h3>Courses</h3>
-                  <ul className="compact-list">
+                <Box>
+                  <Heading size="md" mb={4}>Courses</Heading>
+                  <List spacing={3}>
                     {courses.map(course => (
-                      <li key={course._id} className="assignment-item">
-                        <div className="assignment-name">{course.name}</div>
-                        <div className="assignment-details">
-                          <span>Level: {course.level || 'N/A'}</span>
-                          <span>Branch: {course.branch && course.branch.name ? course.branch.name : 'N/A'}</span>
-                        </div>
-                        <div className="assignment-schedule">
-                          {course.weeklySchedule && course.weeklySchedule.length > 0 ? (
-                            <ul className="schedule-times compact">
+                      <ListItem 
+                        key={course._id} 
+                        p={4} 
+                        borderWidth="1px" 
+                        borderRadius="md" 
+                        borderColor={borderColor}
+                        bg={bgColor}
+                      >
+                        <Heading size="sm" mb={2}>{course.name}</Heading>
+                        <Flex mb={2} wrap="wrap" gap={2}>
+                          <Badge colorScheme="blue">{course.level || 'N/A'}</Badge>
+                          <Badge colorScheme="green">
+                            {course.branch && course.branch.name ? course.branch.name : 'N/A'}
+                          </Badge>
+                        </Flex>
+                        {course.weeklySchedule && course.weeklySchedule.length > 0 ? (
+                          <Box bg={cardBg} p={2} borderRadius="md" fontSize="sm">
+                            <Text fontWeight="medium" mb={1}>Schedule:</Text>
+                            <List>
                               {course.weeklySchedule.map((schedule, idx) => (
-                                <li key={idx}>
+                                <ListItem key={idx}>
                                   {schedule.day}: {schedule.startTime} - {schedule.endTime}
-                                </li>
+                                </ListItem>
                               ))}
-                            </ul>
-                          ) : (
-                            <p>No schedule defined</p>
-                          )}
-                        </div>
-                      </li>
+                            </List>
+                          </Box>
+                        ) : (
+                          <Text fontSize="sm" color="gray.500">No schedule defined</Text>
+                        )}
+                      </ListItem>
                     ))}
-                  </ul>
-                </div>
+                  </List>
+                </Box>
               )}
               
               {kindergartenClasses.length > 0 && (
-                <div id="kindergarten-section" className="assignment-section">
-                  <h3>Kindergarten Classes</h3>
-                  <ul className="compact-list">
+                <Box>
+                  <Heading size="md" mb={4}>Kindergarten Classes</Heading>
+                  <List spacing={3}>
                     {kindergartenClasses.map(kClass => (
-                      <li key={kClass._id} className="assignment-item">
-                        <div className="assignment-name">{kClass.name}</div>
-                        <div className="assignment-details">
-                          <span>School: {kClass.school && kClass.school.name ? kClass.school.name : 'N/A'}</span>
-                          <span>Age Group: {kClass.ageGroup || 'N/A'}</span>
-                        </div>
-                        <div className="assignment-schedule">
-                          {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
-                            <ul className="schedule-times compact">
+                      <ListItem 
+                        key={kClass._id} 
+                        p={4} 
+                        borderWidth="1px" 
+                        borderRadius="md" 
+                        borderColor={borderColor}
+                        bg={bgColor}
+                      >
+                        <Heading size="sm" mb={2}>{kClass.name}</Heading>
+                        <Flex mb={2} wrap="wrap" gap={2}>
+                          <Badge colorScheme="purple">
+                            {kClass.school && kClass.school.name ? kClass.school.name : 'N/A'}
+                          </Badge>
+                          <Badge colorScheme="teal">{kClass.ageGroup || 'N/A'}</Badge>
+                        </Flex>
+                        {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
+                          <Box bg={cardBg} p={2} borderRadius="md" fontSize="sm">
+                            <Text fontWeight="medium" mb={1}>Schedule:</Text>
+                            <List>
                               {kClass.weeklySchedule.map((schedule, idx) => (
-                                <li key={idx}>
+                                <ListItem key={idx}>
                                   {schedule.day}: {schedule.startTime} - {schedule.endTime}
-                                </li>
+                                </ListItem>
                               ))}
-                            </ul>
-                          ) : (
-                            <p>No schedule defined</p>
-                          )}
-                        </div>
-                      </li>
+                            </List>
+                          </Box>
+                        ) : (
+                          <Text fontSize="sm" color="gray.500">No schedule defined</Text>
+                        )}
+                      </ListItem>
                     ))}
-                  </ul>
-                </div>
+                  </List>
+                </Box>
               )}
-            </div>
-          </div>
-          
-          <div className="calendar-container">
-            <div className="time-legend">
-              <div className="legend-item">
-                <span className="legend-color legend-morning"></span>
-                <span>Morning Courses (6:00 - 11:59)</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color legend-afternoon"></span>
-                <span>Afternoon Courses (12:00 - 16:59)</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color legend-evening"></span>
-                <span>Evening Courses (17:00 - 22:00)</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color legend-kindergarten"></span>
-                <span>Kindergarten Classes</span>
-              </div>
-            </div>
-            <Calendar
-              localizer={localizer}
-              events={events}
-              startAccessor="start"
-              endAccessor="end"
-              style={{ height: 500 }}
-              views={['week', 'day']}
-              defaultView={'week'}
-              min={new Date(0, 0, 0, 7, 0, 0)} // Start display at 7:00 AM instead of 6:00 AM
-              max={new Date(0, 0, 0, 22, 0, 0)} // End display at 10:00 PM
-              eventPropGetter={eventStyleGetter}
-              components={{
-                event: EventComponent,
-                timeSlotWrapper: (props) => {
-                  const hour = props.value.getHours();
-                  const minutes = props.value.getMinutes();
-                  
-                  // Check if this is a time slot we want to hide
-                  // For 11:30 AM to 12:30 PM time range
-                  if ((hour === 11 && minutes >= 30) || (hour === 12 && minutes < 30)) {
-                    return (
-                      <div
-                        className="hidden-time-slot"
-                        {...props}
-                      />
-                    );
-                  }
-                  
-                  return <div {...props} />;
-                }
-              }}
-              step={15} // 15-minute intervals for better precision
-              timeslots={2} // 2 slots per step gives 7.5-minute visual precision
-              onNavigate={(date) => console.log('Calendar navigated to:', date)}
-              onSelectEvent={handleSelectEvent}
-              selectable
-            />
-            
-            {selectedEvent && (
-              <div className="tooltip-container" ref={tooltipRef}>
-                <EventTooltip 
-                  event={selectedEvent} 
-                  onClose={() => setSelectedEvent(null)} 
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+              
+              {courses.length === 0 && kindergartenClasses.length === 0 && (
+                <Alert status="info">
+                  <AlertIcon />
+                  This teacher has no assigned courses or classes.
+                </Alert>
+              )}
+            </VStack>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+    </Container>
   );
 };
 

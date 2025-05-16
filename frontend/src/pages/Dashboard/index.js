@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { teachersAPI, coursesAPI, studentsAPI, kindergartenClassesAPI, holidaysAPI } from '../../api';
 import { Chart } from 'react-google-charts';
 import NotificationWidget from '../../components/NotificationWidget';
-import { FaUserGraduate, FaChalkboardTeacher, FaBook, FaCalendarAlt, FaSchool, FaUserFriends, FaExclamationTriangle, FaChartPie, FaChartBar } from 'react-icons/fa';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { Box, Grid, Heading, Text, Flex, Stack, Stat, StatLabel, StatNumber, Badge, Table, Thead, Tbody, Tr, Th, Td, Divider, SimpleGrid, useColorModeValue } from '@chakra-ui/react';
+import { FaUserGraduate, FaChalkboardTeacher, FaBook, FaCalendarAlt, FaSchool, FaUserFriends, FaExclamationTriangle, FaChartPie, FaChartBar, FaBell, FaUsersCog, FaLayerGroup, FaCheckSquare, FaClock, FaMoneyBillWave } from 'react-icons/fa';
+import { format, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
+import { Box, Grid, GridItem, Heading, Text, Flex, Stack, Stat, StatLabel, StatNumber, Badge, Table, Thead, Tbody, Tr, Th, Td, Divider, SimpleGrid, useColorModeValue, Progress, HStack } from '@chakra-ui/react';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -31,6 +31,13 @@ const Dashboard = () => {
   const [upcomingSessions, setUpcomingSessions] = useState([]);
   const [nextHolidays, setNextHolidays] = useState([]);
   const [recentCourses, setRecentCourses] = useState([]);
+  const [todaySessions, setTodaySessions] = useState([]);
+  const [revenue, setRevenue] = useState({
+    monthly: 0,
+    annual: 0,
+    lastMonth: 0,
+    growth: 0
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,10 +79,20 @@ const Dashboard = () => {
         let totalSessions = 0;
         let completedSessions = 0;
         let upcomingSessionsList = [];
+        let todaysSessionsList = [];
         
         // Extract upcoming sessions for the next 7 days
         const nextWeek = new Date();
         nextWeek.setDate(nextWeek.getDate() + 7);
+        
+        // Mock revenue data (replace with actual API calls when available)
+        const mockRevenue = {
+          monthly: Math.floor(Math.random() * 50000) + 10000,
+          annual: Math.floor(Math.random() * 500000) + 100000,
+          lastMonth: Math.floor(Math.random() * 40000) + 10000
+        };
+        mockRevenue.growth = ((mockRevenue.monthly - mockRevenue.lastMonth) / mockRevenue.lastMonth) * 100;
+        setRevenue(mockRevenue);
         
         courses.forEach(course => {
           if (course.sessions) {
@@ -86,6 +103,17 @@ const Dashboard = () => {
               
               if (session.status === 'Completed') {
                 completedSessions++;
+              }
+              
+              // Get today's sessions
+              if (isSameDay(sessionDate, now) && session.status !== 'Canceled') {
+                todaysSessionsList.push({
+                  date: sessionDate,
+                  courseName: course.name,
+                  courseId: course._id,
+                  status: session.status,
+                  time: format(sessionDate, 'h:mm a')
+                });
               }
               
               // Get upcoming sessions for next 7 days
@@ -100,6 +128,10 @@ const Dashboard = () => {
             });
           }
         });
+        
+        // Sort today's sessions by time
+        todaysSessionsList.sort((a, b) => a.date - b.date);
+        setTodaySessions(todaysSessionsList);
         
         // Sort upcoming sessions by date
         upcomingSessionsList.sort((a, b) => a.date - b.date);
@@ -234,8 +266,19 @@ const Dashboard = () => {
     <Box>
       <Heading mb={6} fontSize="xl" fontWeight="semibold">Dashboard</Heading>
       
-      {/* Stats Overview */}
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
+      {/* Recent Notifications - Now at the top and full width */}
+      <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
+        <Flex align="center" mb={4}>
+          <Box color="purple.500" mr={2}>
+            <FaBell />
+          </Box>
+          <Heading size="sm">Recent Activity & Notifications</Heading>
+        </Flex>
+        <NotificationWidget limit={5} />
+      </Box>
+      
+      {/* Key Metrics Overview */}
+      <SimpleGrid columns={{ base: 2, md: 4, lg: 6 }} spacing={4} mb={6}>
         <StatCard 
           icon={<FaChalkboardTeacher />} 
           title="Teachers" 
@@ -268,12 +311,131 @@ const Dashboard = () => {
           iconColor="orange.500" 
           to="/kindergarten/schools" 
         />
+        <StatCard 
+          icon={<FaUsersCog />} 
+          title="Classes" 
+          value={stats.classes.total} 
+          iconBg="teal.100" 
+          iconColor="teal.500" 
+          to="/kindergarten/classes" 
+        />
+        <StatCard 
+          icon={<FaLayerGroup />} 
+          title="Sessions" 
+          value={stats.totalSessions} 
+          iconBg="yellow.100" 
+          iconColor="yellow.500" 
+          to="/sessions" 
+        />
       </SimpleGrid>
+      
+      {/* Course Status Stats */}
+      <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
+        <Flex align="center" mb={4}>
+          <Box color="purple.500" mr={2}>
+            <FaCheckSquare />
+          </Box>
+          <Heading size="sm">Course Status Overview</Heading>
+        </Flex>
+        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+          <StatusStatCard title="Active Courses" value={stats.activeCourses} colorScheme="green" />
+          <StatusStatCard title="Upcoming" value={stats.upcomingCourses} colorScheme="blue" />
+          <StatusStatCard title="Completed" value={stats.completedCourses} colorScheme="purple" />
+          <StatusStatCard title="Cancelled" value={stats.cancelledCourses} colorScheme="red" />
+        </SimpleGrid>
+        <Box mt={4}>
+          <Text fontSize="sm" fontWeight="medium" mb={1}>Sessions Completion</Text>
+          <Flex align="center" mb={1}>
+            <Text fontSize="xs" color="gray.500">
+              {stats.completedSessions} of {stats.totalSessions} Total Sessions
+            </Text>
+            <Text fontSize="xs" fontWeight="bold" ml="auto">
+              {stats.totalSessions > 0 ? Math.round((stats.completedSessions / stats.totalSessions) * 100) : 0}%
+            </Text>
+          </Flex>
+          <Progress 
+            value={stats.totalSessions > 0 ? (stats.completedSessions / stats.totalSessions) * 100 : 0} 
+            size="sm" 
+            colorScheme="purple" 
+            borderRadius="full"
+          />
+        </Box>
+      </Box>
+          
+      {/* Revenue Overview (Mocked Data) */}
+      <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
+        <Flex align="center" mb={4}>
+          <Box color="purple.500" mr={2}>
+            <FaMoneyBillWave />
+          </Box>
+          <Heading size="sm">Revenue Overview</Heading>
+        </Flex>
+        <SimpleGrid columns={{ base: 2, md: 3 }} spacing={4}>
+          <Box p={4} bg="gray.50" borderRadius="md">
+            <Text fontSize="sm" color="gray.500">Monthly Revenue</Text>
+            <Text fontSize="2xl" fontWeight="bold">${revenue.monthly.toLocaleString()}</Text>
+            <HStack mt={1}>
+              <Badge colorScheme={revenue.growth >= 0 ? "green" : "red"}>
+                {revenue.growth >= 0 ? "+" : ""}{revenue.growth.toFixed(1)}%
+              </Badge>
+              <Text fontSize="xs" color="gray.500">vs last month</Text>
+            </HStack>
+          </Box>
+          <Box p={4} bg="gray.50" borderRadius="md">
+            <Text fontSize="sm" color="gray.500">Annual Revenue</Text>
+            <Text fontSize="2xl" fontWeight="bold">${revenue.annual.toLocaleString()}</Text>
+          </Box>
+          <Box p={4} bg="gray.50" borderRadius="md">
+            <Text fontSize="sm" color="gray.500">Revenue Per Student</Text>
+            <Text fontSize="2xl" fontWeight="bold">
+              ${stats.students > 0 ? Math.round(revenue.annual / stats.students).toLocaleString() : 0}
+            </Text>
+          </Box>
+        </SimpleGrid>
+      </Box>
       
       <Grid templateColumns={{ base: "1fr", lg: "1fr 350px" }} gap={6}>
         <Box>
-          {/* Course Status Distribution */}
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6}>
+          {/* Today's Sessions */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                <FaClock />
+              </Box>
+              <Heading size="sm">Today's Schedule</Heading>
+            </Flex>
+            {todaySessions.length > 0 ? (
+              <Table variant="simple" size="sm">
+                <Thead>
+                  <Tr>
+                    <Th>Time</Th>
+                    <Th>Course</Th>
+                    <Th>Status</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {todaySessions.map((session, index) => (
+                    <Tr key={index}>
+                      <Td fontWeight="medium">{session.time}</Td>
+                      <Td>
+                        <Link to={`/courses/${session.courseId}`} style={{ color: '#805ad5' }}>
+                          {session.courseName}
+                        </Link>
+                      </Td>
+                      <Td>
+                        <CourseStatusBadge status={session.status} />
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            ) : (
+              <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>No sessions scheduled for today</Text>
+            )}
+          </Box>
+        
+          {/* Course Status Distribution Chart */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
             <Flex align="center" mb={4}>
               <Box color="purple.500" mr={2}>
                 <FaChartPie />
@@ -296,8 +458,49 @@ const Dashboard = () => {
             </Box>
           </Box>
           
-          {/* Teachers by Branch */}
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6}>
+          {/* Recent Courses */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm">
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                <FaBook />
+              </Box>
+              <Heading size="sm">Recent Courses</Heading>
+            </Flex>
+            <Table variant="simple" size="sm">
+              <Thead>
+                <Tr>
+                  <Th>Course Name</Th>
+                  <Th>Status</Th>
+                  <Th>Students</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {recentCourses.map((course) => (
+                  <Tr key={course._id}>
+                    <Td>
+                      <Link to={`/courses/${course._id}`} style={{ color: '#805ad5' }}>
+                        {course.name}
+                      </Link>
+                    </Td>
+                    <Td>
+                      <CourseStatusBadge status={course.status} />
+                    </Td>
+                    <Td>{course.students?.length || 0}</Td>
+                  </Tr>
+                ))}
+                {recentCourses.length === 0 && (
+                  <Tr>
+                    <Td colSpan={3}>No courses found</Td>
+                  </Tr>
+              )}
+              </Tbody>
+            </Table>
+          </Box>
+        </Box>
+        
+        <Stack spacing={6}>
+          {/* Teachers by Branch Chart */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm">
             <Flex align="center" mb={4}>
               <Box color="purple.500" mr={2}>
                 <FaChartBar />
@@ -322,56 +525,15 @@ const Dashboard = () => {
             </Box>
           </Box>
           
-          {/* Recent Courses */}
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4}>
-            <Flex align="center" mb={4}>
-              <Box color="purple.500" mr={2}>
-                <FaBook />
-              </Box>
-              <Heading size="sm">Recent Courses</Heading>
-            </Flex>
-            <Table variant="simple" size="sm">
-              <Thead>
-                <Tr>
-                  <Th>Course Name</Th>
-                  <Th>Status</Th>
-                  <Th>Students</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {recentCourses.map((course) => (
-                  <Tr key={course._id}>
-                    <Td>
-                      <Link to={`/courses/${course._id}`} style={{ color: '#805ad5' }}>
-                        {course.name}
-                    </Link>
-                    </Td>
-                    <Td>
-                      <CourseStatusBadge status={course.status} />
-                    </Td>
-                    <Td>{course.students?.length || 0}</Td>
-                  </Tr>
-                ))}
-                {recentCourses.length === 0 && (
-                  <Tr>
-                    <Td colSpan={3}>No courses found</Td>
-                  </Tr>
-                )}
-              </Tbody>
-            </Table>
-          </Box>
-        </Box>
-        
-        <Stack spacing={6}>
           {/* Upcoming Sessions */}
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4}>
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm">
             <Flex align="center" mb={4}>
               <Box color="purple.500" mr={2}>
                 <FaCalendarAlt />
               </Box>
               <Heading size="sm">Upcoming Sessions</Heading>
             </Flex>
-            {upcomingSessions.length > 0 ? (
+                {upcomingSessions.length > 0 ? (
               <Stack spacing={3}>
                 {upcomingSessions.map((session, index) => (
                   <Box 
@@ -379,6 +541,7 @@ const Dashboard = () => {
                     p={3} 
                     bg="gray.50" 
                     _hover={{ bg: "gray.100" }}
+                    borderRadius="md"
                   >
                     <Text fontWeight="medium" fontSize="sm">
                       <Link to={`/courses/${session.courseId}`} style={{ color: '#805ad5' }}>
@@ -397,7 +560,7 @@ const Dashboard = () => {
           </Box>
           
           {/* Upcoming Holidays */}
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4}>
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm">
             <Flex align="center" mb={4}>
               <Box color="purple.500" mr={2}>
                 <FaExclamationTriangle />
@@ -411,6 +574,7 @@ const Dashboard = () => {
                     key={holiday._id} 
                     p={3} 
                     bg="gray.50"
+                    borderRadius="md"
                   >
                     <Text fontWeight="medium" fontSize="sm">{holiday.name}</Text>
                     <Text fontSize="xs" color="gray.500">
@@ -422,14 +586,6 @@ const Dashboard = () => {
                 ) : (
               <Text fontSize="sm" color="gray.500">No upcoming holidays</Text>
                 )}
-          </Box>
-          
-          {/* Notifications */}
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4}>
-            <Flex align="center" mb={4}>
-              <Heading size="sm">Recent Notifications</Heading>
-            </Flex>
-            <NotificationWidget limit={4} />
           </Box>
         </Stack>
       </Grid>
@@ -447,25 +603,44 @@ const StatCard = ({ icon, title, value, iconBg, iconColor, to }) => {
       borderWidth="1px" 
       borderColor="gray.200"
       p={4}
+      borderRadius="md"
+      shadow="sm"
       transition="all 0.2s"
       _hover={{ shadow: "md", borderColor: "purple.200", transform: "translateY(-2px)" }}
     >
-      <Flex align="center" mb={3}>
+      <Flex align="center" mb={2}>
         <Flex
-          w="36px"
-          h="36px"
+          w="32px"
+          h="32px"
           align="center"
           justify="center"
           bg={iconBg}
           color={iconColor}
           mr={3}
           fontSize="lg"
+          borderRadius="md"
         >
           {icon}
         </Flex>
-        <Text fontWeight="medium" color="gray.600">{title}</Text>
+        <Text fontWeight="medium" color="gray.600" fontSize="sm">{title}</Text>
       </Flex>
       <Text fontSize="2xl" fontWeight="bold">{value.toLocaleString()}</Text>
+    </Box>
+  );
+};
+
+// Status Stat Card Component
+const StatusStatCard = ({ title, value, colorScheme }) => {
+  return (
+    <Box
+      bg={`${colorScheme}.50`}
+      p={4}
+      borderRadius="md"
+      borderWidth="1px"
+      borderColor={`${colorScheme}.200`}
+    >
+      <Text fontSize="sm" color={`${colorScheme}.700`} mb={1}>{title}</Text>
+      <Text fontSize="2xl" fontWeight="bold" color={`${colorScheme}.700`}>{value}</Text>
     </Box>
   );
 };

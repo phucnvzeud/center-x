@@ -1,7 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { schoolsAPI, regionsAPI } from '../../api';
-import './SchoolForm.css';
+import {
+  Box,
+  Button,
+  Container,
+  Divider,
+  Flex,
+  FormControl,
+  FormLabel,
+  Heading,
+  Input,
+  Select,
+  Alert,
+  AlertIcon,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  Spinner,
+  Text,
+  VStack,
+  Grid,
+  GridItem,
+  useColorModeValue
+} from '@chakra-ui/react';
+import { FaArrowLeft, FaChevronRight } from 'react-icons/fa';
 
 const SchoolForm = () => {
   const { schoolId } = useParams();
@@ -25,6 +48,10 @@ const SchoolForm = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
+
+  // Colors
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,131 +130,164 @@ const SchoolForm = () => {
   };
 
   if (loading) {
-    return <div className="loading-spinner">Loading school data...</div>;
+    return (
+      <Flex justify="center" align="center" height="50vh">
+        <Spinner size="xl" color="blue.500" thickness="4px" />
+        <Text ml={4} fontSize="lg" color="gray.600">Loading school data...</Text>
+      </Flex>
+    );
   }
 
   return (
-    <div className="school-form-container">
-      <div className="school-form-header">
-        <h1>{isEditMode ? 'Edit School' : 'Create New School'}</h1>
-      </div>
+    <Container maxW="container.md" py={6}>
+      <Flex mb={6} justify="space-between" alignItems="center">
+        <Heading size="lg">{isEditMode ? 'Edit School' : 'Create New School'}</Heading>
+        <Button 
+          as={Link} 
+          to={defaultRegionId ? `/kindergarten/regions/${defaultRegionId}/schools` : '/kindergarten/schools'} 
+          leftIcon={<FaArrowLeft />} 
+          size="sm" 
+          colorScheme="gray" 
+          variant="outline"
+        >
+          Back to Schools
+        </Button>
+      </Flex>
       
       {error && (
-        <div className="error-message">
-          <p>{error}</p>
-        </div>
+        <Alert status="error" mb={6} borderRadius="md">
+          <AlertIcon />
+          {error}
+        </Alert>
       )}
       
-      <form onSubmit={handleSubmit} className="school-form">
-        <div className="form-group">
-          <label htmlFor="name">School Name</label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={school.name}
-            onChange={handleInputChange}
-            required
-            disabled={formSubmitting}
-          />
-        </div>
-        
-        <div className="form-group">
-          <label htmlFor="region">Region</label>
-          <select
-            id="region"
-            name="region"
-            value={school.region}
-            onChange={handleInputChange}
-            required
-            disabled={formSubmitting}
-          >
-            <option value="">Select a region</option>
-            {regions.map(region => (
-              <option key={region._id} value={region._id}>{region.name}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="form-group">
-          <label htmlFor="address">Address (Optional)</label>
-          <input
-            type="text"
-            id="address"
-            name="address"
-            value={school.address || ''}
-            onChange={handleInputChange}
-            disabled={formSubmitting}
-          />
-        </div>
-        
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="contactPerson">Contact Person (Optional)</label>
-            <input
-              type="text"
+      <Box 
+        as="form" 
+        onSubmit={handleSubmit} 
+        bg={bgColor} 
+        borderWidth="1px" 
+        borderColor={borderColor} 
+        borderRadius="md" 
+        p={6} 
+        shadow="sm"
+      >
+        <VStack spacing={6} align="stretch">
+          <FormControl isRequired>
+            <FormLabel>School Name</FormLabel>
+            <Input
+              id="name"
+              name="name"
+              value={school.name}
+              onChange={handleInputChange}
+              isDisabled={formSubmitting}
+            />
+          </FormControl>
+          
+          <FormControl isRequired>
+            <FormLabel>Region</FormLabel>
+            <Select
+              id="region"
+              name="region"
+              value={school.region}
+              onChange={handleInputChange}
+              isDisabled={formSubmitting}
+            >
+              <option value="">Select a region</option>
+              {regions.map(region => (
+                <option key={region._id} value={region._id}>{region.name}</option>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <FormControl>
+            <FormLabel>Address (Optional)</FormLabel>
+            <Input
+              id="address"
+              name="address"
+              value={school.address || ''}
+              onChange={handleInputChange}
+              isDisabled={formSubmitting}
+            />
+          </FormControl>
+          
+          <FormControl>
+            <FormLabel>Contact Person (Optional)</FormLabel>
+            <Input
               id="contactPerson"
               name="contactPerson"
               value={school.contactPerson || ''}
               onChange={handleInputChange}
-              disabled={formSubmitting}
+              isDisabled={formSubmitting}
             />
-          </div>
-        </div>
-        
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="contactEmail">Contact Email (Optional)</label>
-            <input
-              type="email"
-              id="contactEmail"
-              name="contactEmail"
-              value={school.contactEmail || ''}
-              onChange={handleInputChange}
-              disabled={formSubmitting}
-            />
-          </div>
+          </FormControl>
           
-          <div className="form-group">
-            <label htmlFor="contactPhone">Contact Phone (Optional)</label>
-            <input
-              type="text"
-              id="contactPhone"
-              name="contactPhone"
-              value={school.contactPhone || ''}
-              onChange={handleInputChange}
-              disabled={formSubmitting}
-            />
-          </div>
-        </div>
-        
-        <div className="form-actions">
-          <Link 
-            to={defaultRegionId ? `/kindergarten/regions/${defaultRegionId}/schools` : '/kindergarten/schools'} 
-            className="cancel-btn"
-          >
-            Cancel
-          </Link>
-          <button 
-            type="submit" 
-            className="submit-btn"
-            disabled={formSubmitting}
-          >
-            {formSubmitting ? 'Saving...' : 'Save School'}
-          </button>
-        </div>
-      </form>
+          <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+            <GridItem>
+              <FormControl>
+                <FormLabel>Contact Email (Optional)</FormLabel>
+                <Input
+                  id="contactEmail"
+                  name="contactEmail"
+                  type="email"
+                  value={school.contactEmail || ''}
+                  onChange={handleInputChange}
+                  isDisabled={formSubmitting}
+                />
+              </FormControl>
+            </GridItem>
+            
+            <GridItem>
+              <FormControl>
+                <FormLabel>Contact Phone (Optional)</FormLabel>
+                <Input
+                  id="contactPhone"
+                  name="contactPhone"
+                  value={school.contactPhone || ''}
+                  onChange={handleInputChange}
+                  isDisabled={formSubmitting}
+                />
+              </FormControl>
+            </GridItem>
+          </Grid>
+          
+          <Flex justify="flex-end" gap={3} mt={4}>
+            <Button 
+              as={Link}
+              to={defaultRegionId ? `/kindergarten/regions/${defaultRegionId}/schools` : '/kindergarten/schools'} 
+              variant="outline" 
+              isDisabled={formSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              colorScheme="blue"
+              isLoading={formSubmitting}
+              loadingText="Saving"
+            >
+              {isEditMode ? 'Update School' : 'Create School'}
+            </Button>
+          </Flex>
+        </VStack>
+      </Box>
       
-      <div className="breadcrumb-navigation">
-        <Link to="/kindergarten" className="breadcrumb-link">Dashboard</Link>
-        <span className="breadcrumb-separator">/</span>
-        <Link to="/kindergarten/schools" className="breadcrumb-link">Schools</Link>
-        <span className="breadcrumb-separator">/</span>
-        <span className="breadcrumb-current">
-          {isEditMode ? 'Edit School' : 'New School'}
-        </span>
-      </div>
-    </div>
+      <Breadcrumb 
+        separator={<FaChevronRight color="gray.500" />} 
+        mt={6}
+        fontSize="sm"
+        color="gray.500"
+      >
+        <BreadcrumbItem>
+          <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbItem>
+          <BreadcrumbLink as={Link} to="/kindergarten/schools">Schools</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbItem isCurrentPage>
+          <Text fontWeight="medium">{isEditMode ? 'Edit School' : 'New School'}</Text>
+        </BreadcrumbItem>
+      </Breadcrumb>
+    </Container>
   );
 };
 

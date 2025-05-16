@@ -22,7 +22,6 @@ import ClassDetail from './pages/ClassDetail';
 import TestComponent from './pages/ClassDetail/TestComponent';
 import Notifications from './pages/Notifications';
 import { NotificationProvider } from './context/NotificationContext';
-import KindergartenNavBar from './components/KindergartenNavBar';
 import { Box, Flex, Text, Input, InputGroup, InputLeftElement, Button, IconButton, Drawer, DrawerBody, DrawerHeader, DrawerOverlay, DrawerContent, DrawerCloseButton, useDisclosure, VStack, HStack, Heading, Divider, useColorModeValue, Image } from '@chakra-ui/react';
 import { FaGraduationCap, FaUserTie, FaBook, FaBuilding, FaHome, FaBell, FaBars, FaSearch } from 'react-icons/fa';
 import TeacherDetail from './pages/TeacherDetail';
@@ -95,7 +94,7 @@ function Layout({ children }) {
               size="sm" 
               variant="outline"
             >
-              Upgrade
+              Development
             </Button>
           </HStack>
         </Flex>
@@ -145,6 +144,32 @@ function SidebarContent() {
     );
   };
 
+  const SubNavItem = ({ children, to }) => {
+    const isActive = location.pathname === to;
+    
+    return (
+      <Flex
+        align="center"
+        pl={10}
+        py={2}
+        mb={1}
+        cursor="pointer"
+        role="group"
+        fontSize="xs"
+        fontWeight="medium"
+        color={isActive ? "brand.500" : "gray.500"}
+        transition="all 0.2s"
+        _hover={{
+          color: "brand.500",
+        }}
+        as={Link}
+        to={to}
+      >
+        {children}
+      </Flex>
+    );
+  };
+
   return (
     <Box>
       <Flex px={6} py={4} align="center" mb={6}>
@@ -164,6 +189,11 @@ function SidebarContent() {
         <NavItem icon={<FaUserTie />} to="/teachers" section="/teachers">
           Teachers
         </NavItem>
+        {location.pathname.startsWith('/teachers') && (
+          <SubNavItem to="/teachers/manage">
+            Manage Teachers
+          </SubNavItem>
+        )}
         <NavItem icon={<FaBook />} to="/courses" section="/courses">
           Courses
         </NavItem>
@@ -215,42 +245,35 @@ function App() {
         }}
       >
         <Layout>
-          {/* Conditional Kindergarten NavBar */}
-          {window.location.pathname.includes('/kindergarten') && (
-            <Box mb={6}>
-              <KindergartenNavBar />
-            </Box>
-          )}
-          
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/test" element={<TestComponent />} />
-              <Route path="/teachers" element={<Teachers />} />
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/test" element={<TestComponent />} />
+            <Route path="/teachers" element={<Teachers />} />
             <Route path="/teachers/:teacherId" element={<TeacherDetail />} />
             <Route path="/teachers/:teacherId/edit" element={<TeacherEdit />} />
-              <Route path="/teachers/manage" element={<TeachersManagement />} />
-              <Route path="/teachers/:teacherId/schedule" element={<TeacherSchedule />} />
-              <Route path="/courses" element={<Courses />} />
-              <Route path="/courses/new" element={<CourseForm />} />
-              <Route path="/courses/edit/:courseId" element={<CourseForm />} />
-              <Route path="/courses/:courseId" element={<CourseDetail />} />
-              <Route path="/courses/:courseId/sessions" element={<Sessions />} />
-              <Route path="/kindergarten" element={<KindergartenDashboard />} />
-              <Route path="/kindergarten/regions" element={<RegionList />} />
-              <Route path="/kindergarten/regions/new" element={<RegionForm />} />
-              <Route path="/kindergarten/regions/edit/:regionId" element={<RegionForm />} />
-              <Route path="/kindergarten/regions/:regionId/schools" element={<SchoolList />} />
-              <Route path="/kindergarten/schools" element={<SchoolList />} />
-              <Route path="/kindergarten/schools/new" element={<SchoolForm />} />
-              <Route path="/kindergarten/schools/edit/:schoolId" element={<SchoolForm />} />
-              <Route path="/kindergarten/schools/:schoolId/classes" element={<ClassList />} />
-              <Route path="/kindergarten/classes" element={<ClassList />} />
-              <Route path="/kindergarten/classes/new" element={<ClassForm />} />
-              <Route path="/kindergarten/classes/edit/:classId" element={<ClassForm />} />
-              <Route path="/kindergarten/classes/:classId" element={<ClassDetail />} />
-              <Route path="/branches" element={<Branches />} />
-              <Route path="/notifications" element={<Notifications />} />
-            </Routes>
+            <Route path="/teachers/manage" element={<TeachersManagement />} />
+            <Route path="/teachers/:teacherId/schedule" element={<TeacherSchedule />} />
+            <Route path="/courses" element={<Courses />} />
+            <Route path="/courses/new" element={<CourseForm />} />
+            <Route path="/courses/edit/:courseId" element={<CourseForm />} />
+            <Route path="/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/courses/:courseId/sessions" element={<Sessions />} />
+            <Route path="/kindergarten" element={<KindergartenDashboard />} />
+            <Route path="/kindergarten/regions" element={<RegionList />} />
+            <Route path="/kindergarten/regions/new" element={<RegionForm />} />
+            <Route path="/kindergarten/regions/edit/:regionId" element={<RegionForm />} />
+            <Route path="/kindergarten/regions/:regionId/schools" element={<SchoolList />} />
+            <Route path="/kindergarten/schools" element={<SchoolList />} />
+            <Route path="/kindergarten/schools/new" element={<SchoolForm />} />
+            <Route path="/kindergarten/schools/edit/:schoolId" element={<SchoolForm />} />
+            <Route path="/kindergarten/schools/:schoolId/classes" element={<ClassList />} />
+            <Route path="/kindergarten/classes" element={<ClassList />} />
+            <Route path="/kindergarten/classes/new" element={<ClassForm />} />
+            <Route path="/kindergarten/classes/edit/:classId" element={<ClassForm />} />
+            <Route path="/kindergarten/classes/:classId" element={<ClassDetail />} />
+            <Route path="/branches" element={<Branches />} />
+            <Route path="/notifications" element={<Notifications />} />
+          </Routes>
         </Layout>
       </Router>
     </NotificationProvider>

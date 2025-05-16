@@ -1,7 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { kindergartenClassesAPI, schoolsAPI, teachersAPI } from '../../api';
-import './ClassForm.css';
+import {
+  Box,
+  Button,
+  Container,
+  Divider,
+  Flex,
+  FormControl,
+  FormLabel,
+  Heading,
+  Input,
+  Select,
+  NumberInput,
+  NumberInputField,
+  Alert,
+  AlertIcon,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  Spinner,
+  Text,
+  VStack,
+  HStack,
+  Grid,
+  GridItem,
+  IconButton,
+  useColorModeValue
+} from '@chakra-ui/react';
+import { FaArrowLeft, FaChevronRight, FaPlus, FaTrash } from 'react-icons/fa';
 
 const DAYS_OF_WEEK = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
@@ -43,6 +70,11 @@ const ClassForm = () => {
   // Default time slots for new schedules
   const defaultStartTime = '09:00';
   const defaultEndTime = '10:30';
+
+  // Colors
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const scheduleBg = useColorModeValue('gray.50', 'gray.700');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -127,6 +159,10 @@ const ClassForm = () => {
     } else {
       setKClass(prev => ({ ...prev, [name]: value }));
     }
+  };
+
+  const handleNumberInputChange = (name, value) => {
+    setKClass(prev => ({ ...prev, [name]: parseInt(value, 10) || 0 }));
   };
 
   const handleAddSchedule = () => {
@@ -238,307 +274,362 @@ const ClassForm = () => {
   };
 
   if (loading) {
-    return <div className="loading-spinner">Loading class data...</div>;
+    return (
+      <Flex justify="center" align="center" height="50vh">
+        <Spinner size="xl" color="blue.500" thickness="4px" />
+        <Text ml={4} fontSize="lg" color="gray.600">Loading class data...</Text>
+      </Flex>
+    );
   }
 
   return (
-    <div className="class-form-container">
-      <div className="class-form-header">
-        <h1>{isEditMode ? 'Edit Class' : 'Create New Class'}</h1>
-      </div>
+    <Container maxW="container.lg" py={6}>
+      <Flex mb={6} justify="space-between" alignItems="center">
+        <Heading size="lg">{isEditMode ? 'Edit Class' : 'Create New Class'}</Heading>
+        <Button 
+          as={Link} 
+          to={defaultSchoolId ? `/kindergarten/schools/${defaultSchoolId}/classes` : '/kindergarten/classes'} 
+          leftIcon={<FaArrowLeft />} 
+          size="sm" 
+          colorScheme="gray" 
+          variant="outline"
+        >
+          Back to Classes
+        </Button>
+      </Flex>
       
       {error && (
-        <div className="error-message">
-          <p>{error}</p>
-        </div>
+        <Alert status="error" mb={6} borderRadius="md">
+          <AlertIcon />
+          {error}
+        </Alert>
       )}
       
-      <form onSubmit={handleSubmit} className="class-form">
-        <div className="form-section">
-          <h2>Basic Information</h2>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="name">Class Name</label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={kClass.name}
-                onChange={handleInputChange}
-                required
-                disabled={formSubmitting}
-              />
-            </div>
+      <Box 
+        as="form" 
+        onSubmit={handleSubmit} 
+        bg={bgColor} 
+        borderWidth="1px" 
+        borderColor={borderColor} 
+        borderRadius="md" 
+        p={6} 
+        shadow="sm"
+      >
+        <VStack spacing={8} align="stretch">
+          <Box>
+            <Heading size="md" mb={4}>Basic Information</Heading>
+            <Divider mb={4} />
             
-            <div className="form-group">
-              <label htmlFor="school">School</label>
-              <select
-                id="school"
-                name="school"
-                value={kClass.school}
-                onChange={handleInputChange}
-                required
-                disabled={formSubmitting}
-              >
-                <option value="">Select a school</option>
-                {schools.map(school => (
-                  <option key={school._id} value={school._id}>{school.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
+              <GridItem>
+                <FormControl isRequired>
+                  <FormLabel>Class Name</FormLabel>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={kClass.name}
+                    onChange={handleInputChange}
+                    isDisabled={formSubmitting}
+                  />
+                </FormControl>
+              </GridItem>
+              
+              <GridItem>
+                <FormControl isRequired>
+                  <FormLabel>Age Group</FormLabel>
+                  <Select
+                    id="ageGroup"
+                    name="ageGroup"
+                    value={kClass.ageGroup}
+                    onChange={handleInputChange}
+                    isDisabled={formSubmitting}
+                  >
+                    {AGE_GROUPS.map(group => (
+                      <option key={group} value={group}>{group}</option>
+                    ))}
+                  </Select>
+                </FormControl>
+              </GridItem>
+              
+              <GridItem>
+                <FormControl isRequired>
+                  <FormLabel>School</FormLabel>
+                  <Select
+                    id="school"
+                    name="school"
+                    value={kClass.school}
+                    onChange={handleInputChange}
+                    isDisabled={formSubmitting || defaultSchoolId}
+                  >
+                    <option value="">Select a school</option>
+                    {schools.map(school => (
+                      <option key={school._id} value={school._id}>{school.name}</option>
+                    ))}
+                  </Select>
+                </FormControl>
+              </GridItem>
+              
+              <GridItem>
+                <FormControl isRequired>
+                  <FormLabel>Teacher</FormLabel>
+                  <Select
+                    id="teacher"
+                    name="teacher"
+                    value={kClass.teacher}
+                    onChange={handleInputChange}
+                    isDisabled={formSubmitting}
+                  >
+                    <option value="">Select a teacher</option>
+                    {teachers.map(teacher => (
+                      <option key={teacher._id} value={teacher._id}>{teacher.name}</option>
+                    ))}
+                  </Select>
+                </FormControl>
+              </GridItem>
+              
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Student Count</FormLabel>
+                  <NumberInput
+                    min={0}
+                    value={kClass.studentCount}
+                    onChange={(valueString) => handleNumberInputChange('studentCount', valueString)}
+                    isDisabled={formSubmitting}
+                  >
+                    <NumberInputField
+                      id="studentCount"
+                      name="studentCount"
+                    />
+                  </NumberInput>
+                </FormControl>
+              </GridItem>
+              
+              <GridItem>
+                <FormControl isRequired>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    id="status"
+                    name="status"
+                    value={kClass.status}
+                    onChange={handleInputChange}
+                    isDisabled={formSubmitting}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Completed">Completed</option>
+                  </Select>
+                </FormControl>
+              </GridItem>
+            </Grid>
+          </Box>
           
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="teacher">Teacher</label>
-              <select
-                id="teacher"
-                name="teacher"
-                value={kClass.teacher}
-                onChange={handleInputChange}
-                required
-                disabled={formSubmitting}
-              >
-                <option value="">Select a teacher</option>
-                {teachers.map(teacher => (
-                  <option key={teacher._id} value={teacher._id}>
-                    {teacher.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <Box>
+            <Heading size="md" mb={4}>Schedule Information</Heading>
+            <Divider mb={4} />
             
-            <div className="form-group">
-              <label htmlFor="status">Status</label>
-              <select
-                id="status"
-                name="status"
-                value={kClass.status}
-                onChange={handleInputChange}
-                disabled={formSubmitting}
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="ageGroup">Age Group</label>
-              <select
-                id="ageGroup"
-                name="ageGroup"
-                value={kClass.ageGroup}
-                onChange={handleInputChange}
-                disabled={formSubmitting}
-              >
-                {AGE_GROUPS.map(age => (
-                  <option key={age} value={age}>{age}</option>
-                ))}
-              </select>
-            </div>
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6} mb={6}>
+              <GridItem>
+                <FormControl isRequired>
+                  <FormLabel>Start Date</FormLabel>
+                  <Input
+                    type="date"
+                    id="startDate"
+                    name="startDate"
+                    value={kClass.startDate}
+                    onChange={handleInputChange}
+                    isDisabled={formSubmitting}
+                  />
+                </FormControl>
+              </GridItem>
+              
+              <GridItem>
+                <FormControl isRequired>
+                  <FormLabel>Total Sessions</FormLabel>
+                  <NumberInput
+                    min={1}
+                    value={kClass.totalSessions}
+                    onChange={(valueString) => handleNumberInputChange('totalSessions', valueString)}
+                    isDisabled={formSubmitting}
+                  >
+                    <NumberInputField
+                      id="totalSessions"
+                      name="totalSessions"
+                    />
+                  </NumberInput>
+                </FormControl>
+              </GridItem>
+            </Grid>
             
-            <div className="form-group">
-              <label htmlFor="studentCount">Number of Students</label>
-              <input
-                type="number"
-                id="studentCount"
-                name="studentCount"
-                value={kClass.studentCount}
-                onChange={handleInputChange}
-                min="0"
-                disabled={formSubmitting}
-              />
-            </div>
-          </div>
-        </div>
-        
-        <div className="form-section">
-          <h2>Schedule Information</h2>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="startDate">Start Date</label>
-              <input
-                type="date"
-                id="startDate"
-                name="startDate"
-                value={kClass.startDate}
-                onChange={handleInputChange}
-                required
-                disabled={formSubmitting}
-              />
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="totalSessions">Total Number of Sessions</label>
-              <input
-                type="number"
-                id="totalSessions"
-                name="totalSessions"
-                value={kClass.totalSessions}
-                onChange={handleInputChange}
-                min="1"
-                required
-                disabled={formSubmitting}
-              />
-            </div>
-          </div>
-          
-          <div className="schedule-section">
-            <div className="section-header">
-              <h3>Weekly Schedule</h3>
-            </div>
-            
-            <div className="schedule-list">
-              {kClass.weeklySchedule.length === 0 ? (
-                <div className="no-data-message small">
-                  <p>No schedule items added yet. Add your first schedule item.</p>
-                </div>
-              ) : (
-                kClass.weeklySchedule.map((schedule, index) => (
-                  <div key={index} className="schedule-item">
-                    <div className="day-select">
-                      <label>Day</label>
-                      <select
-                        value={schedule.day}
-                        onChange={(e) => handleScheduleChange(index, 'day', e.target.value)}
-                        disabled={formSubmitting}
-                      >
-                        {DAYS_OF_WEEK.map(day => (
-                          <option key={day} value={day}>{day}</option>
-                        ))}
-                      </select>
-                    </div>
+            <FormControl mb={6}>
+              <FormLabel>Weekly Schedule</FormLabel>
+              <VStack spacing={3} align="stretch">
+                {kClass.weeklySchedule.map((schedule, index) => (
+                  <Flex 
+                    key={index} 
+                    p={3} 
+                    bg={scheduleBg} 
+                    borderRadius="md" 
+                    borderWidth="1px" 
+                    borderColor={borderColor}
+                    align="center"
+                    justify="space-between"
+                  >
+                    <Select
+                      value={schedule.day}
+                      onChange={(e) => handleScheduleChange(index, 'day', e.target.value)}
+                      width="auto"
+                      mr={4}
+                      isDisabled={formSubmitting}
+                    >
+                      {DAYS_OF_WEEK.map(day => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </Select>
                     
-                    <div className="time-inputs">
-                      <input
+                    <HStack spacing={2} flex="1">
+                      <Input
                         type="time"
                         value={schedule.startTime}
                         onChange={(e) => handleScheduleChange(index, 'startTime', e.target.value)}
-                        disabled={formSubmitting}
+                        width="auto"
+                        isDisabled={formSubmitting}
                       />
-                      <span>to</span>
-                      <input
+                      <Text>to</Text>
+                      <Input
                         type="time"
                         value={schedule.endTime}
                         onChange={(e) => handleScheduleChange(index, 'endTime', e.target.value)}
-                        disabled={formSubmitting}
+                        width="auto"
+                        isDisabled={formSubmitting}
                       />
-                    </div>
+                    </HStack>
                     
-                    <button
-                      type="button"
-                      className="remove-schedule-btn"
+                    <IconButton
+                      aria-label="Remove schedule"
+                      icon={<FaTrash />}
+                      colorScheme="red"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleRemoveSchedule(index)}
-                      disabled={formSubmitting}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))
-              )}
-              
-              <button
-                type="button"
-                className="add-schedule-btn"
-                onClick={handleAddSchedule}
-                disabled={formSubmitting}
-              >
-                + Add Schedule
-              </button>
-            </div>
-          </div>
-          
-          <div className="holiday-section">
-            <div className="section-header">
-              <h3>Holidays/Breaks (Optional)</h3>
-            </div>
+                      ml={2}
+                      isDisabled={formSubmitting}
+                    />
+                  </Flex>
+                ))}
+                
+                <Button
+                  leftIcon={<FaPlus />}
+                  colorScheme="blue"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddSchedule}
+                  alignSelf="flex-start"
+                  mt={2}
+                  isDisabled={formSubmitting}
+                >
+                  Add Schedule
+                </Button>
+              </VStack>
+            </FormControl>
             
-            <div className="holiday-list">
-              {kClass.holidays.length === 0 ? (
-                <div className="no-data-message small">
-                  <p>No holidays added. Add holidays if needed for schedule calculation.</p>
-                </div>
-              ) : (
-                kClass.holidays.map((holiday, index) => (
-                  <div key={index} className="holiday-item">
-                    <div className="holiday-inputs">
-                      <div className="date-input">
-                        <label>Date</label>
-                        <input
-                          type="date"
-                          value={holiday.date}
-                          onChange={(e) => handleHolidayChange(index, 'date', e.target.value)}
-                          disabled={formSubmitting}
-                        />
-                      </div>
-                      
-                      <div className="desc-input">
-                        <label>Description</label>
-                        <input
-                          type="text"
-                          value={holiday.name}
-                          onChange={(e) => handleHolidayChange(index, 'name', e.target.value)}
-                          placeholder="e.g. Christmas Break"
-                          disabled={formSubmitting}
-                        />
-                      </div>
-                    </div>
+            <FormControl>
+              <FormLabel>Holidays (Optional)</FormLabel>
+              <VStack spacing={3} align="stretch">
+                {kClass.holidays.map((holiday, index) => (
+                  <Flex 
+                    key={index} 
+                    p={3} 
+                    bg={scheduleBg} 
+                    borderRadius="md" 
+                    borderWidth="1px" 
+                    borderColor={borderColor}
+                    align="center"
+                    justify="space-between"
+                  >
+                    <Input
+                      type="date"
+                      value={holiday.date}
+                      onChange={(e) => handleHolidayChange(index, 'date', e.target.value)}
+                      width="auto"
+                      mr={4}
+                      isDisabled={formSubmitting}
+                    />
                     
-                    <button
-                      type="button"
-                      className="remove-holiday-btn"
+                    <Input
+                      value={holiday.name}
+                      onChange={(e) => handleHolidayChange(index, 'name', e.target.value)}
+                      placeholder="Holiday name"
+                      flex="1"
+                      isDisabled={formSubmitting}
+                    />
+                    
+                    <IconButton
+                      aria-label="Remove holiday"
+                      icon={<FaTrash />}
+                      colorScheme="red"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleRemoveHoliday(index)}
-                      disabled={formSubmitting}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))
-              )}
-              
-              <button
-                type="button"
-                className="add-holiday-btn"
-                onClick={handleAddHoliday}
-                disabled={formSubmitting}
-              >
-                + Add Holiday
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="form-actions">
-          <Link 
-            to={defaultSchoolId ? `/kindergarten/schools/${defaultSchoolId}/classes` : '/kindergarten/classes'} 
-            className="cancel-btn"
-          >
-            Cancel
-          </Link>
-          <button 
-            type="submit" 
-            className="submit-btn"
-            disabled={formSubmitting}
-          >
-            {formSubmitting ? 'Saving...' : 'Save Class'}
-          </button>
-        </div>
-      </form>
+                      ml={2}
+                      isDisabled={formSubmitting}
+                    />
+                  </Flex>
+                ))}
+                
+                <Button
+                  leftIcon={<FaPlus />}
+                  colorScheme="blue"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddHoliday}
+                  alignSelf="flex-start"
+                  mt={2}
+                  isDisabled={formSubmitting}
+                >
+                  Add Holiday
+                </Button>
+              </VStack>
+            </FormControl>
+          </Box>
+          
+          <Flex justify="flex-end" gap={3} mt={4}>
+            <Button 
+              as={Link}
+              to={defaultSchoolId ? `/kindergarten/schools/${defaultSchoolId}/classes` : '/kindergarten/classes'} 
+              variant="outline" 
+              isDisabled={formSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              colorScheme="blue"
+              isLoading={formSubmitting}
+              loadingText="Saving"
+            >
+              {isEditMode ? 'Update Class' : 'Create Class'}
+            </Button>
+          </Flex>
+        </VStack>
+      </Box>
       
-      <div className="breadcrumb-navigation">
-        <Link to="/kindergarten" className="breadcrumb-link">Dashboard</Link>
-        <span className="breadcrumb-separator">/</span>
-        <Link to="/kindergarten/classes" className="breadcrumb-link">Classes</Link>
-        <span className="breadcrumb-separator">/</span>
-        <span className="breadcrumb-current">
-          {isEditMode ? 'Edit Class' : 'New Class'}
-        </span>
-      </div>
-    </div>
+      <Breadcrumb 
+        separator={<FaChevronRight color="gray.500" />} 
+        mt={6}
+        fontSize="sm"
+        color="gray.500"
+      >
+        <BreadcrumbItem>
+          <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbItem>
+          <BreadcrumbLink as={Link} to="/kindergarten/classes">Classes</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbItem isCurrentPage>
+          <Text fontWeight="medium">{isEditMode ? 'Edit Class' : 'New Class'}</Text>
+        </BreadcrumbItem>
+      </Breadcrumb>
+    </Container>
   );
 };
 

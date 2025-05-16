@@ -1,6 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { teachersAPI, coursesAPI } from '../../api';
-import './TeachersManagement.css';
+import {
+  Box,
+  Button,
+  Container,
+  Flex,
+  Heading,
+  Text,
+  Badge,
+  Input,
+  Select,
+  Checkbox,
+  Grid,
+  GridItem,
+  FormControl,
+  FormLabel,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Link as ChakraLink,
+  Alert,
+  AlertIcon,
+  CloseButton,
+  Spinner,
+  Stack,
+  HStack,
+  VStack,
+  Divider,
+  IconButton,
+  useColorModeValue,
+  useToast
+} from '@chakra-ui/react';
+import { FaPlus, FaEdit, FaTrash, FaCalendarAlt } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
 const TeachersManagement = () => {
   const [teachers, setTeachers] = useState([]);
@@ -10,6 +45,14 @@ const TeachersManagement = () => {
   const [teacherKindergartenClasses, setTeacherKindergartenClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const toast = useToast();
+
+  // Colors and styles
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const hoverBg = useColorModeValue('gray.50', 'gray.700');
+  const activeBg = useColorModeValue('blue.50', 'blue.900');
+  const activeBorder = useColorModeValue('blue.500', 'blue.300');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -99,6 +142,12 @@ const TeachersManagement = () => {
       await teachersAPI.remove(selectedTeacher._id);
       setSelectedTeacher(null);
       fetchTeachers();
+      toast({
+        title: "Teacher deleted",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (err) {
       console.error('Error deleting teacher:', err);
       setError('Failed to delete teacher. They may have courses assigned.');
@@ -111,20 +160,32 @@ const TeachersManagement = () => {
   };
 
   const handleCheckboxChange = (e) => {
-    const { name, checked } = e.target;
-    setFormData({ ...formData, [name]: checked });
+    setFormData({ ...formData, active: e.target.checked });
   };
 
   const handleSubmitForm = async (e) => {
     e.preventDefault();
     
     try {
+      setLoading(true);
       if (selectedTeacher) {
         // Update existing teacher
         await teachersAPI.update(selectedTeacher._id, formData);
+        toast({
+          title: "Teacher updated",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
       } else {
         // Create new teacher
         await teachersAPI.create(formData);
+        toast({
+          title: "Teacher created",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
       }
       
       setIsFormVisible(false);
@@ -132,6 +193,8 @@ const TeachersManagement = () => {
     } catch (err) {
       console.error('Error saving teacher:', err);
       setError('Failed to save teacher. Please check the form and try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,294 +203,380 @@ const TeachersManagement = () => {
   };
 
   if (loading && teachers.length === 0) {
-    return <div className="loading-state">Loading teachers...</div>;
+    return (
+      <Flex justify="center" align="center" height="50vh">
+        <Spinner size="xl" color="blue.500" thickness="4px" />
+        <Text ml={4} fontSize="lg" color="gray.600">Loading teachers...</Text>
+      </Flex>
+    );
   }
 
+  const getStatusColorScheme = (status) => {
+    switch (status) {
+      case 'Active': return 'green';
+      case 'Upcoming': return 'orange';
+      case 'Finished': return 'purple';
+      case 'Cancelled': return 'red';
+      default: return 'gray';
+    }
+  };
+
   return (
-    <div className="teachers-management-container">
-      <div className="teachers-management-header">
-        <h1>Teachers Management</h1>
-        <button 
-          className="new-teacher-btn"
+    <Container maxW="container.xl" py={6}>
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading size="lg">Teachers Management</Heading>
+        <Button 
+          leftIcon={<FaPlus />} 
+          colorScheme="green" 
           onClick={handleNewTeacher}
         >
           Add New Teacher
-        </button>
-      </div>
+        </Button>
+      </Flex>
 
       {error && (
-        <div className="error-message">
-          <p>{error}</p>
-          <button onClick={() => setError(null)}>Dismiss</button>
-        </div>
+        <Alert status="error" mb={6} borderRadius="md">
+          <AlertIcon />
+          <Text flex="1">{error}</Text>
+          <CloseButton onClick={() => setError(null)} />
+        </Alert>
       )}
 
-      <div className="teachers-management-content">
-        <div className="teachers-list-container">
-          <h2>Teachers</h2>
-          {teachers.length === 0 ? (
-            <p className="no-data-message">No teachers found.</p>
-          ) : (
-            <ul className="teachers-list">
-              {teachers.map(teacher => (
-                <li 
-                  key={teacher._id} 
-                  className={`teacher-item ${selectedTeacher && selectedTeacher._id === teacher._id ? 'active' : ''} ${!teacher.active ? 'inactive' : ''}`}
-                  onClick={() => handleSelectTeacher(teacher)}
-                >
-                  <div className="teacher-name">{teacher.name}</div>
-                  <div className="teacher-email">{teacher.email}</div>
-                  {!teacher.active && <span className="inactive-badge">Inactive</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      <Grid templateColumns={{ base: "1fr", md: "1fr 2fr" }} gap={6}>
+        <Box>
+          <Box 
+            bg={bgColor} 
+            borderWidth="1px" 
+            borderColor={borderColor}
+            borderRadius="md" 
+            p={4} 
+            mb={4}
+          >
+            <Heading size="md" mb={4}>Teachers</Heading>
+            {teachers.length === 0 ? (
+              <Text textAlign="center" py={4} color="gray.500" fontStyle="italic">No teachers found.</Text>
+            ) : (
+              <VStack spacing={2} align="stretch">
+                {teachers.map(teacher => (
+                  <Box 
+                    key={teacher._id} 
+                    p={3}
+                    borderWidth="1px"
+                    borderColor={selectedTeacher && selectedTeacher._id === teacher._id ? activeBorder : borderColor}
+                    borderLeftWidth={selectedTeacher && selectedTeacher._id === teacher._id ? "4px" : "1px"}
+                    borderRadius="md"
+                    bg={selectedTeacher && selectedTeacher._id === teacher._id ? activeBg : bgColor}
+                    opacity={!teacher.active ? 0.7 : 1}
+                    _hover={{ bg: hoverBg }}
+                    cursor="pointer"
+                    onClick={() => handleSelectTeacher(teacher)}
+                  >
+                    <Flex justify="space-between" align="center">
+                      <Box>
+                        <Text fontWeight="medium">{teacher.name}</Text>
+                        <Text fontSize="sm" color="gray.500">{teacher.email}</Text>
+                      </Box>
+                      {!teacher.active && (
+                        <Badge colorScheme="red" variant="subtle">Inactive</Badge>
+                      )}
+                    </Flex>
+                  </Box>
+                ))}
+              </VStack>
+            )}
+          </Box>
+        </Box>
 
-        <div className="teacher-details-container">
+        <Box>
           {!selectedTeacher && !isFormVisible ? (
-            <div className="no-selection-message">
-              <p>Select a teacher from the list or add a new one.</p>
-            </div>
+            <Flex 
+              direction="column" 
+              justify="center" 
+              align="center" 
+              height="300px" 
+              bg={bgColor} 
+              borderWidth="1px" 
+              borderColor={borderColor}
+              borderRadius="md"
+              p={6}
+            >
+              <Text color="gray.500" fontStyle="italic" mb={4}>Select a teacher from the list or add a new one.</Text>
+              <Button 
+                leftIcon={<FaPlus />} 
+                colorScheme="blue" 
+                variant="outline" 
+                onClick={handleNewTeacher}
+              >
+                Add New Teacher
+              </Button>
+            </Flex>
           ) : isFormVisible ? (
-            <div className="teacher-form-container">
-              <h2>{selectedTeacher ? 'Edit Teacher' : 'Add New Teacher'}</h2>
-              <form onSubmit={handleSubmitForm} className="teacher-form">
-                <div className="form-group">
-                  <label htmlFor="name">Name</label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="email">Email</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="phone">Phone</label>
-                  <input
-                    type="text"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="specialization">Specialization</label>
-                  <input
-                    type="text"
-                    id="specialization"
-                    name="specialization"
-                    value={formData.specialization}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="qualification">Qualification</label>
-                  <input
-                    type="text"
-                    id="qualification"
-                    name="qualification"
-                    value={formData.qualification}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="form-group checkbox-group">
-                  <input
-                    type="checkbox"
-                    id="active"
-                    name="active"
-                    checked={formData.active}
-                    onChange={handleCheckboxChange}
-                  />
-                  <label htmlFor="active">Active</label>
-                </div>
-
-                <div className="form-actions">
-                  <button 
-                    type="button" 
-                    className="cancel-btn"
+            <Box 
+              bg={bgColor} 
+              borderWidth="1px" 
+              borderColor={borderColor}
+              borderRadius="md" 
+              p={6}
+            >
+              <Heading size="md" mb={6}>{selectedTeacher ? 'Edit Teacher' : 'Add New Teacher'}</Heading>
+              <Box as="form" onSubmit={handleSubmitForm}>
+                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
+                  <FormControl isRequired>
+                    <FormLabel>Name</FormLabel>
+                    <Input
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                    />
+                  </FormControl>
+                  
+                  <FormControl isRequired>
+                    <FormLabel>Email</FormLabel>
+                    <Input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                    />
+                  </FormControl>
+                  
+                  <FormControl>
+                    <FormLabel>Phone</FormLabel>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                    />
+                  </FormControl>
+                  
+                  <FormControl>
+                    <FormLabel>Specialization</FormLabel>
+                    <Input
+                      id="specialization"
+                      name="specialization"
+                      value={formData.specialization}
+                      onChange={handleInputChange}
+                    />
+                  </FormControl>
+                  
+                  <FormControl>
+                    <FormLabel>Qualification</FormLabel>
+                    <Input
+                      id="qualification"
+                      name="qualification"
+                      value={formData.qualification}
+                      onChange={handleInputChange}
+                    />
+                  </FormControl>
+                  
+                  <FormControl>
+                    <Checkbox
+                      id="active"
+                      name="active"
+                      isChecked={formData.active}
+                      onChange={handleCheckboxChange}
+                      mt={8}
+                    >
+                      Active
+                    </Checkbox>
+                  </FormControl>
+                </Grid>
+                
+                <Flex justify="flex-end" mt={6} gap={3}>
+                  <Button
+                    variant="outline"
                     onClick={handleCancelForm}
                   >
                     Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="save-btn"
+                  </Button>
+                  <Button
+                    type="submit"
+                    colorScheme="blue"
+                    isLoading={loading}
                   >
                     {selectedTeacher ? 'Update Teacher' : 'Add Teacher'}
-                  </button>
-                </div>
-              </form>
-            </div>
+                  </Button>
+                </Flex>
+              </Box>
+            </Box>
           ) : (
-            <div className="teacher-details">
-              <h2>{selectedTeacher.name}</h2>
-              <div className="teacher-info">
-                <div className="info-row">
-                  <span className="info-label">Email:</span>
-                  <span className="info-value">{selectedTeacher.email}</span>
-                </div>
+            <Box 
+              bg={bgColor} 
+              borderWidth="1px" 
+              borderColor={borderColor}
+              borderRadius="md" 
+              p={6}
+            >
+              <Flex justify="space-between" align="flex-start" mb={6}>
+                <VStack align="flex-start" spacing={1}>
+                  <Heading size="md">{selectedTeacher.name}</Heading>
+                  <Text color="gray.500">{selectedTeacher.email}</Text>
+                </VStack>
                 
+                <HStack spacing={2}>
+                  <IconButton
+                    aria-label="View schedule"
+                    icon={<FaCalendarAlt />}
+                    colorScheme="purple"
+                    variant="outline"
+                    onClick={() => handleViewSchedule(selectedTeacher._id)}
+                  />
+                  <IconButton
+                    aria-label="Edit teacher"
+                    icon={<FaEdit />}
+                    colorScheme="blue"
+                    variant="outline"
+                    onClick={handleEditTeacher}
+                  />
+                  <IconButton
+                    aria-label="Delete teacher"
+                    icon={<FaTrash />}
+                    colorScheme="red"
+                    variant="outline"
+                    onClick={handleDeleteTeacher}
+                  />
+                </HStack>
+              </Flex>
+              
+              <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4} mb={6}>
                 {selectedTeacher.phone && (
-                  <div className="info-row">
-                    <span className="info-label">Phone:</span>
-                    <span className="info-value">{selectedTeacher.phone}</span>
-                  </div>
+                  <Box>
+                    <Text fontWeight="medium" fontSize="sm" color="gray.500">Phone</Text>
+                    <Text>{selectedTeacher.phone}</Text>
+                  </Box>
                 )}
                 
                 {selectedTeacher.specialization && (
-                  <div className="info-row">
-                    <span className="info-label">Specialization:</span>
-                    <span className="info-value">{selectedTeacher.specialization}</span>
-                  </div>
+                  <Box>
+                    <Text fontWeight="medium" fontSize="sm" color="gray.500">Specialization</Text>
+                    <Text>{selectedTeacher.specialization}</Text>
+                  </Box>
                 )}
                 
                 {selectedTeacher.qualification && (
-                  <div className="info-row">
-                    <span className="info-label">Qualification:</span>
-                    <span className="info-value">{selectedTeacher.qualification}</span>
-                  </div>
+                  <Box>
+                    <Text fontWeight="medium" fontSize="sm" color="gray.500">Qualification</Text>
+                    <Text>{selectedTeacher.qualification}</Text>
+                  </Box>
                 )}
                 
-                <div className="info-row">
-                  <span className="info-label">Status:</span>
-                  <span className={`status-badge ${selectedTeacher.active ? 'active' : 'inactive'}`}>
+                <Box>
+                  <Text fontWeight="medium" fontSize="sm" color="gray.500">Status</Text>
+                  <Badge colorScheme={selectedTeacher.active ? "green" : "red"}>
                     {selectedTeacher.active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
+                  </Badge>
+                </Box>
                 
-                <div className="info-row">
-                  <span className="info-label">Joined:</span>
-                  <span className="info-value">
-                    {new Date(selectedTeacher.joiningDate).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="teacher-actions">
-                <button 
-                  className="edit-btn"
-                  onClick={handleEditTeacher}
-                >
-                  Edit
-                </button>
-                <button 
-                  className="delete-btn"
-                  onClick={handleDeleteTeacher}
-                >
-                  Delete
-                </button>
-              </div>
-
-              <div className="teacher-courses">
-                <h3>Assigned Courses</h3>
-                {loading ? (
-                  <p>Loading courses...</p>
-                ) : teacherCourses.length === 0 ? (
-                  <p className="no-data-message">No courses assigned to this teacher.</p>
-                ) : (
-                  <table className="courses-table">
-                    <thead>
-                      <tr>
-                        <th>Course Name</th>
-                        <th>Level</th>
-                        <th>Status</th>
-                        <th>Branch</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teacherCourses.map(course => (
-                        <tr key={course._id}>
-                          <td>
-                            <a href={`/courses/${course._id}`}>{course.name}</a>
-                          </td>
-                          <td>{course.level}</td>
-                          <td>
-                            <span className={`course-status ${getStatusClass(course.status)}`}>
-                              {course.status}
-                            </span>
-                          </td>
-                          <td>{course.branch.name}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                {selectedTeacher.joiningDate && (
+                  <Box>
+                    <Text fontWeight="medium" fontSize="sm" color="gray.500">Joined</Text>
+                    <Text>{new Date(selectedTeacher.joiningDate).toLocaleDateString()}</Text>
+                  </Box>
                 )}
-              </div>
+              </Grid>
               
-              <div className="teacher-kindergarten-classes">
-                <h3>Kindergarten Classes</h3>
+              <Divider my={4} />
+              
+              <Box mb={6}>
+                <Heading size="sm" mb={4}>Assigned Courses</Heading>
                 {loading ? (
-                  <p>Loading kindergarten classes...</p>
-                ) : teacherKindergartenClasses.length === 0 ? (
-                  <p className="no-data-message">No kindergarten classes assigned to this teacher.</p>
+                  <Flex justify="center" py={4}>
+                    <Spinner size="sm" mr={2} /> 
+                    <Text>Loading courses...</Text>
+                  </Flex>
+                ) : teacherCourses.length === 0 ? (
+                  <Text textAlign="center" py={4} color="gray.500" fontStyle="italic">
+                    No courses assigned to this teacher.
+                  </Text>
                 ) : (
-                  <table className="courses-table">
-                    <thead>
-                      <tr>
-                        <th>Class Name</th>
-                        <th>School</th>
-                        <th>Age Group</th>
-                        <th>Status</th>
-                        <th>Students</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teacherKindergartenClasses.map(kClass => (
-                        <tr key={kClass._id}>
-                          <td>
-                            <a href={`/kindergarten/classes/${kClass._id}`}>{kClass.name}</a>
-                          </td>
-                          <td>{kClass.school?.name || 'N/A'}</td>
-                          <td>{kClass.ageGroup}</td>
-                          <td>
-                            <span className={`course-status ${getStatusClass(kClass.status)}`}>
-                              {kClass.status}
-                            </span>
-                          </td>
-                          <td>{kClass.studentCount}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <Box overflowX="auto">
+                    <Table size="sm" variant="simple">
+                      <Thead>
+                        <Tr>
+                          <Th>Course Name</Th>
+                          <Th>Level</Th>
+                          <Th>Status</Th>
+                          <Th>Branch</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {teacherCourses.map(course => (
+                          <Tr key={course._id}>
+                            <Td>
+                              <ChakraLink as={Link} to={`/courses/${course._id}`} color="blue.500">
+                                {course.name}
+                              </ChakraLink>
+                            </Td>
+                            <Td>{course.level}</Td>
+                            <Td>
+                              <Badge colorScheme={getStatusColorScheme(course.status)}>
+                                {course.status}
+                              </Badge>
+                            </Td>
+                            <Td>{course.branch?.name}</Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </Box>
                 )}
-              </div>
-            </div>
+              </Box>
+              
+              <Box>
+                <Heading size="sm" mb={4}>Kindergarten Classes</Heading>
+                {loading ? (
+                  <Flex justify="center" py={4}>
+                    <Spinner size="sm" mr={2} /> 
+                    <Text>Loading kindergarten classes...</Text>
+                  </Flex>
+                ) : teacherKindergartenClasses.length === 0 ? (
+                  <Text textAlign="center" py={4} color="gray.500" fontStyle="italic">
+                    No kindergarten classes assigned to this teacher.
+                  </Text>
+                ) : (
+                  <Box overflowX="auto">
+                    <Table size="sm" variant="simple">
+                      <Thead>
+                        <Tr>
+                          <Th>Class Name</Th>
+                          <Th>School</Th>
+                          <Th>Age Group</Th>
+                          <Th>Status</Th>
+                          <Th>Students</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {teacherKindergartenClasses.map(kClass => (
+                          <Tr key={kClass._id}>
+                            <Td>
+                              <ChakraLink as={Link} to={`/kindergarten/classes/${kClass._id}`} color="blue.500">
+                                {kClass.name}
+                              </ChakraLink>
+                            </Td>
+                            <Td>{kClass.school?.name || 'N/A'}</Td>
+                            <Td>{kClass.ageGroup}</Td>
+                            <Td>
+                              <Badge colorScheme={getStatusColorScheme(kClass.status)}>
+                                {kClass.status}
+                              </Badge>
+                            </Td>
+                            <Td>{kClass.studentCount}</Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </Box>
+                )}
+              </Box>
+            </Box>
           )}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </Grid>
+    </Container>
   );
-};
-
-// Helper function
-const getStatusClass = (status) => {
-  switch (status) {
-    case 'Active': return 'status-active';
-    case 'Upcoming': return 'status-upcoming';
-    case 'Finished': return 'status-finished';
-    case 'Cancelled': return 'status-cancelled';
-    default: return '';
-  }
 };
 
 export default TeachersManagement;

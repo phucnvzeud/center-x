@@ -148,17 +148,17 @@ const Notifications = () => {
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
         <Heading fontSize="xl" fontWeight="semibold">Notifications</Heading>
-        {notifications.length > 0 && (
+            {notifications.length > 0 && (
           <Button 
             size="sm"
             colorScheme="blue"
             variant="outline"
             leftIcon={<FaCheckCircle />}
-            onClick={markAllAsRead}
-          >
-            Mark all as read
+                onClick={markAllAsRead}
+              >
+                Mark all as read
           </Button>
-        )}
+            )}
       </Flex>
 
       <Box
@@ -169,7 +169,7 @@ const Notifications = () => {
         borderColor={borderColor}
         boxShadow="sm"
         mb={6}
-      >
+            >
         <Tabs onChange={(index) => setTabIndex(index)} colorScheme="blue">
           <TabList px={4} bg={headerBg}>
             <Tab>All</Tab>
@@ -196,16 +196,16 @@ const Notifications = () => {
                   </Box>
                 ) : (
                   <VStack spacing={0} divider={<Divider />} align="stretch">
-                    {getFilteredNotifications().map((notification) => (
+        {getFilteredNotifications().map((notification) => (
                       <Flex 
-                        key={notification._id}
+            key={notification._id}
                         p={4}
                         bg={!notification.read ? unreadBg : bgColor}
                         _hover={{ bg: hoverBg }}
                         cursor="pointer"
-                        onClick={() => handleNotificationClick(notification)}
+            onClick={() => handleNotificationClick(notification)}
                         position="relative"
-                      >
+          >
                         <Box 
                           w="4px" 
                           position="absolute"
@@ -222,7 +222,7 @@ const Notifications = () => {
                                 colorScheme={getTypeColor(notification.type)}
                                 mr={2}
                               >
-                                {getTypeLabel(notification.type)}
+              {getTypeLabel(notification.type)}
                               </Badge>
                               <Badge 
                                 colorScheme="gray" 
@@ -256,7 +256,7 @@ const Notifications = () => {
                               variant="subtle"
                             >
                               <Box mr={1}>{getActionIcon(notification.action)}</Box>
-                              {getActionLabel(notification.action)}
+                  {getActionLabel(notification.action)}
                             </Badge>
                             
                             <Box ml="auto">
@@ -270,26 +270,26 @@ const Notifications = () => {
                                   onClick={(e) => e.stopPropagation()}
                                 />
                                 <MenuList>
-                                  {!notification.read && (
+              {!notification.read && (
                                     <MenuItem
                                       icon={<FaCheckCircle />}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        markAsRead(notification._id);
-                                      }}
-                                    >
-                                      Mark as read
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markAsRead(notification._id);
+                  }}
+                >
+                  Mark as read
                                     </MenuItem>
-                                  )}
+              )}
                                   <MenuItem
                                     icon={<FaTrash />}
                                     color="red.500"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      deleteNotification(notification._id);
-                                    }}
-                                  >
-                                    Delete
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteNotification(notification._id);
+                }}
+              >
+                Delete
                                   </MenuItem>
                                 </MenuList>
                               </Menu>
@@ -301,7 +301,7 @@ const Notifications = () => {
                   </VStack>
                 )}
               </TabPanel>
-            ))}
+        ))}
           </TabPanels>
         </Tabs>
       </Box>

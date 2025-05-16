@@ -30,7 +30,7 @@ import {
 } from '@chakra-ui/react';
 import { FaSearch, FaPlus, FaFilter, FaEllipsisV, FaEdit, FaTrash, FaEye, FaCalendarAlt, FaChalkboardTeacher, FaSchool } from 'react-icons/fa';
 
-const ClassList = () => {
+const ClassList = ({ limit, compact = false }) => {
   const { schoolId } = useParams();
   const navigate = useNavigate();
   
@@ -49,7 +49,7 @@ const ClassList = () => {
   const [regions, setRegions] = useState([]);
   const [schools, setSchools] = useState([]);
   const [loadingFilters, setLoadingFilters] = useState(true);
-  const [isFiltersVisible, setIsFiltersVisible] = useState(true);
+  const [isFiltersVisible, setIsFiltersVisible] = useState(!compact);
   
   // Determine if we're viewing classes for a specific school
   const isSchoolSpecific = !!schoolId;
@@ -179,6 +179,9 @@ const ClassList = () => {
     (kClass.teacherName && kClass.teacherName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Apply limit if specified
+  const displayedClasses = limit ? filteredClasses.slice(0, limit) : filteredClasses;
+
   // Helper function to get teacher name
   const getTeacherName = (kClass) => {
     if (kClass.teacher && kClass.teacher.name) {
@@ -226,52 +229,56 @@ const ClassList = () => {
 
   return (
     <Box>
-      <Breadcrumb mb={4} fontSize="sm" color="gray.500">
-        <BreadcrumbItem>
-          <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
-        </BreadcrumbItem>
-        {isSchoolSpecific && school ? (
-          <>
-            <BreadcrumbItem>
-              <BreadcrumbLink as={Link} to="/kindergarten/schools">Schools</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbItem isCurrentPage>
-              <BreadcrumbLink>{school.name}</BreadcrumbLink>
-            </BreadcrumbItem>
-          </>
-        ) : (
-          <BreadcrumbItem isCurrentPage>
-            <BreadcrumbLink>Classes</BreadcrumbLink>
+      {!compact && (
+        <Breadcrumb mb={4} fontSize="sm" color="gray.500">
+          <BreadcrumbItem>
+            <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
           </BreadcrumbItem>
-        )}
-      </Breadcrumb>
+          {isSchoolSpecific && school ? (
+            <>
+              <BreadcrumbItem>
+                <BreadcrumbLink as={Link} to="/kindergarten/schools">Schools</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbItem isCurrentPage>
+                <BreadcrumbLink>{school.name}</BreadcrumbLink>
+              </BreadcrumbItem>
+            </>
+          ) : (
+            <BreadcrumbItem isCurrentPage>
+              <BreadcrumbLink>Classes</BreadcrumbLink>
+            </BreadcrumbItem>
+          )}
+        </Breadcrumb>
+      )}
       
-      <Flex justify="space-between" align="center" mb={6}>
-        <Heading fontSize="xl" fontWeight="semibold">
-          {isSchoolSpecific && school ? `Classes in ${school.name}` : 'All Kindergarten Classes'}
-        </Heading>
-        <HStack spacing={2}>
-          <Button 
-            leftIcon={<FaFilter />}
-            size="sm"
-            onClick={toggleFilters}
-            colorScheme="gray"
-            variant="outline"
-          >
-            {isFiltersVisible ? 'Hide Filters' : 'Show Filters'}
-          </Button>
-          <Button 
-            as={Link} 
-            to="/kindergarten/classes/new" 
-            leftIcon={<FaPlus />} 
-            colorScheme="brand"
-            size="sm"
-          state={{ schoolId: schoolId }}
-        >
-            New Class
-          </Button>
-        </HStack>
-      </Flex>
+      {!compact && (
+        <Flex justify="space-between" align="center" mb={6}>
+          <Heading fontSize="xl" fontWeight="semibold">
+            {isSchoolSpecific && school ? `Classes in ${school.name}` : 'All Kindergarten Classes'}
+          </Heading>
+          <HStack spacing={2}>
+            <Button 
+              leftIcon={<FaFilter />}
+              size="sm"
+              onClick={toggleFilters}
+              colorScheme="gray"
+              variant="outline"
+            >
+              {isFiltersVisible ? 'Hide Filters' : 'Show Filters'}
+            </Button>
+            <Button 
+              as={Link} 
+              to="/kindergarten/classes/new" 
+              leftIcon={<FaPlus />} 
+              colorScheme="brand"
+              size="sm"
+              state={{ schoolId: schoolId }}
+            >
+              New Class
+            </Button>
+          </HStack>
+        </Flex>
+      )}
       
       {isFiltersVisible && (
         <Box bg={bgColor} p={4} borderRadius="md" mb={6} borderWidth="1px" borderColor={borderColor}>
@@ -282,20 +289,20 @@ const ClassList = () => {
                   <FaSearch color="gray.300" />
                 </InputLeftElement>
                 <Input
-              placeholder="Search classes or teachers..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+                  placeholder="Search classes or teachers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </InputGroup>
             </Box>
           
             <Box>
               <Select 
                 placeholder="All Statuses" 
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="Active">Active</option>
+                value={statusFilter} 
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="Active">Active</option>
                 <option value="Planning">Planning</option>
                 <option value="Completed">Completed</option>
                 <option value="Cancelled">Cancelled</option>
@@ -305,15 +312,15 @@ const ClassList = () => {
             <Box>
               <Select 
                 placeholder="All Teachers" 
-              value={teacherFilter}
-              onChange={(e) => setTeacherFilter(e.target.value)}
+                value={teacherFilter}
+                onChange={(e) => setTeacherFilter(e.target.value)}
                 isDisabled={loadingFilters}
-            >
-              {teachers.map(teacher => (
+              >
+                {teachers.map(teacher => (
                   <option key={teacher._id} value={teacher._id}>
                     {teacher.name}
                   </option>
-              ))}
+                ))}
               </Select>
             </Box>
           
@@ -322,25 +329,25 @@ const ClassList = () => {
                 <Box>
                   <Select 
                     placeholder="All Regions" 
-              value={regionFilter}
-              onChange={(e) => setRegionFilter(e.target.value)}
+                    value={regionFilter}
+                    onChange={(e) => setRegionFilter(e.target.value)}
                     isDisabled={loadingFilters}
-            >
-              {regions.map(region => (
+                  >
+                    {regions.map(region => (
                       <option key={region._id} value={region._id}>
                         {region.name}
                       </option>
-              ))}
+                    ))}
                   </Select>
                 </Box>
           
                 <Box>
                   <Select 
                     placeholder="All Schools" 
-              value={schoolFilter}
-              onChange={(e) => setSchoolFilter(e.target.value)}
+                    value={schoolFilter}
+                    onChange={(e) => setSchoolFilter(e.target.value)}
                     isDisabled={loadingFilters}
-            >
+                  >
                     {schools.map(school => (
                       <option key={school._id} value={school._id}>
                         {school.name}
@@ -356,21 +363,21 @@ const ClassList = () => {
             <Button 
               variant="outline" 
               size="sm" 
-            onClick={resetFilters}
-          >
+              onClick={resetFilters}
+            >
               Clear Filters
             </Button>
           </Flex>
         </Box>
       )}
       
-      {filteredClasses.length === 0 ? (
+      {displayedClasses.length === 0 ? (
         <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" textAlign="center" borderRadius="md">
           <Text color="gray.500" mb={4}>
             {searchTerm || statusFilter || teacherFilter || regionFilter || (!isSchoolSpecific && schoolFilter) ? 
               'No classes match your filters. Try adjusting your search criteria.' :
               'No classes found. Add your first class to get started.'
-          }
+            }
           </Text>
           {!(searchTerm || statusFilter || teacherFilter || regionFilter || (!isSchoolSpecific && schoolFilter)) && (
             <Button 
@@ -387,12 +394,12 @@ const ClassList = () => {
         </Box>
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-          {filteredClasses.map(kClass => {
+          {displayedClasses.map(kClass => {
             const statusColorScheme = getStatusColor(kClass.status);
             
             return (
               <Box 
-                  key={kClass._id} 
+                key={kClass._id} 
                 bg={bgColor}
                 borderWidth="1px" 
                 borderColor={borderColor}
@@ -402,7 +409,7 @@ const ClassList = () => {
                 cursor="pointer"
                 onClick={() => handleClassClick(kClass._id)}
                 _hover={{ shadow: "md", borderColor: "brand.200", transform: "translateY(-2px)" }}
-                >
+              >
                 <Flex mb={2} justify="space-between" align="flex-start">
                   <Box>
                     <Heading size="sm" mb={1}>{kClass.name}</Heading>
@@ -444,10 +451,10 @@ const ClassList = () => {
                       <MenuItem 
                         icon={<FaTrash />} 
                         color="red.500"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClass(kClass._id);
-                            }} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClass(kClass._id);
+                        }} 
                       >
                         Delete
                       </MenuItem>
@@ -479,9 +486,23 @@ const ClassList = () => {
                   )}
                 </VStack>
               </Box>
-                            );
-                          })}
+            );
+          })}
         </SimpleGrid>
+      )}
+      
+      {limit && filteredClasses.length > limit && (
+        <Flex justify="center" mt={4}>
+          <Button 
+            as={Link}
+            to="/kindergarten/classes"
+            size="sm"
+            colorScheme="brand"
+            variant="link"
+          >
+            View All Classes ({filteredClasses.length})
+          </Button>
+        </Flex>
       )}
     </Box>
   );

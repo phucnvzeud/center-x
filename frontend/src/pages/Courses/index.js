@@ -40,6 +40,7 @@ const Courses = () => {
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const footerBgColor = useColorModeValue('gray.50', 'gray.700');
 
   useEffect(() => {
     fetchCourses();
@@ -185,7 +186,7 @@ const Courses = () => {
   }
 
   return (
-    <Box>
+    <Box maxW="1200px" mx="auto">
       <Flex justify="space-between" align="center" mb={6}>
         <Heading fontSize="xl" fontWeight="semibold">Courses</Heading>
         <HStack spacing={2}>
@@ -296,106 +297,116 @@ const Courses = () => {
                 bg={bgColor}
                 borderWidth="1px" 
                 borderColor={borderColor}
-                borderRadius="md"
-                p={4}
+                borderRadius="lg"
+                overflow="hidden"
+                boxShadow="base"
                 transition="all 0.2s"
                 cursor="pointer"
                 onClick={() => handleCourseClick(course._id)}
-                _hover={{ shadow: "md", borderColor: "brand.200", transform: "translateY(-2px)" }}
+                _hover={{ shadow: "md", borderColor: "brand.300", transform: "translateY(-2px)" }}
+                display="flex"
+                flexDirection="column"
+                maxW="350px"
               >
-                <Box mb={4}>
-                  <Heading size="sm" mb={1}>{course.name}</Heading>
-                  <Badge px={2} py={1} mb={2} bg={statusColorScheme.bg} color={statusColorScheme.color}>
+                <Box p={4} borderBottomWidth="1px" borderColor={borderColor}>
+                  <Heading size="md" mb={2} noOfLines={1}>{course.name}</Heading>
+                  <Flex gap={2} flexWrap="wrap">
+                    <Badge px={2} py={1} bg={statusColorScheme.bg} color={statusColorScheme.color} borderRadius="full">
                   {course.status}
-                  </Badge>
-                  
-                  {course.level && (
-                    <Badge ml={course.status ? 2 : 0} px={2} py={1} bg="purple.100" color="purple.700">
-                      {course.level}
                     </Badge>
-                  )}
+                    
+                    {course.level && (
+                      <Badge px={2} py={1} bg="purple.100" color="purple.700" borderRadius="full">
+                        {course.level}
+                      </Badge>
+                    )}
+                  </Flex>
                 </Box>
                 
-                <Stack spacing={2} mb={4} fontSize="sm">
-                  {course.teacher && (
+                <Box p={4} flex="1">
+                  <Stack spacing={3} mb={3} fontSize="sm">
+                    {course.teacher && (
+                      <Flex align="center">
+                        <Text fontWeight="medium" width="80px">Teacher:</Text>
+                        <Text noOfLines={1}>{course.teacher.name}</Text>
+                      </Flex>
+                    )}
+                    
+                    {course.branch && (
+                      <Flex align="center">
+                        <Text fontWeight="medium" width="80px">Branch:</Text>
+                        <Text noOfLines={1}>{course.branch.name}</Text>
+                      </Flex>
+                    )}
+                    
                     <Flex align="center">
-                      <Text fontWeight="medium" width="80px">Teacher:</Text>
-                      <Text>{course.teacher.name}</Text>
+                      <Text fontWeight="medium" width="80px">Start:</Text>
+                      <Text>{formatDate(course.startDate)}</Text>
                     </Flex>
-                  )}
-                  
-                  {course.branch && (
+                
                     <Flex align="center">
-                      <Text fontWeight="medium" width="80px">Branch:</Text>
-                      <Text>{course.branch.name}</Text>
+                      <Text fontWeight="medium" width="80px">End:</Text>
+                      <Text>{formatDate(course.endDate)}</Text>
                     </Flex>
-                  )}
-                  
-                  <Flex align="center">
-                    <Text fontWeight="medium" width="80px">Start:</Text>
-                    <Text>{formatDate(course.startDate)}</Text>
-                  </Flex>
+                  </Stack>
+                </Box>
                 
-                  <Flex align="center">
-                    <Text fontWeight="medium" width="80px">End:</Text>
-                    <Text>{formatDate(course.endDate)}</Text>
+                <Box p={3} bg={footerBgColor} borderTopWidth="1px" borderColor={borderColor}>
+                  <Flex justify="flex-end" gap={1}>
+                    <IconButton
+                      icon={<FaEye />}
+                      aria-label="View course details"
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="gray"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/courses/${course._id}`);
+                      }}
+                    />
+                    <IconButton
+                      icon={<FaEdit />}
+                      aria-label="Edit course"
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="blue"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/courses/edit/${course._id}`);
+                      }}
+                    />
+                    <IconButton
+                      icon={<FaCalendarAlt />}
+                      aria-label="Course sessions"
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="green"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/courses/${course._id}/sessions`);
+                      }}
+                    />
+                    <IconButton
+                      icon={<FaUserGraduate />}
+                      aria-label="Students"
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="brand"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/courses/${course._id}?tab=enrollments`);
+                      }}
+                    />
+                    <IconButton
+                      icon={<FaTrash />}
+                      aria-label="Delete course"
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="red"
+                      onClick={(e) => handleDeleteCourse(course._id, e)}
+                    />
                   </Flex>
-                </Stack>
-                
-                <Flex justify="flex-end" mt={4} gap={2}>
-                  <IconButton
-                    icon={<FaEye />}
-                    aria-label="View course details"
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="gray"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/courses/${course._id}`);
-                    }}
-                  />
-                  <IconButton
-                    icon={<FaEdit />}
-                    aria-label="Edit course"
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="blue"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/courses/edit/${course._id}`);
-                    }}
-                  />
-                  <IconButton
-                    icon={<FaCalendarAlt />}
-                    aria-label="Course sessions"
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="green"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/courses/${course._id}/sessions`);
-                    }}
-                  />
-                  <IconButton
-                    icon={<FaUserGraduate />}
-                    aria-label="Students"
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="brand"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/courses/${course._id}?tab=enrollments`);
-                    }}
-                  />
-                  <IconButton
-                    icon={<FaTrash />}
-                    aria-label="Delete course"
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="red"
-                    onClick={(e) => handleDeleteCourse(course._id, e)}
-                  />
-                </Flex>
+                </Box>
               </Box>
             );
           })}

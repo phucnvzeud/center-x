@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { coursesAPI, studentsAPI, teachersAPI, branchesAPI } from '../../api';
-import './CourseDetail.css';
-import './SessionTableTracker.css';
-import './EnrollmentStyles.css';
 import * as XLSX from 'xlsx';
 import {
   Box,
@@ -47,7 +44,10 @@ import {
   MenuList,
   MenuItem,
   useDisclosure,
-  useColorModeValue
+  useColorModeValue,
+  SimpleGrid,
+  UnorderedList,
+  ListItem
 } from '@chakra-ui/react';
 import { 
   FaArrowLeft, 
@@ -776,6 +776,162 @@ const CourseDetail = () => {
     XLSX.writeFile(wb, fileName);
   };
 
+  // Import functionality
+  const handleFileImport = (e) => {
+    setImportError(null);
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setImportFile(file);
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = event.target.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const firstSheet = workbook.SheetNames[0];
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+        
+        if (jsonData.length === 0) {
+          setImportError('No data found in the file');
+          setImportPreview([]);
+          return;
+        }
+        
+        // Validate data structure
+        const requiredFields = ['Name', 'Email'];
+        const missingFields = requiredFields.filter(field => 
+          !jsonData.some(row => row[field] !== undefined)
+        );
+        
+        if (missingFields.length > 0) {
+          setImportError(`Missing required fields: ${missingFields.join(', ')}`);
+          setImportPreview([]);
+          return;
+        }
+        
+        // Preview first 5 records
+        setImportPreview(jsonData.slice(0, 5));
+      } catch (err) {
+        console.error('Error processing import file:', err);
+        setImportError('Failed to process the file. Please ensure it is a valid Excel or CSV file.');
+        setImportPreview([]);
+      }
+    };
+    
+    reader.onerror = () => {
+      setImportError('Error reading the file');
+      setImportPreview([]);
+    };
+    
+    reader.readAsBinaryString(file);
+  };
+
+  const handleImportSubmit = async () => {
+    if (!importFile || importPreview.length === 0) return;
+    
+    try {
+      setImportLoading(true);
+      setImportError(null);
+      
+      const reader = new FileReader();
+      
+      reader.onload = async (event) => {
+        try {
+          const data = event.target.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const firstSheet = workbook.SheetNames[0];
+          const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+          
+          // Process each student
+          let successCount = 0;
+          let errorCount = 0;
+          
+          for (const row of jsonData) {
+            try {
+              // Create or find student
+              let student;
+              
+              // Check if student already exists by email
+              const existingStudents = await studentsAPI.getAll();
+              student = existingStudents.data.find(s => 
+                s.email && s.email.toLowerCase() === row.Email.toLowerCase()
+              );
+              
+              if (!student) {
+                // Create new student
+                const newStudent = await studentsAPI.create({
+                  name: row.Name,
+                  email: row.Email,
+                  phone: row.Phone || '',
+                  // Add additional fields as needed
+                });
+                student = newStudent.data;
+              }
+              
+              // Enroll student in the course
+              const enrollmentData = {
+                courseId,
+                totalAmount: typeof row.Amount === 'number' ? row.Amount : course.price || 0,
+                amountPaid: typeof row.Paid === 'number' ? row.Paid : 0,
+                enrollmentDate: row.EnrollmentDate ? new Date(row.EnrollmentDate) : new Date(),
+                notes: row.Notes || ''
+              };
+              
+              // Check if already enrolled
+              const enrollmentCheck = await coursesAPI.getEnrollments(courseId);
+              const alreadyEnrolled = enrollmentCheck.data.some(e => 
+                e.student._id === student._id
+              );
+              
+              if (!alreadyEnrolled) {
+                await studentsAPI.enroll(student._id, enrollmentData);
+                successCount++;
+              } else {
+                // Skip already enrolled
+                console.log(`Student ${student.name} already enrolled, skipping`);
+              }
+            } catch (err) {
+              console.error('Error processing student import:', err);
+              errorCount++;
+            }
+          }
+          
+          // Refresh enrollment data
+          await fetchEnrollmentData();
+          
+          // Refresh course data to update totalStudent
+          const courseData = await coursesAPI.getById(courseId);
+          setCourse(courseData.data);
+          
+          closeImportModal();
+          setImportLoading(false);
+          
+          if (errorCount > 0) {
+            alert(`Import completed with ${successCount} students added and ${errorCount} errors`);
+          } else {
+            alert(`Successfully imported ${successCount} students`);
+          }
+        } catch (err) {
+          console.error('Error processing import file:', err);
+          setImportError('Failed to process the import. Please try again.');
+          setImportLoading(false);
+        }
+      };
+      
+      reader.onerror = () => {
+        setImportError('Error reading the file');
+        setImportLoading(false);
+      };
+      
+      reader.readAsBinaryString(importFile);
+    } catch (err) {
+      console.error('Error in import process:', err);
+      setImportError('An error occurred during import');
+      setImportLoading(false);
+    }
+  };
+
   // Calculate payment progress for the course
   const calculatePaymentProgress = () => {
     if (!allEnrollments || allEnrollments.length === 0) {
@@ -816,9 +972,9 @@ const CourseDetail = () => {
   const renderSessionsContent = () => {
     if (!course || !course.sessions || course.sessions.length === 0) {
       return (
-        <div className="no-data-message">
-          <p>No sessions found for this course.</p>
-        </div>
+        <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" borderRadius="md" textAlign="center">
+          <Text color="gray.500">No sessions found for this course.</Text>
+        </Box>
       );
     }
 
@@ -872,52 +1028,60 @@ const CourseDetail = () => {
     visibleSessions.sort((a, b) => new Date(a.date) - new Date(b.date));
     
     return (
-      <div>
-        <div className="session-controls">
-          <div className="control-group">
-            <button 
-              className={`toggle-button ${showTaughtSessions ? 'active' : ''}`}
+      <Box>
+        <Flex justify="space-between" align="center" mb={4} flexWrap="wrap" gap={2}>
+          <HStack spacing={3} flexWrap="wrap">
+            <Button 
+              colorScheme={showTaughtSessions ? 'blue' : 'gray'}
+              variant={showTaughtSessions ? 'solid' : 'outline'}
+              size="sm"
               onClick={toggleTaughtSessions}
             >
               {showTaughtSessions ? 'Hide Taught & Canceled Sessions' : 'Show Taught & Canceled Sessions'}
-            </button>
+            </Button>
             
             {otherFutureSessions.length > 0 && (
-              <button 
-                className={`toggle-button ${showCollapsedFutureSessions ? 'active' : ''}`}
+              <Button 
+                colorScheme={showCollapsedFutureSessions ? 'blue' : 'gray'}
+                variant={showCollapsedFutureSessions ? 'solid' : 'outline'}
+                size="sm"
                 onClick={toggleFutureSessions}
               >
                 {showCollapsedFutureSessions ? 'Hide Future Sessions' : `Show ${otherFutureSessions.length} More Future Sessions`}
-              </button>
+              </Button>
             )}
+          </HStack>
             
-            <button 
-              className="export-button"
+          <Button 
+            leftIcon={<FaFileExport />}
+            colorScheme="green" 
+            variant="outline"
+            size="sm"
               onClick={exportSessionsToExcel}
             >
               Export to Excel
-            </button>
-          </div>
+          </Button>
+        </Flex>
           
           {nearestFutureSessions.length > 0 && (
-            <div className="nearest-sessions-label">
+          <Text fontSize="sm" color="gray.600" mb={3}>
               Showing {nearestFutureSessions.length} nearest upcoming sessions
-            </div>
+          </Text>
           )}
-        </div>
         
-        <table className="session-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Date</th>
-              <th>Day & Time</th>
-              <th>Status</th>
-              <th>Notes</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Box overflowX="auto" borderWidth="1px" borderColor="gray.200" borderRadius="md" mb={4}>
+          <Table variant="simple" size="sm">
+            <Thead bg="gray.50">
+              <Tr>
+                <Th width="50px" textAlign="center">#</Th>
+                <Th>Date</Th>
+                <Th>Day & Time</Th>
+                <Th>Status</Th>
+                <Th>Notes</Th>
+                <Th>Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
             {visibleSessions.map((session, index) => {
               const originalIndex = course.sessions.findIndex(s => 
                 s._id === session._id
@@ -925,85 +1089,95 @@ const CourseDetail = () => {
               const isUpdateLoading = updatingSessionIndex === originalIndex;
               const isThisSessionFuture = isFutureSession(session.date);
               const isNearestFuture = nearestFutureSessions.some(s => s._id === session._id);
+                const statusColors = getStatusColorScheme(session.status);
               
               // Find the original session number in the full course sessions array
               const sessionNumber = course.sessions.findIndex(s => s._id === session._id) + 1;
               
               return (
-                <tr 
+                  <Tr 
                   key={session._id || index}
-                  className={`
-                    ${session.status === 'Taught' ? 'taught-session' : ''}
-                    ${session.status.startsWith('Absent') ? 'absent-session' : ''}
-                    ${isThisSessionFuture ? 'future-session' : ''}
-                    ${isNearestFuture ? 'nearest-future-session' : ''}
-                  `}
+                    bg={
+                      session.status === 'Taught' ? 'green.50' :
+                      session.status.startsWith('Absent') ? 'red.50' :
+                      isThisSessionFuture ? 'blue.50' : undefined
+                    }
+                    _hover={{ bg: 'gray.50' }}
                 >
-                  <td>{sessionNumber}</td>
-                  <td>{formatDate(session.date)}</td>
-                  <td>{getSessionDayAndTime(session.date)}</td>
-                  <td>
-                    <span className={`session-status ${getStatusClass(session.status)}`}>
+                    <Td textAlign="center" fontWeight="medium">{sessionNumber}</Td>
+                    <Td>{formatDate(session.date)}</Td>
+                    <Td>{getSessionDayAndTime(session.date)}</Td>
+                    <Td>
+                      <Badge 
+                        px={2} 
+                        py={1} 
+                        borderRadius="full"
+                        bg={statusColors.bg}
+                        color={statusColors.color}
+                      >
                       {session.status}
-                    </span>
-                  </td>
-                  <td className="notes-cell">{session.notes || '-'}</td>
-                  <td>
+                      </Badge>
+                    </Td>
+                    <Td maxW="200px" isTruncated fontSize="sm">{session.notes || '-'}</Td>
+                    <Td>
                     {isUpdateLoading ? (
-                      <span className="loading-spinner-small"></span>
+                        <Spinner size="sm" />
                     ) : (
-                      <div className="session-actions">
+                        <HStack spacing={2}>
                         {!isThisSessionFuture && session.status === 'Pending' && (
-                          <div className="quick-update-buttons">
-                            <button 
-                              className="quick-update taught"
+                            <>
+                              <Button 
+                                size="xs"
+                                colorScheme="green"
                               onClick={() => handleQuickStatusUpdate(originalIndex, 'Taught')}
                             >
                               Mark Taught
-                            </button>
+                              </Button>
                             
-                            <div className="absence-dropdown-container">
-                              <button 
-                                className="quick-update absent"
-                                onClick={(e) => toggleAbsenceDropdown(originalIndex, e)}
+                              <Menu>
+                                <MenuButton 
+                                  as={Button} 
+                                  size="xs" 
+                                  colorScheme="red"
+                                  onClick={(e) => e.stopPropagation()}
                               >
                                 Mark Absent
-                              </button>
-                              
-                              {activeAbsenceDropdown === originalIndex && (
-                                <div className="absence-dropdown">
-                                  <button onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Personal Reason)')}>
+                                </MenuButton>
+                                <MenuList>
+                                  <MenuItem onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Personal Reason)')}>
                                     Personal Reason
-                                  </button>
-                                  <button onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Holiday)')}>
+                                  </MenuItem>
+                                  <MenuItem onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Holiday)')}>
                                     Holiday
-                                  </button>
-                                  <button onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Other Reason)')}>
+                                  </MenuItem>
+                                  <MenuItem onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Other Reason)')}>
                                     Other Reason
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                                  </MenuItem>
+                                </MenuList>
+                              </Menu>
+                            </>
                         )}
                         
-                        <button 
-                          className="edit-btn"
+                          <IconButton
+                            icon={<FaEdit />}
+                            aria-label="Edit session"
+                            size="sm"
+                            colorScheme="blue"
+                            variant="ghost"
                           onClick={() => openUpdateModal(session, originalIndex)}
-                          disabled={isThisSessionFuture}
+                            isDisabled={isThisSessionFuture}
                           title={isThisSessionFuture ? "Cannot update future sessions" : "Edit session"}
-                        >
-                          Edit
-                        </button>
-                      </div>
+                          />
+                        </HStack>
                     )}
-                  </td>
-                </tr>
+                    </Td>
+                  </Tr>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+            </Tbody>
+          </Table>
+        </Box>
+      </Box>
     );
   };
 
@@ -1093,16 +1267,84 @@ const CourseDetail = () => {
     enrollment.status === 'Withdrawn'
   );
 
+  // Session update modal
+  const sessionModal = selectedSession && (
+    <Modal isOpen={isSessionModalOpen} onClose={closeModal}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Update Session Status</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <form onSubmit={handleSubmitSession}>
+            <FormControl mb={4}>
+              <FormLabel>Session Date</FormLabel>
+              <Text>{formatDate(selectedSession.date)}</Text>
+            </FormControl>
+            
+            <FormControl mb={4}>
+              <FormLabel>Status</FormLabel>
+              <Select
+                name="status"
+                value={selectedSession.status}
+                onChange={handleInputChange}
+              >
+                {SESSION_STATUS_OPTIONS.map(option => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
+              {selectedSession.status.startsWith('Absent') && originalStatus === 'Pending' && (
+                <Text fontSize="sm" color="blue.600" mt={2}>
+                  A compensatory session will be added automatically.
+                </Text>
+              )}
+            </FormControl>
+            
+            <FormControl mb={4}>
+              <FormLabel>Notes</FormLabel>
+              <Textarea
+                name="notes"
+                value={selectedSession.notes || ''}
+                onChange={handleInputChange}
+                placeholder="Add any notes about this session..."
+                size="sm"
+              />
+            </FormControl>
+            
+            {updateError && (
+              <Text color="red.500" mb={4}>{updateError}</Text>
+            )}
+            
+            <ModalFooter px={0} pb={0}>
+              <Button mr={3} onClick={closeModal} variant="ghost">
+                Cancel
+              </Button>
+              <Button 
+                colorScheme="blue" 
+                type="submit" 
+                isLoading={updateLoading}
+                loadingText="Updating"
+              >
+                Update
+              </Button>
+            </ModalFooter>
+          </form>
+        </ModalBody>
+      </ModalContent>
+    </Modal>
+  );
+
   return (
     <Box maxW="container.xl" mx="auto" p={4}>
       <Flex justify="space-between" align="flex-start" mb={6} wrap="wrap">
         <Box mb={{ base: 4, md: 0 }}>
           <Heading as="h1" size="lg" mb={2}>{course.name}</Heading>
           <HStack spacing={2} flexWrap="wrap">
-            <Badge px={2} py={1} bg="purple.100" color="purple.700">
+            <Badge px={2} py={1} bg="purple.100" color="purple.700" borderRadius="full">
               {course.level}
             </Badge>
-            <Badge px={2} py={1} bg="blue.100" color="blue.700">
+            <Badge px={2} py={1} bg="blue.100" color="blue.700" borderRadius="full">
               {course.branch?.name || 'Unknown Branch'}
             </Badge>
             <Badge 
@@ -1110,6 +1352,7 @@ const CourseDetail = () => {
               py={1} 
               bg={getStatusColorScheme(course.status).bg} 
               color={getStatusColorScheme(course.status).color}
+              borderRadius="full"
             >
               {course.status}
             </Badge>
@@ -1158,6 +1401,8 @@ const CourseDetail = () => {
           </Button>
         </HStack>
       </Flex>
+      
+      {sessionModal}
 
       <Grid 
         templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }}
@@ -1323,204 +1568,363 @@ const CourseDetail = () => {
               {renderSessionsContent()}
             </TabPanel>
             <TabPanel p={4}>
-            <div className="enrollments-tab">
-              <div className="enrollments-header">
-                <div className="enrollments-filters">
-                  <div className="filter-group">
-                    <span className="info-label">Active Students:</span> {enrollments.length}
+              <Box>
+                <Flex justify="space-between" align="flex-start" mb={6} flexWrap={{base: "wrap", md: "nowrap"}} gap={4}>
+                  <VStack align="flex-start" spacing={4} flexGrow={1}>
+                    <HStack spacing={4} flexWrap="wrap">
+                      <HStack>
+                        <Text fontWeight="medium">Active Students:</Text>
+                        <Text>{enrollments.length}</Text>
+                      </HStack>
                     {withdrawnStudents.length > 0 && (
-                      <button 
-                        className="view-withdrawn-btn"
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          colorScheme="gray"
                           onClick={() => openWithdrawnModal()}
                       >
                         Show Withdrawn Students ({withdrawnStudents.length})
-                      </button>
+                        </Button>
                     )}
-                  </div>
+                    </HStack>
                   
-                  <div className="filter-group">
-                    <span className="info-label status-filter">
-                      Status: 
-                      <select 
+                    <HStack spacing={4} flexWrap="wrap">
+                      <HStack>
+                        <Text fontWeight="medium">Status:</Text>
+                        <Select 
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="status-filter-select"
+                          size="sm"
+                          width="auto"
+                          minW="110px"
                       >
                         <option value="">All</option>
                         <option value="active">Active</option>
                         <option value="completed">Completed</option>
                         <option value="suspended">Suspended</option>
-                      </select>
-                    </span>
-                    <span className="info-label status-filter">
-                      Payment: 
-                      <select 
+                        </Select>
+                      </HStack>
+                      <HStack>
+                        <Text fontWeight="medium">Payment:</Text>
+                        <Select 
                         value={paymentStatusFilter}
                         onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                        className="status-filter-select"
+                          size="sm"
+                          width="auto"
+                          minW="110px"
                       >
                         <option value="">All</option>
                         <option value="paid">Paid</option>
                         <option value="partial">Partial</option>
                         <option value="pending">Pending</option>
-                      </select>
-                    </span>
-                  </div>
-                </div>
+                        </Select>
+                      </HStack>
+                    </HStack>
+                  </VStack>
                 
-                <div className="enrollments-controls">
-                  <div className="search-container">
-                    <input
-                      type="text"
+                  <HStack spacing={2} flexWrap="wrap">
+                    <Input
                       placeholder="Search students..."
                       value={searchText}
                       onChange={(e) => setSearchText(e.target.value)}
-                      className="search-input"
+                      size="sm"
+                      width={{base: "full", md: "auto"}}
+                      minW="200px"
                     />
-                  </div>
-                  <button 
-                    className="add-student-btn"
+                    <Button 
+                      leftIcon={<FaUserPlus />}
+                      colorScheme="blue"
+                      size="sm"
                     onClick={() => openEnrollModal()}
                   >
                     Add Student
-                  </button>
-                  <button 
-                    className="import-students-btn"
+                    </Button>
+                    <Button 
+                      leftIcon={<FaFileImport />}
+                      colorScheme="blue"
+                      size="sm"
+                      variant="outline" 
                       onClick={() => openImportModal()}
                   >
-                    Import Students
-                  </button>
-                  <button 
-                    className="export-btn"
+                      Import
+                    </Button>
+                    <Button 
+                      leftIcon={<FaFileExport />}
+                      colorScheme="green"
+                      size="sm"
+                      variant="outline"
                     onClick={exportEnrollmentsToExcel}
-                    disabled={enrollments.length === 0}
+                      isDisabled={enrollments.length === 0}
                   >
                     Export
-                  </button>
-                </div>
-              </div>
+                    </Button>
+                  </HStack>
+                </Flex>
               
               {enrollmentLoading && (
-                <div className="loading-spinner">
-                  <div>Loading enrollment data...</div>
-                </div>
+                  <Flex justify="center" align="center" p={8}>
+                    <Spinner mr={3} color="blue.500" />
+                    <Text>Loading enrollment data...</Text>
+                  </Flex>
               )}
               
               {enrollmentError && (
-                <div className="error-message">
-                  <p>{enrollmentError}</p>
-                  <button onClick={fetchEnrollmentData}>Try Again</button>
-                </div>
+                  <Box p={6} bg="red.50" borderWidth="1px" borderColor="red.200" borderRadius="md">
+                    <Text color="red.600" mb={2}>{enrollmentError}</Text>
+                    <Button colorScheme="red" size="sm" onClick={fetchEnrollmentData}>Try Again</Button>
+                  </Box>
               )}
               
               {!enrollmentLoading && !enrollmentError && (
                 <>
                     {filteredEnrollments.length > 0 ? (
-                    <div className="enrollments-table-container">
-                      <table className="enrollments-table">
-                        <thead>
-                          <tr>
-                            <th>#</th>
-                            <th>Student Name</th>
-                            <th>ID</th>
-                            <th>Enrollment Date</th>
-                            <th>Status</th>
-                            <th>Contact</th>
-                            <th>Payment</th>
-                            <th>Notes</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredEnrollments.map((enrollment, index) => (
-                            <tr key={enrollment._id}>
-                              <td>{index + 1}</td>
-                              <td>{enrollment.student.name}</td>
-                              <td>{enrollment.student._id.substring(0, 8)}</td>
-                              <td>{formatDate(enrollment.enrollmentDate)}</td>
-                              <td>
-                                <span className={`enrollment-status ${enrollment.status.toLowerCase()}`}>
+                      <Box overflowX="auto" borderWidth="1px" borderColor="gray.200" borderRadius="md">
+                        <Table variant="simple" size="sm">
+                          <Thead bg="gray.50">
+                            <Tr>
+                              <Th width="50px" textAlign="center">#</Th>
+                              <Th>Student Name</Th>
+                              <Th>ID</Th>
+                              <Th>Enrollment Date</Th>
+                              <Th>Status</Th>
+                              <Th>Contact</Th>
+                              <Th>Payment</Th>
+                              <Th>Notes</Th>
+                              <Th>Actions</Th>
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {filteredEnrollments.map((enrollment, index) => {
+                              const paymentStatusColors = 
+                                enrollment.paymentStatus === 'Paid' ? { bg: 'green.100', color: 'green.700' } :
+                                enrollment.paymentStatus === 'Partial' ? { bg: 'yellow.100', color: 'yellow.700' } :
+                                { bg: 'red.100', color: 'red.700' };
+                              
+                              return (
+                                <Tr key={enrollment._id} _hover={{ bg: 'gray.50' }}>
+                                  <Td textAlign="center">{index + 1}</Td>
+                                  <Td fontWeight="medium">{enrollment.student.name}</Td>
+                                  <Td fontSize="sm" color="gray.600">{enrollment.student._id.substring(0, 8)}</Td>
+                                  <Td>{formatDate(enrollment.enrollmentDate)}</Td>
+                                  <Td>
+                                    <Badge 
+                                      px={2} 
+                                      py={1} 
+                                      colorScheme={
+                                        enrollment.status === 'Active' ? 'green' :
+                                        enrollment.status === 'Completed' ? 'blue' :
+                                        enrollment.status === 'Suspended' ? 'orange' : 
+                                        'gray'
+                                      }
+                                      borderRadius="full"
+                                    >
                                   {enrollment.status}
-                                </span>
-                              </td>
-                              <td>
-                                {enrollment.student.email}<br />
-                                {enrollment.student.phone && <span>{enrollment.student.phone}</span>}
-                              </td>
-                              <td>
-                                <div className="payment-status">
-                                  <span className={`payment-status-badge ${enrollment.paymentStatus.toLowerCase()}`}>
+                                    </Badge>
+                                  </Td>
+                                  <Td fontSize="sm">
+                                    <VStack align="flex-start" spacing={0}>
+                                      <Text>{enrollment.student.email}</Text>
+                                      {enrollment.student.phone && <Text>{enrollment.student.phone}</Text>}
+                                    </VStack>
+                                  </Td>
+                                  <Td>
+                                    <VStack align="flex-start" spacing={1}>
+                                      <Badge 
+                                        px={2} 
+                                        py={1} 
+                                        bg={paymentStatusColors.bg} 
+                                        color={paymentStatusColors.color}
+                                        borderRadius="full"
+                                      >
                                     {enrollment.paymentStatus}
-                                  </span>
-                                  <div className="payment-details">
-                                    <span>Paid: ${enrollment.amountPaid}</span>
-                                    <span>Total: ${enrollment.totalAmount}</span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="notes-cell">
+                                      </Badge>
+                                      <Text fontSize="xs">Paid: ${enrollment.amountPaid}</Text>
+                                      <Text fontSize="xs">Total: ${enrollment.totalAmount}</Text>
+                                    </VStack>
+                                  </Td>
+                                  <Td maxW="200px" isTruncated>
                                 {enrollment.notes ? 
-                                  <div className="enrollment-notes" title={enrollment.notes}>
+                                      <Text 
+                                        fontSize="sm" 
+                                        bg="gray.50" 
+                                        p={1} 
+                                        borderRadius="md" 
+                                        title={enrollment.notes}
+                                      >
                                     {enrollment.notes.length > 50 ? 
                                       `${enrollment.notes.substring(0, 50)}...` : 
                                       enrollment.notes
                                     }
-                                  </div> : 
-                                  <span className="no-notes">No notes</span>
+                                      </Text> : 
+                                      <Text fontSize="xs" color="gray.500" fontStyle="italic">No notes</Text>
                                 }
-                              </td>
-                              <td className="actions-cell">
-                                <button 
-                                  className="action-btn edit-btn"
+                                  </Td>
+                                  <Td>
+                                    <HStack spacing={1}>
+                                      <IconButton
+                                        icon={<FaEdit />}
+                                        aria-label="Edit enrollment"
+                                        size="sm"
+                                        colorScheme="blue"
+                                        variant="ghost"
                                   onClick={() => openEnrollModal(enrollment)}
-                                >
-                                  Edit
-                                </button>
-                                <button 
-                                  className="action-btn remove-btn"
+                                      />
+                                      <IconButton
+                                        icon={<FaTimes />}
+                                        aria-label="Remove student"
+                                        size="sm"
+                                        colorScheme="red"
+                                        variant="ghost"
                                   onClick={() => handleRemoveEnrollment(enrollment._id, enrollment.student._id)}
-                                >
-                                  Remove
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                                      />
+                                    </HStack>
+                                  </Td>
+                                </Tr>
+                              );
+                            })}
+                          </Tbody>
+                        </Table>
+                      </Box>
                   ) : (
-                    <div className="no-data-message">
-                      <p>No students enrolled in this course yet.</p>
-                    </div>
+                      <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" borderRadius="md" textAlign="center">
+                        <Text color="gray.500">No students enrolled in this course yet.</Text>
+                      </Box>
                   )}
                 </>
               )}
-            </div>
+              </Box>
             </TabPanel>
             <TabPanel p={4}>
-            <div className="schedule-tab">
-              <h2>Weekly Schedule</h2>
+              <Box>
+                <Heading as="h3" size="md" mb={4}>Weekly Schedule</Heading>
               {!course.weeklySchedule || course.weeklySchedule.length === 0 ? (
-                <div className="no-data-message">
-                  <p>No schedule defined for this course.</p>
-                </div>
+                  <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" borderRadius="md" textAlign="center">
+                    <Text color="gray.500">No schedule defined for this course.</Text>
+                  </Box>
               ) : (
-                <div className="schedule-list">
+                  <SimpleGrid columns={{base: 1, md: 2, lg: 3}} spacing={4}>
                   {course.weeklySchedule.map((schedule, index) => (
-                    <div key={index} className="schedule-item">
-                      <div className="schedule-day">{schedule.day}</div>
-                      <div className="schedule-time">
-                        {schedule.startTime} - {schedule.endTime}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                      <Box 
+                        key={index} 
+                        p={4} 
+                        borderWidth="1px" 
+                        borderColor="gray.200" 
+                        borderRadius="md" 
+                        bg="white"
+                        transition="transform 0.2s"
+                        _hover={{ 
+                          transform: "translateY(-2px)", 
+                          shadow: "sm", 
+                          borderColor: "blue.300" 
+                        }}
+                      >
+                        <Text fontWeight="bold" color="blue.700">{schedule.day}</Text>
+                        <Text>
+                          {schedule.startTime} - {schedule.endTime}
+                        </Text>
+                      </Box>
+                    ))}
+                  </SimpleGrid>
+                )}
+              </Box>
             </TabPanel>
           </TabPanels>
         </Tabs>
       </Box>
+      
+      {/* Enrollment Modal */}
+      <Modal isOpen={isEnrollModalOpen} onClose={closeEnrollModal} size="xl">
+        {/* ... existing code ... */}
+      </Modal>
+      
+      {/* Import Modal */}
+      <Modal isOpen={isImportModalOpen} onClose={closeImportModal} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Import Students</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Box mb={4} p={3} bg="blue.50" borderRadius="md">
+              <Text fontWeight="medium" mb={2}>Instructions:</Text>
+              <Text fontSize="sm">
+                Upload an Excel file (.xlsx) or CSV file with the following columns:
+              </Text>
+              <UnorderedList fontSize="sm" mt={2}>
+                <ListItem><b>Name</b> - Required</ListItem>
+                <ListItem><b>Email</b> - Required</ListItem>
+                <ListItem><b>Phone</b> - Optional</ListItem>
+                <ListItem><b>Amount</b> - Optional (Total Fee)</ListItem>
+                <ListItem><b>Paid</b> - Optional (Amount Paid)</ListItem>
+                <ListItem><b>EnrollmentDate</b> - Optional (mm/dd/yyyy)</ListItem>
+                <ListItem><b>Notes</b> - Optional</ListItem>
+              </UnorderedList>
+            </Box>
+            
+            <FormControl mb={4}>
+              <FormLabel htmlFor="importFile">Upload File</FormLabel>
+              <Input
+                type="file"
+                id="importFile"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileImport}
+              />
+            </FormControl>
+            
+            {importError && (
+              <Box mb={4} p={3} bg="red.50" color="red.600" borderRadius="md">
+                <Text fontSize="sm">{importError}</Text>
+              </Box>
+            )}
+            
+            {importPreview.length > 0 && (
+              <Box mb={4} border="1px" borderColor="gray.200" borderRadius="md" overflow="hidden">
+                <Box bg="gray.50" p={2} borderBottomWidth="1px">
+                  <Text fontWeight="medium" fontSize="sm">Data Preview</Text>
+                </Box>
+                <Box overflowX="auto">
+                  <Table variant="simple" size="sm">
+                    <Thead>
+                      <Tr>
+                        {Object.keys(importPreview[0]).map(header => (
+                          <Th key={header}>{header}</Th>
+                        ))}
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {importPreview.map((row, index) => (
+                        <Tr key={index}>
+                          {Object.values(row).map((value, i) => (
+                            <Td key={i}>{value}</Td>
+                          ))}
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </Box>
+              </Box>
+            )}
+          </ModalBody>
+          
+          <ModalFooter>
+            <Button onClick={closeImportModal} mr={3} variant="outline">
+              Cancel
+            </Button>
+            <Button 
+              colorScheme="blue" 
+              onClick={handleImportSubmit}
+              isLoading={importLoading}
+              isDisabled={importPreview.length === 0}
+            >
+              Import
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      
+      {/* Withdrawn Students Modal */}
+      <Modal isOpen={isWithdrawnModalOpen} onClose={closeWithdrawnModal} size="xl">
+        {/* ... existing code ... */}
+      </Modal>
     </Box>
   );
 };

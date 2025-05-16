@@ -1,7 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { regionsAPI } from '../../api';
-import './RegionForm.css';
+import {
+  Box,
+  Button,
+  Container,
+  Divider,
+  Flex,
+  FormControl,
+  FormLabel,
+  Heading,
+  Input,
+  Textarea,
+  Alert,
+  AlertIcon,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  Spinner,
+  Text,
+  VStack,
+  useColorModeValue
+} from '@chakra-ui/react';
+import { FaArrowLeft, FaChevronRight } from 'react-icons/fa';
 
 const RegionForm = () => {
   const { regionId } = useParams();
@@ -15,6 +36,10 @@ const RegionForm = () => {
   const [loading, setLoading] = useState(isEditMode);
   const [error, setError] = useState(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
+
+  // Colors
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   useEffect(() => {
     if (isEditMode) {
@@ -68,71 +93,110 @@ const RegionForm = () => {
   };
 
   if (loading) {
-    return <div className="loading-spinner">Loading region data...</div>;
+    return (
+      <Flex justify="center" align="center" height="50vh">
+        <Spinner size="xl" color="blue.500" thickness="4px" />
+        <Text ml={4} fontSize="lg" color="gray.600">Loading region data...</Text>
+      </Flex>
+    );
   }
 
   return (
-    <div className="region-form-container">
-      <div className="region-form-header">
-        <h1>{isEditMode ? 'Edit Region' : 'Create New Region'}</h1>
-      </div>
+    <Container maxW="container.md" py={6}>
+      <Flex mb={6} justify="space-between" alignItems="center">
+        <Heading size="lg">{isEditMode ? 'Edit Region' : 'Create New Region'}</Heading>
+        <Button 
+          as={Link} 
+          to="/kindergarten/regions" 
+          leftIcon={<FaArrowLeft />} 
+          size="sm" 
+          colorScheme="gray" 
+          variant="outline"
+        >
+          Back to Regions
+        </Button>
+      </Flex>
       
       {error && (
-        <div className="error-message">
-          <p>{error}</p>
-        </div>
+        <Alert status="error" mb={6} borderRadius="md">
+          <AlertIcon />
+          {error}
+        </Alert>
       )}
       
-      <form onSubmit={handleSubmit} className="region-form">
-        <div className="form-group">
-          <label htmlFor="name">Region Name</label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={region.name}
-            onChange={handleInputChange}
-            required
-            disabled={formSubmitting}
-          />
-        </div>
-        
-        <div className="form-group">
-          <label htmlFor="description">Description (Optional)</label>
-          <textarea
-            id="description"
-            name="description"
-            value={region.description || ''}
-            onChange={handleInputChange}
-            rows="4"
-            disabled={formSubmitting}
-          />
-        </div>
-        
-        <div className="form-actions">
-          <Link to="/kindergarten/regions" className="cancel-btn">
-            Cancel
-          </Link>
-          <button 
-            type="submit" 
-            className="submit-btn"
-            disabled={formSubmitting}
-          >
-            {formSubmitting ? 'Saving...' : 'Save Region'}
-          </button>
-        </div>
-      </form>
+      <Box 
+        as="form" 
+        onSubmit={handleSubmit} 
+        bg={bgColor} 
+        borderWidth="1px" 
+        borderColor={borderColor} 
+        borderRadius="md" 
+        p={6} 
+        shadow="sm"
+      >
+        <VStack spacing={6} align="stretch">
+          <FormControl isRequired>
+            <FormLabel>Region Name</FormLabel>
+            <Input
+              id="name"
+              name="name"
+              value={region.name}
+              onChange={handleInputChange}
+              isDisabled={formSubmitting}
+            />
+          </FormControl>
+          
+          <FormControl>
+            <FormLabel>Description (Optional)</FormLabel>
+            <Textarea
+              id="description"
+              name="description"
+              value={region.description || ''}
+              onChange={handleInputChange}
+              rows={4}
+              resize="vertical"
+              isDisabled={formSubmitting}
+            />
+          </FormControl>
+          
+          <Flex justify="flex-end" gap={3} mt={4}>
+            <Button 
+              as={Link}
+              to="/kindergarten/regions"
+              variant="outline" 
+              isDisabled={formSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              colorScheme="blue"
+              isLoading={formSubmitting}
+              loadingText="Saving"
+            >
+              {isEditMode ? 'Update Region' : 'Create Region'}
+            </Button>
+          </Flex>
+        </VStack>
+      </Box>
       
-      <div className="breadcrumb-navigation">
-        <Link to="/kindergarten" className="breadcrumb-link">Dashboard</Link>
-        <span className="breadcrumb-separator">/</span>
-        <Link to="/kindergarten/regions" className="breadcrumb-link">Regions</Link>
-        <span className="breadcrumb-separator">/</span>
-        <span className="breadcrumb-current">
-          {isEditMode ? 'Edit Region' : 'New Region'}
-        </span>
-      </div>
-    </div>
+      <Breadcrumb 
+        separator={<FaChevronRight color="gray.500" />} 
+        mt={6}
+        fontSize="sm"
+        color="gray.500"
+      >
+        <BreadcrumbItem>
+          <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbItem>
+          <BreadcrumbLink as={Link} to="/kindergarten/regions">Regions</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbItem isCurrentPage>
+          <Text fontWeight="medium">{isEditMode ? 'Edit Region' : 'New Region'}</Text>
+        </BreadcrumbItem>
+      </Breadcrumb>
+    </Container>
   );
 };
 
