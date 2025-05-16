@@ -645,8 +645,7 @@ const ClassDetail = () => {
           <tr>
             <th>#</th>
             <th>Date</th>
-            <th>Start Time</th>
-            <th>End Time</th>
+            <th>Day & Time</th>
             <th>Status</th>
             <th>Notes</th>
             <th>Actions</th>
@@ -656,6 +655,7 @@ const ClassDetail = () => {
           {monthSessions.map((session, idx) => {
             const dateObj = new Date(session.date);
             const formattedDate = formatDate(dateObj);
+            const dayName = getDayName(dateObj);
             const isToday = isSameDay(dateObj, new Date());
             const isPast = dateObj < new Date();
             
@@ -666,8 +666,14 @@ const ClassDetail = () => {
               <tr key={sessionKey} className={isToday ? 'today-session' : ''}>
                 <td>{idx + 1}</td>
                 <td className={isToday ? 'bg-info text-white' : ''}>{formattedDate}</td>
-                <td>{session.startTime}</td>
-                <td>{session.endTime}</td>
+                <td>
+                  <VStack spacing={0} align="flex-start">
+                    <Text fontWeight="medium">{dayName}</Text>
+                    <Text fontSize="sm" color={subtleTextColor}>
+                      {session.startTime || formatTime(session.date)} {session.endTime ? `- ${session.endTime}` : ''}
+                    </Text>
+                  </VStack>
+                </td>
                 <td>
                   <Badge bg={statusVariant}>
                     {session.status}
@@ -1123,11 +1129,10 @@ const ClassDetail = () => {
                               <Tr>
                               <Th width="5%">#</Th>
                               <Th width="15%">Date</Th>
-                              <Th width="10%">Day</Th>
-                              <Th width="10%">Time</Th>
+                              <Th width="15%">Day & Time</Th>
                               <Th width="15%">Status</Th>
                               <Th width="25%">Notes</Th>
-                              <Th width="20%">Actions</Th>
+                              <Th width="25%">Actions</Th>
                               </Tr>
                             </Thead>
                             <Tbody>
@@ -1148,9 +1153,13 @@ const ClassDetail = () => {
                                   <Td fontWeight={isToday ? "bold" : "normal"}>
                                     {formattedDate}
                                     </Td>
-                                  <Td>{dayName}</Td>
                                     <Td>
-                                    {session.startTime} - {session.endTime}
+                                    <VStack spacing={0} align="flex-start">
+                                      <Text fontWeight="medium">{dayName}</Text>
+                                      <Text fontSize="sm" color={subtleTextColor}>
+                                        {session.startTime || formatTime(session.date)} {session.endTime ? `- ${session.endTime}` : ''}
+                                      </Text>
+                                    </VStack>
                                     </Td>
                                     <Td>
                                     <Badge 

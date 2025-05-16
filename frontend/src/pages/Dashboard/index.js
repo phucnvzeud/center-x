@@ -22,7 +22,13 @@ const Dashboard = () => {
     upcomingSessions: 0,
     classes: { total: 0, active: 0, inactive: 0 },
     schools: { total: 0 },
-    regions: { total: 0 }
+    regions: { total: 0 },
+    studentStats: {
+      newThisMonth: 0,
+      enrollmentRate: 0,
+      activeEnrollments: 0,
+      averagePerCourse: 0
+    }
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,6 +37,7 @@ const Dashboard = () => {
   const [upcomingSessions, setUpcomingSessions] = useState([]);
   const [nextHolidays, setNextHolidays] = useState([]);
   const [recentCourses, setRecentCourses] = useState([]);
+  const [recentStudentActivities, setRecentStudentActivities] = useState([]);
   const [todaySessions, setTodaySessions] = useState([]);
   const [revenue, setRevenue] = useState({
     monthly: 0,
@@ -68,6 +75,37 @@ const Dashboard = () => {
         const courses = coursesResponse.data;
         const teachers = teachersResponse.data;
         const students = studentsResponse.data;
+        
+        // Get current month for student stats
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        // Calculate new students this month
+        const newStudentsThisMonth = students.filter(student => {
+          if (!student.createdAt) return false;
+          const createdDate = new Date(student.createdAt);
+          return createdDate.getMonth() === currentMonth && createdDate.getFullYear() === currentYear;
+        }).length;
+        
+        // Calculate student enrollment stats
+        let totalEnrollments = 0;
+        let activeEnrollments = 0;
+        
+        // Count enrollments from course data
+        courses.forEach(course => {
+          if (course.students && Array.isArray(course.students)) {
+            totalEnrollments += course.students.length;
+            if (course.status === 'Active') {
+              activeEnrollments += course.students.length;
+            }
+          }
+        });
+        
+        // Calculate enrollment rate
+        const enrollmentRate = students.length > 0 ? (activeEnrollments / students.length) * 100 : 0;
+        
+        // Calculate average students per active course
+        const averagePerCourse = stats.activeCourses > 0 ? Math.round(activeEnrollments / stats.activeCourses) : 0;
         
         // Get course status counts
         const activeCourses = courses.filter(c => c.status === 'Active');
@@ -149,6 +187,31 @@ const Dashboard = () => {
         );
         setRecentCourses(sortedCourses.slice(0, 5));
         
+        // Generate sample recent student activities (to be replaced with real API data)
+        const recentActivities = [];
+        
+        // Add recent enrollments (newest first)
+        courses.forEach(course => {
+          if (course.students && Array.isArray(course.students)) {
+            course.students.forEach(student => {
+              if (student.enrollmentDate) {
+                recentActivities.push({
+                  type: 'enrollment',
+                  date: new Date(student.enrollmentDate),
+                  courseId: course._id,
+                  courseName: course.name,
+                  studentId: student._id,
+                  studentName: student.name || 'Student'
+                });
+              }
+            });
+          }
+        });
+        
+        // Sort activities by date (newest first) and take top 5
+        recentActivities.sort((a, b) => b.date - a.date);
+        setRecentStudentActivities(recentActivities.slice(0, 5));
+        
         // Ensure kindergartenStatsResponse data has proper structure
         const kindergartenStats = kindergartenStatsResponse.data || {};
         const processedStats = {
@@ -169,7 +232,13 @@ const Dashboard = () => {
           totalSessions,
           completedSessions,
           upcomingSessions: upcomingSessionsList.length,
-          ...processedStats
+          ...processedStats,
+          studentStats: {
+            newThisMonth: newStudentsThisMonth,
+            enrollmentRate,
+            activeEnrollments,
+            averagePerCourse
+          }
         });
         
         // Process course status data for chart
@@ -266,18 +335,7 @@ const Dashboard = () => {
     <Box>
       <Heading mb={6} fontSize="xl" fontWeight="semibold">Dashboard</Heading>
       
-      {/* Recent Notifications - Now at the top and full width */}
-      <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
-        <Flex align="center" mb={4}>
-          <Box color="purple.500" mr={2}>
-            <FaBell />
-          </Box>
-          <Heading size="sm">Recent Activity & Notifications</Heading>
-        </Flex>
-        <NotificationWidget limit={5} />
-      </Box>
-      
-      {/* Key Metrics Overview */}
+      {/* Top Row: Key Metrics Overview */}
       <SimpleGrid columns={{ base: 2, md: 4, lg: 6 }} spacing={4} mb={6}>
         <StatCard 
           icon={<FaChalkboardTeacher />} 
@@ -329,73 +387,124 @@ const Dashboard = () => {
         />
       </SimpleGrid>
       
-      {/* Course Status Stats */}
-      <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
-        <Flex align="center" mb={4}>
-          <Box color="purple.500" mr={2}>
-            <FaCheckSquare />
+      {/* Main Content Grid: 3 columns */}
+      <Grid 
+        templateColumns={{ base: "1fr", md: "1fr 1fr", lg: "350px 1fr 350px" }} 
+        gap={6}
+        mb={6}
+      >
+        {/* Left Column */}
+        <GridItem colSpan={{ base: 1, md: 2, lg: 1 }}>
+          {/* Recent Activity & Notifications - Resized */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm" maxHeight="450px" overflowY="auto">
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                <FaBell />
+              </Box>
+              <Heading size="sm">Recent Activity & Notifications</Heading>
+            </Flex>
+            <NotificationWidget limit={5} />
           </Box>
-          <Heading size="sm">Course Status Overview</Heading>
-        </Flex>
-        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-          <StatusStatCard title="Active Courses" value={stats.activeCourses} colorScheme="green" />
-          <StatusStatCard title="Upcoming" value={stats.upcomingCourses} colorScheme="blue" />
-          <StatusStatCard title="Completed" value={stats.completedCourses} colorScheme="purple" />
-          <StatusStatCard title="Cancelled" value={stats.cancelledCourses} colorScheme="red" />
-        </SimpleGrid>
-        <Box mt={4}>
-          <Text fontSize="sm" fontWeight="medium" mb={1}>Sessions Completion</Text>
-          <Flex align="center" mb={1}>
-            <Text fontSize="xs" color="gray.500">
-              {stats.completedSessions} of {stats.totalSessions} Total Sessions
-            </Text>
-            <Text fontSize="xs" fontWeight="bold" ml="auto">
-              {stats.totalSessions > 0 ? Math.round((stats.completedSessions / stats.totalSessions) * 100) : 0}%
-            </Text>
-          </Flex>
-          <Progress 
-            value={stats.totalSessions > 0 ? (stats.completedSessions / stats.totalSessions) * 100 : 0} 
-            size="sm" 
-            colorScheme="purple" 
-            borderRadius="full"
-          />
-        </Box>
-      </Box>
           
-      {/* Revenue Overview (Mocked Data) */}
-      <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
-        <Flex align="center" mb={4}>
-          <Box color="purple.500" mr={2}>
-            <FaMoneyBillWave />
+          {/* Upcoming Sessions */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm" mb={6}>
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                  <FaCalendarAlt />
+              </Box>
+              <Heading size="sm">Upcoming Sessions</Heading>
+            </Flex>
+            {upcomingSessions.length > 0 ? (
+              <Stack spacing={3}>
+                {upcomingSessions.map((session, index) => (
+                  <Box 
+                    key={index} 
+                    p={3} 
+                    bg="gray.50" 
+                    _hover={{ bg: "gray.100" }}
+                    borderRadius="md"
+                  >
+                    <Text fontWeight="medium" fontSize="sm">
+                      <Link to={`/courses/${session.courseId}`} style={{ color: '#805ad5' }}>
+                        {session.courseName}
+                      </Link>
+                    </Text>
+                    <Text fontSize="xs" color="gray.500">
+                      {format(new Date(session.date), 'MMM dd, yyyy • h:mm a')}
+                    </Text>
+                  </Box>
+                ))}
+              </Stack>
+            ) : (
+              <Text fontSize="sm" color="gray.500">No upcoming sessions</Text>
+            )}
           </Box>
-          <Heading size="sm">Revenue Overview</Heading>
-        </Flex>
-        <SimpleGrid columns={{ base: 2, md: 3 }} spacing={4}>
-          <Box p={4} bg="gray.50" borderRadius="md">
-            <Text fontSize="sm" color="gray.500">Monthly Revenue</Text>
-            <Text fontSize="2xl" fontWeight="bold">${revenue.monthly.toLocaleString()}</Text>
-            <HStack mt={1}>
-              <Badge colorScheme={revenue.growth >= 0 ? "green" : "red"}>
-                {revenue.growth >= 0 ? "+" : ""}{revenue.growth.toFixed(1)}%
-              </Badge>
-              <Text fontSize="xs" color="gray.500">vs last month</Text>
-            </HStack>
+          
+          {/* Upcoming Holidays */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm">
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                <FaExclamationTriangle />
+              </Box>
+              <Heading size="sm">Upcoming Holidays</Heading>
+            </Flex>
+            {nextHolidays.length > 0 ? (
+              <Stack spacing={3}>
+                {nextHolidays.map((holiday) => (
+                  <Box 
+                    key={holiday._id} 
+                    p={3} 
+                    bg="gray.50"
+                    borderRadius="md"
+                  >
+                    <Text fontWeight="medium" fontSize="sm">{holiday.name}</Text>
+                    <Text fontSize="xs" color="gray.500">
+                      {format(new Date(holiday.startDate), 'MMM dd')} - {format(new Date(holiday.endDate), 'MMM dd, yyyy')}
+                    </Text>
+                  </Box>
+                ))}
+              </Stack>
+            ) : (
+              <Text fontSize="sm" color="gray.500">No upcoming holidays</Text>
+            )}
           </Box>
-          <Box p={4} bg="gray.50" borderRadius="md">
-            <Text fontSize="sm" color="gray.500">Annual Revenue</Text>
-            <Text fontSize="2xl" fontWeight="bold">${revenue.annual.toLocaleString()}</Text>
+        </GridItem>
+        
+        {/* Center Column */}
+        <GridItem>
+          {/* Course Status Overview */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
+            <Flex align="center" mb={4}>
+              <Box color="purple.500" mr={2}>
+                <FaCheckSquare />
+              </Box>
+              <Heading size="sm">Course Status Overview</Heading>
+            </Flex>
+            <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+              <StatusStatCard title="Active Courses" value={stats.activeCourses} colorScheme="green" />
+              <StatusStatCard title="Upcoming" value={stats.upcomingCourses} colorScheme="blue" />
+              <StatusStatCard title="Completed" value={stats.completedCourses} colorScheme="purple" />
+              <StatusStatCard title="Cancelled" value={stats.cancelledCourses} colorScheme="red" />
+            </SimpleGrid>
+            <Box mt={4}>
+              <Text fontSize="sm" fontWeight="medium" mb={1}>Sessions Completion</Text>
+              <Flex align="center" mb={1}>
+                <Text fontSize="xs" color="gray.500">
+                  {stats.completedSessions} of {stats.totalSessions} Total Sessions
+                </Text>
+                <Text fontSize="xs" fontWeight="bold" ml="auto">
+                  {stats.totalSessions > 0 ? Math.round((stats.completedSessions / stats.totalSessions) * 100) : 0}%
+                </Text>
+              </Flex>
+              <Progress 
+                value={stats.totalSessions > 0 ? (stats.completedSessions / stats.totalSessions) * 100 : 0} 
+                size="sm" 
+                colorScheme="purple" 
+                borderRadius="full"
+              />
+            </Box>
           </Box>
-          <Box p={4} bg="gray.50" borderRadius="md">
-            <Text fontSize="sm" color="gray.500">Revenue Per Student</Text>
-            <Text fontSize="2xl" fontWeight="bold">
-              ${stats.students > 0 ? Math.round(revenue.annual / stats.students).toLocaleString() : 0}
-            </Text>
-          </Box>
-        </SimpleGrid>
-      </Box>
-      
-      <Grid templateColumns={{ base: "1fr", lg: "1fr 350px" }} gap={6}>
-        <Box>
+          
           {/* Today's Sessions */}
           <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
             <Flex align="center" mb={4}>
@@ -433,7 +542,7 @@ const Dashboard = () => {
               <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>No sessions scheduled for today</Text>
             )}
           </Box>
-        
+          
           {/* Course Status Distribution Chart */}
           <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
             <Flex align="center" mb={4}>
@@ -442,7 +551,7 @@ const Dashboard = () => {
               </Box>
               <Heading size="sm">Course Status Distribution</Heading>
             </Flex>
-            <Box height="300px">
+            <Box height="250px">
               {coursesByStatus.length > 1 && (
                 <Chart
                   chartType="PieChart"
@@ -492,13 +601,147 @@ const Dashboard = () => {
                   <Tr>
                     <Td colSpan={3}>No courses found</Td>
                   </Tr>
-              )}
+                )}
               </Tbody>
             </Table>
           </Box>
-        </Box>
+        </GridItem>
         
-        <Stack spacing={6}>
+        {/* Right Column */}
+        <GridItem>
+          {/* Student Stats - New Section */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
+            <Flex align="center" mb={4}>
+              <Box color="blue.500" mr={2}>
+                <FaUserGraduate />
+              </Box>
+              <Heading size="sm">Student Overview</Heading>
+            </Flex>
+            <SimpleGrid columns={2} spacing={4} mb={4}>
+              <Box p={3} bg="blue.50" borderRadius="md" borderWidth="1px" borderColor="blue.200">
+                <Text fontSize="sm" color="blue.700">Active Students</Text>
+                <Text fontSize="xl" fontWeight="bold" color="blue.700">
+                  {stats.students}
+                </Text>
+              </Box>
+              <Box p={3} bg="teal.50" borderRadius="md" borderWidth="1px" borderColor="teal.200">
+                <Text fontSize="sm" color="teal.700">Average per Course</Text>
+                <Text fontSize="xl" fontWeight="bold" color="teal.700">
+                  {stats.studentStats.averagePerCourse}
+                </Text>
+              </Box>
+            </SimpleGrid>
+            
+            <Box mb={4}>
+              <Text fontSize="sm" fontWeight="medium" mb={2}>Enrollment Rate</Text>
+              <Progress 
+                value={stats.studentStats.enrollmentRate} 
+                size="sm" 
+                colorScheme="blue" 
+                borderRadius="full"
+                mb={1}
+              />
+              <Flex justify="space-between">
+                <Text fontSize="xs" color="gray.500">New Students (This Month)</Text>
+                <Text fontSize="xs" fontWeight="bold">{stats.studentStats.newThisMonth}</Text>
+              </Flex>
+            </Box>
+            
+            <Divider mb={4} />
+            
+            <HStack spacing={4} justify="center" mb={3}>
+              <Box textAlign="center">
+                <Text fontSize="sm" color="gray.500">Active Enrollments</Text>
+                <Text fontSize="lg" fontWeight="bold" color="purple.500">{stats.studentStats.activeEnrollments}</Text>
+              </Box>
+              <Box textAlign="center">
+                <Text fontSize="sm" color="gray.500">Total Students</Text>
+                <Text fontSize="lg" fontWeight="bold" color="purple.500">{stats.students}</Text>
+              </Box>
+            </HStack>
+            
+            <Link to="/students" style={{ display: 'block', textAlign: 'center', color: '#805ad5', fontSize: '14px' }}>
+              View All Students
+            </Link>
+          </Box>
+          
+          {/* Recent Student Activities - New Section */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
+            <Flex align="center" mb={4}>
+              <Box color="blue.500" mr={2}>
+                <FaUserFriends />
+              </Box>
+              <Heading size="sm">Recent Student Activities</Heading>
+            </Flex>
+            
+            {recentStudentActivities.length > 0 ? (
+              <Stack spacing={3}>
+                {recentStudentActivities.map((activity, index) => (
+                  <Box 
+                    key={index} 
+                    p={3} 
+                    bg="gray.50" 
+                    borderRadius="md"
+                    _hover={{ bg: "gray.100" }}
+                  >
+                    <Flex align="center" mb={1}>
+                      <Badge colorScheme="green" mr={2}>
+                        {activity.type === 'enrollment' ? 'Enrollment' : 'Activity'}
+                      </Badge>
+                      <Text fontSize="sm" fontWeight="medium">
+                        {activity.studentName}
+                      </Text>
+                    </Flex>
+                    <Text fontSize="xs" color="gray.500">
+                      Enrolled in <Link to={`/courses/${activity.courseId}`} style={{ color: '#805ad5' }}>
+                        {activity.courseName}
+                      </Link>
+                    </Text>
+                    <Text fontSize="xs" color="gray.500" mt={1}>
+                      {format(new Date(activity.date), 'MMM dd, yyyy')}
+                    </Text>
+                  </Box>
+                ))}
+              </Stack>
+            ) : (
+              <Text fontSize="sm" color="gray.500" textAlign="center" py={2}>
+                No recent student activities
+              </Text>
+            )}
+          </Box>
+          
+          {/* Revenue Overview (Mocked Data) */}
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
+            <Flex align="center" mb={4}>
+              <Box color="green.500" mr={2}>
+                <FaMoneyBillWave />
+              </Box>
+              <Heading size="sm">Revenue Overview</Heading>
+            </Flex>
+            <Stack spacing={4}>
+              <Box p={3} bg="gray.50" borderRadius="md">
+                <Text fontSize="sm" color="gray.500">Monthly Revenue</Text>
+                <Text fontSize="xl" fontWeight="bold">${revenue.monthly.toLocaleString()}</Text>
+                <HStack mt={1}>
+                  <Badge colorScheme={revenue.growth >= 0 ? "green" : "red"}>
+                    {revenue.growth >= 0 ? "+" : ""}{revenue.growth.toFixed(1)}%
+                  </Badge>
+                  <Text fontSize="xs" color="gray.500">vs last month</Text>
+                </HStack>
+              </Box>
+              <Box p={3} bg="gray.50" borderRadius="md">
+                <Text fontSize="sm" color="gray.500">Annual Revenue</Text>
+                <Text fontSize="xl" fontWeight="bold">${revenue.annual.toLocaleString()}</Text>
+              </Box>
+              <Box p={3} bg="gray.50" borderRadius="md">
+                <Text fontSize="sm" color="gray.500">Revenue Per Student</Text>
+                <Text fontSize="xl" fontWeight="bold">
+                  ${stats.students > 0 ? Math.round(revenue.annual / stats.students).toLocaleString() : 0}
+                </Text>
+              </Box>
+            </Stack>
+          </Box>
+          
           {/* Teachers by Branch Chart */}
           <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm">
             <Flex align="center" mb={4}>
@@ -507,7 +750,7 @@ const Dashboard = () => {
               </Box>
               <Heading size="sm">Teachers by Branch</Heading>
             </Flex>
-            <Box height="300px">
+            <Box height="200px">
               {teachersByBranch.length > 1 && (
                 <Chart
                   chartType="BarChart"
@@ -524,70 +767,7 @@ const Dashboard = () => {
               )}
             </Box>
           </Box>
-          
-          {/* Upcoming Sessions */}
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm">
-            <Flex align="center" mb={4}>
-              <Box color="purple.500" mr={2}>
-                <FaCalendarAlt />
-              </Box>
-              <Heading size="sm">Upcoming Sessions</Heading>
-            </Flex>
-                {upcomingSessions.length > 0 ? (
-              <Stack spacing={3}>
-                {upcomingSessions.map((session, index) => (
-                  <Box 
-                    key={index} 
-                    p={3} 
-                    bg="gray.50" 
-                    _hover={{ bg: "gray.100" }}
-                    borderRadius="md"
-                  >
-                    <Text fontWeight="medium" fontSize="sm">
-                      <Link to={`/courses/${session.courseId}`} style={{ color: '#805ad5' }}>
-                        {session.courseName}
-                    </Link>
-                    </Text>
-                    <Text fontSize="xs" color="gray.500">
-                      {format(new Date(session.date), 'MMM dd, yyyy • h:mm a')}
-                    </Text>
-                  </Box>
-                ))}
-              </Stack>
-            ) : (
-              <Text fontSize="sm" color="gray.500">No upcoming sessions</Text>
-            )}
-          </Box>
-          
-          {/* Upcoming Holidays */}
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm">
-            <Flex align="center" mb={4}>
-              <Box color="purple.500" mr={2}>
-                <FaExclamationTriangle />
-              </Box>
-              <Heading size="sm">Upcoming Holidays</Heading>
-            </Flex>
-                {nextHolidays.length > 0 ? (
-              <Stack spacing={3}>
-                {nextHolidays.map((holiday) => (
-                  <Box 
-                    key={holiday._id} 
-                    p={3} 
-                    bg="gray.50"
-                    borderRadius="md"
-                  >
-                    <Text fontWeight="medium" fontSize="sm">{holiday.name}</Text>
-                    <Text fontSize="xs" color="gray.500">
-                          {format(new Date(holiday.startDate), 'MMM dd')} - {format(new Date(holiday.endDate), 'MMM dd, yyyy')}
-                    </Text>
-                  </Box>
-                ))}
-              </Stack>
-                ) : (
-              <Text fontSize="sm" color="gray.500">No upcoming holidays</Text>
-                )}
-          </Box>
-        </Stack>
+        </GridItem>
       </Grid>
     </Box>
   );

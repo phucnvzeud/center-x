@@ -221,7 +221,7 @@ const KindergartenDashboard = () => {
             </Flex>
           </Stat>
         </Box>
-        
+      
         <Stat bg={statCardBg} p={3} borderRadius="md" shadow="xs" borderWidth="1px" borderColor={borderColor} size="sm">
           <Flex align="center">
             <Icon as={FaUserGraduate} color="purple.500" boxSize={5} mr={2} />

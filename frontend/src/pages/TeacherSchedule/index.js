@@ -463,6 +463,12 @@ const TeacherSchedule = () => {
     
     const startTime = formatTime(event.start);
     const endTime = formatTime(event.end);
+    const duration = Math.round((event.end - event.start) / (1000 * 60)); // Duration in minutes
+    
+    // Style based on event type (kindergarten or course)
+    const eventTypeStyle = event.type === 'kindergarten' 
+      ? { borderLeft: '3px solid #805ad5' } 
+      : { borderLeft: '3px solid #3182ce' };
     
     return (
       <div 
@@ -471,12 +477,18 @@ const TeacherSchedule = () => {
           e.stopPropagation();
           handleSelectEvent(event);
         }}
+        style={eventTypeStyle}
       >
-        <strong className="event-title">{event.title}</strong>
+        <strong className="event-title">
+          {event.type === 'kindergarten' && '🧒 '}
+          {event.title}
+        </strong>
         <p className="event-details">
-          {startTime} - {endTime} • {timeOfDayLabel}
-          {event.resource.branch && event.resource.branch.name ? 
-            ` • ${event.resource.branch.name}` : ''}
+          {startTime} - {endTime} • {duration}min
+          {event.type === 'kindergarten' ? 
+            (event.resource.school ? ` • ${event.resource.school.name}` : '') :
+            (event.resource.branch ? ` • ${event.resource.branch.name}` : '')
+          }
         </p>
       </div>
     );
@@ -576,16 +588,15 @@ const TeacherSchedule = () => {
                 />
                 
                 {selectedEvent && (
-                  <Box 
-                    position="absolute" 
+                  <div 
+                    className="tooltip-container"
                     ref={tooltipRef}
-                    className="event-tooltip-wrapper"
                   >
                     <EventTooltip 
                       event={selectedEvent} 
                       onClose={() => setSelectedEvent(null)} 
                     />
-                  </Box>
+                  </div>
                 )}
               </Box>
             </Box>

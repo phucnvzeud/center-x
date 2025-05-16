@@ -131,9 +131,9 @@
 /* Calendar customization */
 .rbc-calendar {
   font-family: inherit;
-  --morning-color: #4285f4; /* Blue for morning (6:00 - 11:59) */
-  --afternoon-color: #fbbc05; /* Yellow/Gold for afternoon (12:00 - 16:59) */
-  --evening-color: #34a853; /* Green for evening (17:00 - 22:00) */
+  --morning-color: #4299e1; /* Blue for morning (6:00 - 11:59) */
+  --afternoon-color: #f6ad55; /* Orange for afternoon (12:00 - 16:59) */
+  --evening-color: #9f7aea; /* Purple for evening (17:00 - 22:00) */
   /* Increase time slot resolution */
   --time-slot-height: 1.75rem; /* Default height for time slots */
 }
@@ -145,6 +145,14 @@
   flex-direction: column !important;
   position: absolute !important;
   z-index: 5; /* Ensure events appear above grid lines */
+  border-radius: 4px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.rbc-event:hover {
+  box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23) !important;
+  transform: translateY(-1px) !important;
 }
 
 .rbc-event-content {
@@ -152,42 +160,83 @@
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
-  font-size: 0.8rem !important;
+  font-size: 0.85rem !important;
+  padding: 2px !important;
 }
 
 .morning-event {
-  background-color: #4a90e2;
+  background-color: rgba(66, 153, 225, 0.9) !important;
+  color: white !important;
 }
 
 .afternoon-event {
-  background-color: #f5a623;
+  background-color: rgba(246, 173, 85, 0.9) !important;
+  color: white !important;
 }
 
 .evening-event {
-  background-color: #8e44ad;
+  background-color: rgba(159, 122, 234, 0.9) !important;
+  color: white !important;
 }
 
 /* Kindergarten class specific styling */
 .kindergarten-event {
-  display: block !important;
-  opacity: 1 !important;
-  z-index: 10 !important;
-  pointer-events: auto !important;
-  visibility: visible !important;
   position: relative !important;
+  z-index: 10 !important;
+  border-bottom: 2px solid #805ad5 !important;
+}
+
+.morning-event.kindergarten-event {
+  background-color: rgba(66, 153, 225, 0.8) !important;
+  background-image: linear-gradient(135deg, rgba(128, 90, 213, 0.2) 25%, transparent 25%, transparent 50%, rgba(128, 90, 213, 0.2) 50%, rgba(128, 90, 213, 0.2) 75%, transparent 75%, transparent) !important;
+  background-size: 8px 8px !important;
+}
+
+.afternoon-event.kindergarten-event {
+  background-color: rgba(246, 173, 85, 0.8) !important;
+  background-image: linear-gradient(135deg, rgba(128, 90, 213, 0.2) 25%, transparent 25%, transparent 50%, rgba(128, 90, 213, 0.2) 50%, rgba(128, 90, 213, 0.2) 75%, transparent 75%, transparent) !important;
+  background-size: 8px 8px !important;
+}
+
+.evening-event.kindergarten-event {
+  background-color: rgba(159, 122, 234, 0.8) !important;
+  background-image: linear-gradient(135deg, rgba(128, 90, 213, 0.2) 25%, transparent 25%, transparent 50%, rgba(128, 90, 213, 0.2) 50%, rgba(128, 90, 213, 0.2) 75%, transparent 75%, transparent) !important;
+  background-size: 8px 8px !important;
 }
 
 /* Ensure the course events have distinctive styling too */
 .course-event {
-  border-left: 4px solid #3498db !important;
+  border-left: 4px solid #3182ce !important;
+}
+
+.event-title {
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  margin-bottom: 2px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .event-details {
   font-size: 0.75rem !important;
   margin: 0 !important;
+  opacity: 0.9 !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
+}
+
+/* Make events clickable */
+.event-wrapper {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.event-wrapper:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Smaller text for very small events */
@@ -242,20 +291,6 @@
   color: #666;
 }
 
-.event-wrapper {
-  width: 100%;
-  overflow: hidden;
-}
-
-.event-title {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: bold;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* For very small events, only show the title */
 .rbc-event.rbc-event-allday .event-details,
 .rbc-event.rbc-event-continues-prior .event-details,
@@ -280,25 +315,6 @@
   margin-top: 1.5rem;
   border-top: 1px solid #eaeaea;
   padding-top: 1.5rem;
-}
-
-/* Calendar event styling */
-.morning-event.kindergarten-event {
-  background-color: #7986cb !important; /* Indigo */
-  border-left: 4px solid #3949ab !important;
-  color: white !important;
-}
-
-.afternoon-event.kindergarten-event {
-  background-color: #5c6bc0 !important; /* Darker indigo */
-  border-left: 4px solid #3949ab !important;
-  color: white !important;
-}
-
-.evening-event.kindergarten-event {
-  background-color: #3f51b5 !important; /* Deep indigo */
-  border-left: 4px solid #283593 !important;
-  color: white !important;
 }
 
 /* Updated legend for kindergarten classes */
@@ -548,58 +564,53 @@
   }
 }
 
-/* Event tooltip styles */
+/* Event tooltip styling */
 .tooltip-container {
-  position: fixed;
-  bottom: 20px;
+  position: absolute;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   z-index: 1000;
-  width: 90%;
-  max-width: 320px;
+  width: 300px;
+  animation: fadeIn 0.2s ease-in-out;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border-radius: 8px;
   overflow: hidden;
-  animation: slideUp 0.2s ease-out;
+  background-color: white;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .event-tooltip {
-  background-color: white;
   width: 100%;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .tooltip-header {
+  padding: 12px 16px;
+  background-color: #3182ce;
+  color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 15px;
-  background-color: #4285f4;
-  color: white;
 }
 
 .tooltip-header.kindergarten {
-  background-color: #3f51b5;
+  background-color: #805ad5;
 }
 
 .tooltip-header h4 {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 80%;
 }
 
 .close-tooltip {
@@ -607,75 +618,41 @@
   border: none;
   color: white;
   font-size: 20px;
-  line-height: 1;
   cursor: pointer;
-  padding: 0 5px;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.close-tooltip:hover {
+  opacity: 1;
 }
 
 .tooltip-content {
-  padding: 12px 15px;
+  padding: 16px;
 }
 
 .tooltip-schedule {
-  margin-bottom: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .tooltip-details {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 6px;
-  font-size: 0.9rem;
+  grid-template-columns: auto 1fr;
+  gap: 8px 12px;
+  font-size: 14px;
+  color: #4a5568;
 }
 
-.tooltip-details strong {
-  font-weight: 500;
-  color: #555;
-}
-
-/* Make events clickable */
-.event-wrapper {
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.course-event .event-wrapper:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.kindergarten-event .event-wrapper:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-/* Desktop tooltip positioning */
-@media (min-width: 768px) {
+/* Media queries for responsive tooltip */
+@media (max-width: 768px) {
   .tooltip-container {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    bottom: auto;
-  }
-}
-
-/* Smaller screens */
-@media (max-width: 480px) {
-  .tooltip-container {
-    bottom: 10px;
-    width: 95%;
-  }
-  
-  .tooltip-header h4 {
-    font-size: 0.9rem;
-  }
-  
-  .tooltip-content {
-    padding: 10px;
-  }
-  
-  .tooltip-details {
-    font-size: 0.8rem;
+    width: 90%;
+    max-width: 320px;
   }
 }
 

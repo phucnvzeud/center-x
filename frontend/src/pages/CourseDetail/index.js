@@ -146,32 +146,43 @@ const CourseDetail = () => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  useEffect(() => {
-    const fetchCourseData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch course details
-        const courseData = await coursesAPI.getById(courseId);
-        setCourse(courseData.data);
-        
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching course data:', err);
-        setError('Failed to load course data. Please try again later.');
-        setLoading(false);
+  // Function to fetch course data
+  const fetchCourseData = async (shouldRefreshEnrollments = false) => {
+    try {
+      setLoading(true);
+      
+      // Fetch course details
+      const courseData = await coursesAPI.getById(courseId);
+      setCourse(courseData.data);
+      
+      // Optionally refresh enrollment data as well
+      if (shouldRefreshEnrollments) {
+        // Small delay to ensure course data is properly saved on backend
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await fetchEnrollmentData();
       }
-    };
+      
+      setLoading(false);
+      return true;
+    } catch (err) {
+      console.error('Error fetching course data:', err);
+      setError('Failed to load course data. Please try again later.');
+      setLoading(false);
+      return false;
+    }
+  };
 
+  // Load course data on initial component mount
+  useEffect(() => {
     fetchCourseData();
   }, [courseId]);
 
-  // Fetch enrollments when the activeTab changes to 'enrollments'
+  // Fetch enrollments when the activeTab changes to 'enrollments' or when course data is updated
   useEffect(() => {
-    if (activeTab === 'enrollments' && courseId) {
+    if ((activeTab === 1 || activeTab === 'enrollments') && courseId && course) {
       fetchEnrollmentData();
     }
-  }, [activeTab, courseId]);
+  }, [activeTab, courseId, course?._id]);
 
   // Fetch students for enrollment form
   useEffect(() => {
@@ -188,7 +199,7 @@ const CourseDetail = () => {
     }
   }, [isEnrollModalOpen]);
 
-  const fetchEnrollmentData = async () => {
+  const fetchEnrollmentData = async (retryCount = 0) => {
     try {
       setEnrollmentLoading(true);
       setEnrollmentError(null);
@@ -200,17 +211,33 @@ const CourseDetail = () => {
       // Store all enrollments
       setAllEnrollments(response.data);
       
+      // Calculate payment progress based on all enrollments
+      const paymentProgress = calculatePaymentProgress(response.data);
+      
       // Only show Active enrollments in the table, filter out Withdrawn students
       const activeEnrollments = response.data.filter(enrollment => 
         enrollment.status === 'Active' || enrollment.status === 'Completed' || enrollment.status === 'Suspended'
       );
       
+      console.log(`Found ${activeEnrollments.length} active enrollments out of ${response.data.length} total`);
       setEnrollments(activeEnrollments);
       setEnrollmentLoading(false);
+      
+      return true;
     } catch (err) {
       console.error('Error fetching enrollments:', err);
+      
+      // Retry logic for network errors or timing issues
+      if (retryCount < 3) {
+        console.log(`Retry attempt ${retryCount + 1} for fetching enrollments...`);
+        // Wait a bit longer between each retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return fetchEnrollmentData(retryCount + 1);
+      }
+      
       setEnrollmentError('Failed to load enrollment data. Please try again later.');
       setEnrollmentLoading(false);
+      return false;
     }
   };
 
@@ -426,13 +453,53 @@ const CourseDetail = () => {
     return { formattedDate, daysLeft };
   };
 
-  // Function to export sessions to Excel in a horizontal format
+  // Function to export sessions to Excel in a better format
   const exportSessionsToExcel = () => {
     if (!course || !course.sessions || course.sessions.length === 0) return;
     
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    
+    // Course Info Sheet
+    const courseInfoData = [
+      ['Course Information', ''],
+      ['Course Name', course.name || 'N/A'],
+      ['Branch', course.branch?.name || 'N/A'],
+      ['Teacher', course.teacher?.name || 'N/A'],
+      ['Level', course.level || 'N/A'],
+      ['Start Date', formatDate(course.startDate)],
+      ['End Date', calculateActualEndDate().formattedDate],
+      ['Total Sessions', course.sessions.length],
+      ['', '']
+    ];
+    
+    const courseInfoWs = XLSX.utils.aoa_to_sheet(courseInfoData);
+    XLSX.utils.book_append_sheet(wb, courseInfoWs, "Course Info");
+    
+    // Sessions Sheet
+    const sessionHeaders = ['#', 'Date', 'Day & Time', 'Status', 'Notes'];
+    const sessionData = course.sessions
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .map((session, index) => [
+        index + 1,
+        formatDate(session.date),
+        getSessionDayAndTime(session.date),
+        session.status,
+        session.notes || ''
+      ]);
+    
+    // Create sessions worksheet with headers
+    const sessionsWs = XLSX.utils.aoa_to_sheet([sessionHeaders, ...sessionData]);
+    
+    // Auto-size columns for sessions worksheet
+    const sessionWidths = [5, 15, 25, 20, 40]; // Define custom widths
+    sessionsWs['!cols'] = sessionWidths.map(width => ({ wch: width }));
+    
+    XLSX.utils.book_append_sheet(wb, sessionsWs, "Sessions");
+    
+    // Monthly Sessions Overview Sheet (calendar format)
     // Group sessions by month
     const sessionsByMonth = {};
-    const allDays = {};
     
     course.sessions.forEach(session => {
       const date = new Date(session.date);
@@ -445,12 +512,6 @@ const CourseDetail = () => {
         sessionsByMonth[monthKey] = [];
       }
       
-      // Track this day in this month
-      if (!allDays[monthKey]) {
-        allDays[monthKey] = {};
-      }
-      allDays[monthKey][day] = true;
-      
       // Add session to the month
       sessionsByMonth[monthKey].push({
         day,
@@ -459,58 +520,43 @@ const CourseDetail = () => {
       });
     });
     
-    // Create worksheet data
-    const wsData = [];
+    const calendarData = [];
     
-    // Add headers
-    wsData.push(['Course: ' + (course.name || 'Unknown')]);
-    wsData.push(['Teacher: ' + (course.teacher?.name || 'Unknown')]);
-    wsData.push(['Branch: ' + (course.branch?.name || 'Unknown')]);
-    wsData.push(['Start Date: ' + formatDate(course.startDate)]);
-    wsData.push(['']);  // Empty row as separator
+    // Add header
+    calendarData.push(['Calendar Overview - ' + course.name]);
+    calendarData.push(['']);
     
     // Process each month
     Object.keys(sessionsByMonth).sort().forEach(monthKey => {
       const [year, month] = monthKey.split('-');
       const monthName = new Date(year, month-1, 1).toLocaleString('default', { month: 'long' });
-      const monthRow = [`${monthName} ${year}`];
-      
-      // Get all days in this month
-      const daysInMonth = new Date(year, month, 0).getDate();
+      const monthTitle = [`${monthName} ${year}`];
+      calendarData.push(monthTitle);
       
       // Add day headers (1-31)
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const dayRow = ['Days'];
       for (let day = 1; day <= daysInMonth; day++) {
-        monthRow.push(day);
+        dayRow.push(day);
       }
-      wsData.push(monthRow);
+      calendarData.push(dayRow);
       
-      // Add sessions row (will contain 1 if session exists on that day)
-      const sessionsRow = ['Sessions'];
-      for (let day = 1; day <= daysInMonth; day++) {
-        const hasSession = sessionsByMonth[monthKey].some(s => s.day === day);
-        sessionsRow.push(hasSession ? 1 : '');
-      }
-      wsData.push(sessionsRow);
-      
-      // Add status row
-      const statusRow = ['Status'];
+      // Add session status row
+      const sessionRow = ['Status'];
       for (let day = 1; day <= daysInMonth; day++) {
         const session = sessionsByMonth[monthKey].find(s => s.day === day);
-        statusRow.push(session ? session.status : '');
+        sessionRow.push(session ? session.status : '');
       }
-      wsData.push(statusRow);
+      calendarData.push(sessionRow);
       
       // Add empty row as separator
-      wsData.push(['']);
+      calendarData.push(['']);
     });
     
-    // Create worksheet and workbook
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sessions");
+    const calendarWs = XLSX.utils.aoa_to_sheet(calendarData);
     
-    // Auto-size columns
-    const colWidths = wsData.reduce((widths, row) => {
+    // Auto-size columns for calendar
+    const colWidths = calendarData.reduce((widths, row) => {
       row.forEach((cell, i) => {
         const cellValue = cell?.toString() || '';
         widths[i] = Math.max(widths[i] || 0, cellValue.length);
@@ -518,7 +564,9 @@ const CourseDetail = () => {
       return widths;
     }, {});
     
-    ws['!cols'] = Object.keys(colWidths).map(i => ({ wch: colWidths[i] }));
+    calendarWs['!cols'] = Object.keys(colWidths).map(i => ({ wch: colWidths[i] }));
+    
+    XLSX.utils.book_append_sheet(wb, calendarWs, "Calendar");
     
     // Generate filename
     const fileName = `${course.name.replace(/\s+/g, '_')}_Sessions_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -711,13 +759,14 @@ const CourseDetail = () => {
     }
   };
 
+  // Export enrollments to Excel with better formatting
   const exportEnrollmentsToExcel = () => {
     if (!enrollments || enrollments.length === 0) return;
     
-    // Create worksheet
+    // Create workbook
     const wb = XLSX.utils.book_new();
     
-    // Add course info sheet
+    // Course Info Sheet
     const courseInfoData = [
       ['Course Information', ''],
       ['Course Name', course.name || 'N/A'],
@@ -728,50 +777,102 @@ const CourseDetail = () => {
       ['Start Date', formatDate(course.startDate)],
       ['End Date', calculateActualEndDate().formattedDate],
       ['Total Students', enrollments.length],
-      ['', ''],
-      ['Enrollment List', '']
+      ['Total Payment Expected', `$${paymentProgress.total.toFixed(2)}`],
+      ['Total Payment Received', `$${paymentProgress.paid.toFixed(2)}`],
+      ['Payment Progress', `${paymentProgress.percent}%`],
+      ['', '']
     ];
     
-    // Format data for Excel
-    const data = enrollments.map((enrollment, index) => {
-      return {
-        '#': index + 1,
-        'Student Name': enrollment.student.name,
-        'Email': enrollment.student.email,
-        'Phone': enrollment.student.phone || 'N/A',
-        'Enrollment Date': formatDate(enrollment.enrollmentDate),
-        'Status': enrollment.status,
-        'Payment Status': enrollment.paymentStatus,
-        'Amount Paid': enrollment.amountPaid,
-        'Total Amount': enrollment.totalAmount,
-        'Balance': enrollment.totalAmount - enrollment.amountPaid,
-        'Notes': enrollment.notes || ''
-      };
-    });
+    const infoWs = XLSX.utils.aoa_to_sheet(courseInfoData);
+    XLSX.utils.book_append_sheet(wb, infoWs, "Course Info");
     
-    // Prepare main worksheet with enrollment data
-    const ws = XLSX.utils.json_to_sheet(data);
+    // Student Enrollment Sheet
+    const headers = [
+      '#',
+      'Student Name',
+      'Email',
+      'Phone',
+      'Enrollment Date',
+      'Status',
+      'Payment Status',
+      'Amount Paid',
+      'Total Amount',
+      'Balance',
+      'Notes'
+    ];
     
-    // Add header rows with course info
-    XLSX.utils.sheet_add_aoa(ws, courseInfoData, { origin: 'A1' });
+    const studentData = enrollments.map((enrollment, index) => [
+      index + 1,
+      enrollment.student.name,
+      enrollment.student.email || '',
+      enrollment.student.phone || '',
+      formatDate(enrollment.enrollmentDate),
+      enrollment.status,
+      enrollment.paymentStatus,
+      enrollment.amountPaid,
+      enrollment.totalAmount,
+      enrollment.totalAmount - enrollment.amountPaid,
+      enrollment.notes || ''
+    ]);
     
-    // Adjust column width for the sheet
-    const colWidths = courseInfoData.reduce((widths, row) => {
-      row.forEach((cell, i) => {
-        const cellValue = cell?.toString() || '';
-        widths[i] = Math.max(widths[i] || 0, cellValue.length);
-      });
-      return widths;
-    }, {});
+    // Create enrollment data worksheet with headers
+    const enrollmentsWs = XLSX.utils.aoa_to_sheet([headers, ...studentData]);
     
-    ws['!cols'] = Object.keys(colWidths).map(i => ({ wch: colWidths[i] }));
+    // Set column widths
+    const columnWidths = [
+      { wch: 5 },  // #
+      { wch: 25 }, // Student Name
+      { wch: 25 }, // Email
+      { wch: 15 }, // Phone
+      { wch: 15 }, // Enrollment Date
+      { wch: 10 }, // Status
+      { wch: 15 }, // Payment Status
+      { wch: 10 }, // Amount Paid
+      { wch: 10 }, // Total Amount
+      { wch: 10 }, // Balance
+      { wch: 40 }  // Notes
+    ];
     
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, "Enrollments");
+    enrollmentsWs['!cols'] = columnWidths;
     
+    // Add enrollment sheet to workbook
+    XLSX.utils.book_append_sheet(wb, enrollmentsWs, "Students");
+    
+    // Include Withdrawn Students Sheet if any exist
+    if (withdrawnStudents.length > 0) {
+      const withdrawnData = withdrawnStudents.map((enrollment, index) => [
+        index + 1,
+        enrollment.student.name,
+        enrollment.student.email || '',
+        enrollment.student.phone || '',
+        formatDate(enrollment.enrollmentDate),
+        formatDate(enrollment.withdrawnDate),
+        enrollment.amountPaid,
+        enrollment.totalAmount,
+        enrollment.notes || ''
+      ]);
+      
+      const withdrawnHeaders = [
+        '#',
+        'Student Name',
+        'Email',
+        'Phone',
+        'Enrollment Date',
+        'Withdrawn Date',
+        'Amount Paid',
+        'Total Amount',
+        'Notes'
+      ];
+      
+      const withdrawnWs = XLSX.utils.aoa_to_sheet([withdrawnHeaders, ...withdrawnData]);
+      withdrawnWs['!cols'] = columnWidths.slice(0, withdrawnHeaders.length);
+      
+      XLSX.utils.book_append_sheet(wb, withdrawnWs, "Withdrawn Students");
+    }
+
     // Generate filename
     const fileName = `${course.name.replace(/\s+/g, '_')}_Enrollments_${new Date().toISOString().split('T')[0]}.xlsx`;
-    
+
     // Export
     XLSX.writeFile(wb, fileName);
   };
@@ -846,49 +947,70 @@ const CourseDetail = () => {
           // Process each student
           let successCount = 0;
           let errorCount = 0;
+          let processedStudents = [];
           
           for (const row of jsonData) {
             try {
-              // Create or find student
-              let student;
-              
+              if (!row.Name || !row.Email) {
+                console.error('Missing required fields for student:', row);
+                errorCount++;
+                continue;
+              }
+
               // Check if student already exists by email
               const existingStudents = await studentsAPI.getAll();
-              student = existingStudents.data.find(s => 
+              let student = existingStudents.data.find(s => 
                 s.email && s.email.toLowerCase() === row.Email.toLowerCase()
               );
               
               if (!student) {
                 // Create new student
-                const newStudent = await studentsAPI.create({
+                console.log('Creating new student:', row.Name);
+                const studentData = {
                   name: row.Name,
                   email: row.Email,
                   phone: row.Phone || '',
-                  // Add additional fields as needed
-                });
-                student = newStudent.data;
+                  age: row.Age || null,
+                  address: row.Address || '',
+                  status: 'Active'
+                };
+                
+                const newStudentResponse = await studentsAPI.create(studentData);
+                student = newStudentResponse.data;
+                console.log('Created new student:', student);
               }
-              
-              // Enroll student in the course
-              const enrollmentData = {
-                courseId,
-                totalAmount: typeof row.Amount === 'number' ? row.Amount : course.price || 0,
-                amountPaid: typeof row.Paid === 'number' ? row.Paid : 0,
-                enrollmentDate: row.EnrollmentDate ? new Date(row.EnrollmentDate) : new Date(),
-                notes: row.Notes || ''
-              };
               
               // Check if already enrolled
               const enrollmentCheck = await coursesAPI.getEnrollments(courseId);
               const alreadyEnrolled = enrollmentCheck.data.some(e => 
-                e.student._id === student._id
+                e.student && e.student._id === student._id
               );
               
               if (!alreadyEnrolled) {
-                await studentsAPI.enroll(student._id, enrollmentData);
-                successCount++;
+                // Prepare enrollment data
+                const enrollmentData = {
+                  courseId,
+                  totalAmount: typeof row.Amount === 'number' ? row.Amount : (course.price || 0),
+                  amountPaid: typeof row.Paid === 'number' ? row.Paid : 0,
+                  enrollmentDate: row.EnrollmentDate ? new Date(row.EnrollmentDate) : new Date(),
+                  notes: row.Notes || '',
+                  status: 'Active'
+                };
+                
+                console.log(`Enrolling student ${student.name} in course ${courseId}:`, enrollmentData);
+                
+                // Enroll student
+                const enrollResponse = await studentsAPI.enroll(student._id, enrollmentData);
+                
+                if (enrollResponse.status === 200 || enrollResponse.status === 201) {
+                  console.log('Enrollment successful:', enrollResponse.data);
+                  successCount++;
+                  processedStudents.push(student.name);
+                } else {
+                  console.error('Enrollment returned unexpected status:', enrollResponse.status);
+                  errorCount++;
+                }
               } else {
-                // Skip already enrolled
                 console.log(`Student ${student.name} already enrolled, skipping`);
               }
             } catch (err) {
@@ -897,24 +1019,45 @@ const CourseDetail = () => {
             }
           }
           
-          // Refresh enrollment data
-          await fetchEnrollmentData();
+          // Update UI state
+          setImportLoading(false);
           
-          // Refresh course data to update totalStudent
+          // Close modal before any further operations
+          closeImportModal();
+          
+          // Add a small delay to ensure backend processing is complete
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Refresh enrollment data
+          const enrollmentSuccess = await fetchEnrollmentData();
+          
+          // Refresh course data to update totalStudent count
           const courseData = await coursesAPI.getById(courseId);
           setCourse(courseData.data);
           
-          closeImportModal();
-          setImportLoading(false);
-          
-          if (errorCount > 0) {
-            alert(`Import completed with ${successCount} students added and ${errorCount} errors`);
+          // If importing was successful, switch to enrollments tab to show the imported students
+          if (successCount > 0) {
+            setActiveTab(1); // Enrollments tab
+            
+            // Show specific success message with student names for small imports
+            const successMessage = processedStudents.length <= 5 
+              ? `Successfully imported students: ${processedStudents.join(', ')}`
+              : `Successfully imported ${successCount} students`;
+            
+            alert(successMessage + (errorCount > 0 ? ` (${errorCount} errors occurred)` : ''));
+          } else if (errorCount > 0) {
+            alert(`Import failed with ${errorCount} errors. Please check the console for details.`);
           } else {
-            alert(`Successfully imported ${successCount} students`);
+            alert('No new students were imported. They may already be enrolled in this course.');
           }
+          
+          // Reset import state
+          setImportFile(null);
+          setImportPreview([]);
+          
         } catch (err) {
           console.error('Error processing import file:', err);
-          setImportError('Failed to process the import. Please try again.');
+          setImportError(`Failed to process the import: ${err.message || 'Unknown error'}`);
           setImportLoading(false);
         }
       };
@@ -927,7 +1070,7 @@ const CourseDetail = () => {
       reader.readAsBinaryString(importFile);
     } catch (err) {
       console.error('Error in import process:', err);
-      setImportError('An error occurred during import');
+      setImportError(`An error occurred during import: ${err.message || 'Unknown error'}`);
       setImportLoading(false);
     }
   };
@@ -1820,23 +1963,185 @@ const CourseDetail = () => {
                       >
                         <Text fontWeight="bold" color="blue.700">{schedule.day}</Text>
                         <Text>
-                          {schedule.startTime} - {schedule.endTime}
+                        {schedule.startTime} - {schedule.endTime}
                         </Text>
                       </Box>
-                    ))}
+                  ))}
                   </SimpleGrid>
-                )}
+          )}
               </Box>
             </TabPanel>
           </TabPanels>
         </Tabs>
       </Box>
-      
+            
       {/* Enrollment Modal */}
       <Modal isOpen={isEnrollModalOpen} onClose={closeEnrollModal} size="xl">
-        {/* ... existing code ... */}
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>{isEditMode ? 'Edit Enrollment' : 'Add Student'}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <form onSubmit={handleSubmitEnrollment}>
+              <Stack spacing={4}>
+                <FormControl isRequired>
+                  <FormLabel>Student Name</FormLabel>
+                  <Box position="relative">
+                    <Input
+                    name="studentName"
+                    value={newEnrollmentData.studentName}
+                    onChange={handleEnrollmentInputChange}
+                      placeholder="Enter student name"
+                      autoComplete="off"
+                    />
+                    
+                    {showStudentDropdown && filteredStudents.length > 0 && (
+                      <Box
+                        position="absolute"
+                        top="100%"
+                        left={0}
+                        right={0}
+                        zIndex={10}
+                        bg="white"
+                        borderWidth="1px"
+                        borderColor="gray.200"
+                        borderRadius="md"
+                        shadow="md"
+                        maxH="200px"
+                        overflowY="auto"
+                      >
+                      {filteredStudents.map(student => (
+                          <Box
+                          key={student._id} 
+                            p={2}
+                            _hover={{ bg: 'gray.100' }}
+                            cursor="pointer"
+                          onClick={() => handleSelectStudent(student)}
+                        >
+                            <Text fontWeight="medium">{student.name}</Text>
+                            <Text fontSize="sm" color="gray.600">{student.email}</Text>
+                          </Box>
+                      ))}
+                      </Box>
+                  )}
+                  </Box>
+                  {selectedStudent && (
+                    <Text fontSize="sm" color="blue.500" mt={1}>
+                      Using existing student record
+                    </Text>
+                  )}
+                </FormControl>
+                
+                <FormControl isRequired>
+                  <FormLabel>Email</FormLabel>
+                  <Input 
+                      name="studentEmail"
+                      value={newEnrollmentData.studentEmail}
+                      onChange={handleEnrollmentInputChange}
+                    placeholder="Enter student email"
+                    isReadOnly={selectedStudent !== null}
+                    bg={selectedStudent ? "gray.50" : undefined}
+                    />
+                </FormControl>
+                  
+                <FormControl>
+                  <FormLabel>Phone</FormLabel>
+                  <Input 
+                      name="studentPhone"
+                      value={newEnrollmentData.studentPhone}
+                      onChange={handleEnrollmentInputChange}
+                    placeholder="Enter student phone"
+                    isReadOnly={selectedStudent !== null}
+                    bg={selectedStudent ? "gray.50" : undefined}
+                />
+                </FormControl>
+                
+                <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                  <FormControl>
+                    <FormLabel>Total Amount</FormLabel>
+                    <Input 
+                  name="totalAmount"
+                      value={newEnrollmentData.totalAmount}
+                      onChange={handleEnrollmentInputChange}
+                  type="number"
+                      placeholder="0"
+                  min="0"
+                  step="0.01"
+                />
+                  </FormControl>
+              
+                  <FormControl>
+                    <FormLabel>Amount Paid</FormLabel>
+                    <Input 
+                  name="amountPaid"
+                      value={newEnrollmentData.amountPaid}
+                      onChange={handleEnrollmentInputChange}
+                  type="number"
+                      placeholder="0"
+                  min="0"
+                  step="0.01"
+                    />
+                  </FormControl>
+                </Grid>
+                
+                <FormControl>
+                  <FormLabel>Enrollment Date</FormLabel>
+                  <Input 
+                    name="enrollmentDate"
+                    value={newEnrollmentData.enrollmentDate}
+                  onChange={handleEnrollmentInputChange}
+                    type="date"
+                  />
+                </FormControl>
+                
+                {isEditMode && (
+                  <FormControl>
+                    <FormLabel>Withdrawn Date (leave empty if active)</FormLabel>
+                    <Input 
+                      name="withdrawnDate"
+                      value={newEnrollmentData.withdrawnDate}
+                      onChange={handleEnrollmentInputChange}
+                      type="date"
+                />
+                  </FormControl>
+                )}
+                
+                <FormControl>
+                  <FormLabel>Notes</FormLabel>
+                  <Textarea
+                  name="notes"
+                  value={newEnrollmentData.notes}
+                  onChange={handleEnrollmentInputChange}
+                    placeholder="Add any notes about this enrollment..."
+                    size="sm"
+                    rows={3}
+                  />
+                </FormControl>
+              </Stack>
+              
+              {enrollmentError && (
+                <Box mt={4} p={3} bg="red.50" color="red.600" borderRadius="md">
+                  <Text>{enrollmentError}</Text>
+                </Box>
+              )}
+            </form>
+          </ModalBody>
+          
+          <ModalFooter>
+            <Button onClick={closeEnrollModal} mr={3} variant="outline">
+              Cancel
+            </Button>
+            <Button 
+              colorScheme="blue" 
+              onClick={handleSubmitEnrollment}
+              isLoading={enrollmentLoading}
+            >
+              {isEditMode ? 'Update' : 'Enroll'}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
       </Modal>
-      
+
       {/* Import Modal */}
       <Modal isOpen={isImportModalOpen} onClose={closeImportModal} size="lg">
         <ModalOverlay />
@@ -1863,20 +2168,20 @@ const CourseDetail = () => {
             <FormControl mb={4}>
               <FormLabel htmlFor="importFile">Upload File</FormLabel>
               <Input
-                type="file"
+                  type="file"
                 id="importFile"
                 accept=".xlsx,.xls,.csv"
                 onChange={handleFileImport}
-              />
+                />
             </FormControl>
-            
-            {importError && (
+              
+              {importError && (
               <Box mb={4} p={3} bg="red.50" color="red.600" borderRadius="md">
                 <Text fontSize="sm">{importError}</Text>
               </Box>
-            )}
-            
-            {importPreview.length > 0 && (
+              )}
+              
+              {importPreview.length > 0 && (
               <Box mb={4} border="1px" borderColor="gray.200" borderRadius="md" overflow="hidden">
                 <Box bg="gray.50" p={2} borderBottomWidth="1px">
                   <Text fontWeight="medium" fontSize="sm">Data Preview</Text>
@@ -1902,16 +2207,16 @@ const CourseDetail = () => {
                   </Table>
                 </Box>
               </Box>
-            )}
+              )}
           </ModalBody>
           
           <ModalFooter>
             <Button onClick={closeImportModal} mr={3} variant="outline">
-              Cancel
+                  Cancel
             </Button>
             <Button 
               colorScheme="blue" 
-              onClick={handleImportSubmit}
+                  onClick={handleImportSubmit} 
               isLoading={importLoading}
               isDisabled={importPreview.length === 0}
             >
@@ -1923,7 +2228,87 @@ const CourseDetail = () => {
       
       {/* Withdrawn Students Modal */}
       <Modal isOpen={isWithdrawnModalOpen} onClose={closeWithdrawnModal} size="xl">
-        {/* ... existing code ... */}
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Withdrawn Students</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {withdrawnStudents.length > 0 ? (
+              <Box overflowX="auto" borderWidth="1px" borderColor="gray.200" borderRadius="md">
+                <Table variant="simple" size="sm">
+                  <Thead bg="gray.50">
+                    <Tr>
+                      <Th width="50px" textAlign="center">#</Th>
+                      <Th>Student Name</Th>
+                      <Th>Withdrawn Date</Th>
+                      <Th>Contact</Th>
+                      <Th>Payment</Th>
+                      <Th>Notes</Th>
+                      <Th>Actions</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {withdrawnStudents.map((enrollment, index) => (
+                      <Tr key={enrollment._id} _hover={{ bg: 'gray.50' }}>
+                        <Td textAlign="center">{index + 1}</Td>
+                        <Td fontWeight="medium">{enrollment.student.name}</Td>
+                        <Td>{formatDate(enrollment.withdrawnDate)}</Td>
+                        <Td fontSize="sm">
+                          <VStack align="flex-start" spacing={0}>
+                            <Text>{enrollment.student.email}</Text>
+                            {enrollment.student.phone && <Text>{enrollment.student.phone}</Text>}
+                          </VStack>
+                        </Td>
+                        <Td>
+                          <VStack align="flex-start" spacing={1}>
+                            <Text fontSize="xs">Paid: ${enrollment.amountPaid}</Text>
+                            <Text fontSize="xs">Total: ${enrollment.totalAmount}</Text>
+                          </VStack>
+                        </Td>
+                        <Td maxW="200px" isTruncated>
+                          {enrollment.notes ? 
+                            <Text 
+                              fontSize="sm" 
+                              bg="gray.50" 
+                              p={1} 
+                              borderRadius="md" 
+                              title={enrollment.notes}
+                            >
+                              {enrollment.notes.length > 50 ? 
+                                `${enrollment.notes.substring(0, 50)}...` : 
+                                enrollment.notes
+                              }
+                            </Text> : 
+                            <Text fontSize="xs" color="gray.500" fontStyle="italic">No notes</Text>
+                          }
+                        </Td>
+                        <Td>
+                          <Button
+                            size="xs"
+                            colorScheme="green"
+                            onClick={() => openEnrollModal(enrollment)}
+                          >
+                            Reactivate
+                          </Button>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
+            ) : (
+              <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" borderRadius="md" textAlign="center">
+                <Text color="gray.500">No withdrawn students for this course.</Text>
+              </Box>
+      )}
+          </ModalBody>
+          
+          <ModalFooter>
+            <Button onClick={closeWithdrawnModal} colorScheme="blue">
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
       </Modal>
     </Box>
   );

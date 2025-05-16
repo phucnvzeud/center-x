@@ -254,7 +254,7 @@ const ClassList = ({ limit, compact = false }) => {
       {!compact && (
         <Flex justify="space-between" align="center" mb={6}>
           <Heading fontSize="xl" fontWeight="semibold">
-            {isSchoolSpecific && school ? `Classes in ${school.name}` : 'All Kindergarten Classes'}
+          {isSchoolSpecific && school ? `Classes in ${school.name}` : 'All Kindergarten Classes'}
           </Heading>
           <HStack spacing={2}>
             <Button 
@@ -272,8 +272,8 @@ const ClassList = ({ limit, compact = false }) => {
               leftIcon={<FaPlus />} 
               colorScheme="brand"
               size="sm"
-              state={{ schoolId: schoolId }}
-            >
+          state={{ schoolId: schoolId }}
+        >
               New Class
             </Button>
           </HStack>
@@ -289,20 +289,20 @@ const ClassList = ({ limit, compact = false }) => {
                   <FaSearch color="gray.300" />
                 </InputLeftElement>
                 <Input
-                  placeholder="Search classes or teachers..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              placeholder="Search classes or teachers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
               </InputGroup>
             </Box>
           
             <Box>
               <Select 
                 placeholder="All Statuses" 
-                value={statusFilter} 
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="Active">Active</option>
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="Active">Active</option>
                 <option value="Planning">Planning</option>
                 <option value="Completed">Completed</option>
                 <option value="Cancelled">Cancelled</option>
@@ -312,15 +312,15 @@ const ClassList = ({ limit, compact = false }) => {
             <Box>
               <Select 
                 placeholder="All Teachers" 
-                value={teacherFilter}
-                onChange={(e) => setTeacherFilter(e.target.value)}
+              value={teacherFilter}
+              onChange={(e) => setTeacherFilter(e.target.value)}
                 isDisabled={loadingFilters}
-              >
-                {teachers.map(teacher => (
+            >
+              {teachers.map(teacher => (
                   <option key={teacher._id} value={teacher._id}>
                     {teacher.name}
                   </option>
-                ))}
+              ))}
               </Select>
             </Box>
           
@@ -329,25 +329,25 @@ const ClassList = ({ limit, compact = false }) => {
                 <Box>
                   <Select 
                     placeholder="All Regions" 
-                    value={regionFilter}
-                    onChange={(e) => setRegionFilter(e.target.value)}
+              value={regionFilter}
+              onChange={(e) => setRegionFilter(e.target.value)}
                     isDisabled={loadingFilters}
-                  >
-                    {regions.map(region => (
+            >
+              {regions.map(region => (
                       <option key={region._id} value={region._id}>
                         {region.name}
                       </option>
-                    ))}
+              ))}
                   </Select>
                 </Box>
           
                 <Box>
                   <Select 
                     placeholder="All Schools" 
-                    value={schoolFilter}
-                    onChange={(e) => setSchoolFilter(e.target.value)}
+              value={schoolFilter}
+              onChange={(e) => setSchoolFilter(e.target.value)}
                     isDisabled={loadingFilters}
-                  >
+            >
                     {schools.map(school => (
                       <option key={school._id} value={school._id}>
                         {school.name}
@@ -363,8 +363,8 @@ const ClassList = ({ limit, compact = false }) => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={resetFilters}
-            >
+            onClick={resetFilters}
+          >
               Clear Filters
             </Button>
           </Flex>
@@ -377,7 +377,7 @@ const ClassList = ({ limit, compact = false }) => {
             {searchTerm || statusFilter || teacherFilter || regionFilter || (!isSchoolSpecific && schoolFilter) ? 
               'No classes match your filters. Try adjusting your search criteria.' :
               'No classes found. Add your first class to get started.'
-            }
+          }
           </Text>
           {!(searchTerm || statusFilter || teacherFilter || regionFilter || (!isSchoolSpecific && schoolFilter)) && (
             <Button 
@@ -399,7 +399,7 @@ const ClassList = ({ limit, compact = false }) => {
             
             return (
               <Box 
-                key={kClass._id} 
+                  key={kClass._id} 
                 bg={bgColor}
                 borderWidth="1px" 
                 borderColor={borderColor}
@@ -409,7 +409,7 @@ const ClassList = ({ limit, compact = false }) => {
                 cursor="pointer"
                 onClick={() => handleClassClick(kClass._id)}
                 _hover={{ shadow: "md", borderColor: "brand.200", transform: "translateY(-2px)" }}
-              >
+                >
                 <Flex mb={2} justify="space-between" align="flex-start">
                   <Box>
                     <Heading size="sm" mb={1}>{kClass.name}</Heading>
@@ -451,10 +451,10 @@ const ClassList = ({ limit, compact = false }) => {
                       <MenuItem 
                         icon={<FaTrash />} 
                         color="red.500"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteClass(kClass._id);
-                        }} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClass(kClass._id);
+                            }} 
                       >
                         Delete
                       </MenuItem>
@@ -486,8 +486,8 @@ const ClassList = ({ limit, compact = false }) => {
                   )}
                 </VStack>
               </Box>
-            );
-          })}
+                            );
+                          })}
         </SimpleGrid>
       )}
       
@@ -503,7 +503,7 @@ const ClassList = ({ limit, compact = false }) => {
             View All Classes ({filteredClasses.length})
           </Button>
         </Flex>
-      )}
+        )}
     </Box>
   );
 };

@@ -23,9 +23,12 @@ import TestComponent from './pages/ClassDetail/TestComponent';
 import Notifications from './pages/Notifications';
 import { NotificationProvider } from './context/NotificationContext';
 import { Box, Flex, Text, Input, InputGroup, InputLeftElement, Button, IconButton, Drawer, DrawerBody, DrawerHeader, DrawerOverlay, DrawerContent, DrawerCloseButton, useDisclosure, VStack, HStack, Heading, Divider, useColorModeValue, Image } from '@chakra-ui/react';
-import { FaGraduationCap, FaUserTie, FaBook, FaBuilding, FaHome, FaBell, FaBars, FaSearch } from 'react-icons/fa';
+import { FaGraduationCap, FaUserTie, FaBook, FaBuilding, FaHome, FaBell, FaBars, FaSearch, FaUserGraduate } from 'react-icons/fa';
 import TeacherDetail from './pages/TeacherDetail';
 import TeacherEdit from './pages/TeacherEdit';
+import StudentManagement from './pages/StudentManagement';
+import StudentForm from './pages/StudentForm';
+import StudentDetail from './pages/StudentDetail';
 
 // Layout component with sidebar
 function Layout({ children }) {
@@ -197,6 +200,14 @@ function SidebarContent() {
         <NavItem icon={<FaBook />} to="/courses" section="/courses">
           Courses
         </NavItem>
+        <NavItem icon={<FaUserGraduate />} to="/students" section="/students">
+          Students
+        </NavItem>
+        {location.pathname.startsWith('/students') && (
+          <SubNavItem to="/students/manage">
+            Manage Students
+          </SubNavItem>
+        )}
         <NavItem icon={<FaGraduationCap />} to="/kindergarten" section="/kindergarten">
           Kindergarten
         </NavItem>
@@ -258,6 +269,11 @@ function App() {
             <Route path="/courses/edit/:courseId" element={<CourseForm />} />
             <Route path="/courses/:courseId" element={<CourseDetail />} />
             <Route path="/courses/:courseId/sessions" element={<Sessions />} />
+            <Route path="/students" element={<StudentManagement />} />
+            <Route path="/students/manage" element={<StudentManagement />} />
+            <Route path="/students/new" element={<StudentForm />} />
+            <Route path="/students/:studentId" element={<StudentDetail />} />
+            <Route path="/students/:studentId/edit" element={<StudentForm />} />
             <Route path="/kindergarten" element={<KindergartenDashboard />} />
             <Route path="/kindergarten/regions" element={<RegionList />} />
             <Route path="/kindergarten/regions/new" element={<RegionForm />} />

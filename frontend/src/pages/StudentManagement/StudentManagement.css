@@ -1,0 +1,54 @@
+/* StudentManagement.css */
+
+.accordion-button-hover:hover {
+  background-color: #f8f9fa;
+}
+
+.student-row:hover {
+  background-color: #f5f8ff;
+}
+
+.avatar-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.course-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.course-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: #f3f0ff;
+  color: #6b46c1;
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .student-table-container {
+    overflow-x: auto;
+  }
+  
+  .actions-column {
+    width: 60px;
+    min-width: 60px;
+  }
+} 
