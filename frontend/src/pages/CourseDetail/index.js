@@ -148,12 +148,12 @@ const CourseDetail = () => {
 
   // Function to fetch course data
   const fetchCourseData = async (shouldRefreshEnrollments = false) => {
-    try {
-      setLoading(true);
-      
-      // Fetch course details
-      const courseData = await coursesAPI.getById(courseId);
-      setCourse(courseData.data);
+      try {
+        setLoading(true);
+        
+        // Fetch course details
+        const courseData = await coursesAPI.getById(courseId);
+        setCourse(courseData.data);
       
       // Optionally refresh enrollment data as well
       if (shouldRefreshEnrollments) {
@@ -161,16 +161,16 @@ const CourseDetail = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
         await fetchEnrollmentData();
       }
-      
-      setLoading(false);
+        
+        setLoading(false);
       return true;
-    } catch (err) {
-      console.error('Error fetching course data:', err);
-      setError('Failed to load course data. Please try again later.');
-      setLoading(false);
+      } catch (err) {
+        console.error('Error fetching course data:', err);
+        setError('Failed to load course data. Please try again later.');
+        setLoading(false);
       return false;
-    }
-  };
+      }
+    };
 
   // Load course data on initial component mount
   useEffect(() => {
@@ -956,7 +956,7 @@ const CourseDetail = () => {
                 errorCount++;
                 continue;
               }
-
+              
               // Check if student already exists by email
               const existingStudents = await studentsAPI.getAll();
               let student = existingStudents.data.find(s => 
@@ -988,8 +988,8 @@ const CourseDetail = () => {
               
               if (!alreadyEnrolled) {
                 // Prepare enrollment data
-                const enrollmentData = {
-                  courseId,
+              const enrollmentData = {
+                courseId,
                   totalAmount: typeof row.Amount === 'number' ? row.Amount : (course.price || 0),
                   amountPaid: typeof row.Paid === 'number' ? row.Paid : 0,
                   enrollmentDate: row.EnrollmentDate ? new Date(row.EnrollmentDate) : new Date(),
@@ -1001,14 +1001,14 @@ const CourseDetail = () => {
                 
                 // Enroll student
                 const enrollResponse = await studentsAPI.enroll(student._id, enrollmentData);
-                
+              
                 if (enrollResponse.status === 200 || enrollResponse.status === 201) {
                   console.log('Enrollment successful:', enrollResponse.data);
-                  successCount++;
+              successCount++;
                   processedStudents.push(student.name);
                 } else {
                   console.error('Enrollment returned unexpected status:', enrollResponse.status);
-                  errorCount++;
+              errorCount++;
                 }
               } else {
                 console.log(`Student ${student.name} already enrolled, skipping`);

@@ -596,12 +596,12 @@ const TeacherSchedule = () => {
                       event={selectedEvent} 
                       onClose={() => setSelectedEvent(null)} 
                     />
-                  </div>
+            </div>
                 )}
               </Box>
             </Box>
           </TabPanel>
-          
+            
           <TabPanel p={4}>
             <VStack spacing={6} align="stretch">
               {courses.length > 0 && (
@@ -624,7 +624,7 @@ const TeacherSchedule = () => {
                             {course.branch && course.branch.name ? course.branch.name : 'N/A'}
                           </Badge>
                         </Flex>
-                        {course.weeklySchedule && course.weeklySchedule.length > 0 ? (
+                          {course.weeklySchedule && course.weeklySchedule.length > 0 ? (
                           <Box bg={cardBg} p={2} borderRadius="md" fontSize="sm">
                             <Text fontWeight="medium" mb={1}>Schedule:</Text>
                             <List>
@@ -635,9 +635,9 @@ const TeacherSchedule = () => {
                               ))}
                             </List>
                           </Box>
-                        ) : (
+                          ) : (
                           <Text fontSize="sm" color="gray.500">No schedule defined</Text>
-                        )}
+                          )}
                       </ListItem>
                     ))}
                   </List>
@@ -664,7 +664,7 @@ const TeacherSchedule = () => {
                           </Badge>
                           <Badge colorScheme="teal">{kClass.ageGroup || 'N/A'}</Badge>
                         </Flex>
-                        {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
+                          {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
                           <Box bg={cardBg} p={2} borderRadius="md" fontSize="sm">
                             <Text fontWeight="medium" mb={1}>Schedule:</Text>
                             <List>

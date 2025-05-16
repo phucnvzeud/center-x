@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { teachersAPI } from '../../api';
 import { Box, Heading, Text, SimpleGrid, Flex, Button, Badge, Spinner, useColorModeValue } from '@chakra-ui/react';
+import { FaPlus, FaArrowRight } from 'react-icons/fa';
 import './Teachers.css';
 
 const Teachers = () => {
@@ -49,7 +50,49 @@ const Teachers = () => {
 
   return (
     <Box>
-      <Heading mb={6} fontSize="xl" fontWeight="semibold">Teachers</Heading>
+      <Flex justifyContent="space-between" alignItems="center" mb={6}>
+        <Heading fontSize="xl" fontWeight="semibold">Teachers</Heading>
+        <Button 
+          as={Link} 
+          to={'/teachers/new'}
+          colorScheme="brand" 
+          size="sm"
+          leftIcon={<FaPlus />}
+        >
+          Add Teacher
+        </Button>
+      </Flex>
+      
+      <Box 
+        p={4} 
+        mb={6} 
+        bg="green.50" 
+        borderWidth="1px" 
+        borderColor="green.200" 
+        borderRadius="md"
+      >
+        <Flex alignItems="center" justifyContent="space-between">
+          <Box>
+            <Heading size="sm" color="green.700" mb={1}>
+              New Feature: Teacher Session Reports
+            </Heading>
+            <Text fontSize="sm" color="green.600">
+              You can now export monthly session reports for each teacher. These reports show all courses and classes taught by a teacher in a specific month.
+            </Text>
+          </Box>
+          <Button
+            as={Link}
+            to={teachers.length > 0 ? `/teachers/${teachers[0]?._id}` : '#'}
+            isDisabled={teachers.length === 0}
+            colorScheme="green"
+            size="sm"
+            mr={2}
+            rightIcon={<FaArrowRight />}
+          >
+            Try it now
+          </Button>
+        </Flex>
+      </Box>
       
       {teachers.length === 0 ? (
         <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" textAlign="center">

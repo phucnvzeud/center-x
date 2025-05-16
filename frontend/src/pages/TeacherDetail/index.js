@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { teachersAPI } from '../../api';
+import { teachersAPI, coursesAPI, kindergartenClassesAPI } from '../../api';
+import * as XLSX from 'xlsx';
 import {
   Box,
   Button,
@@ -22,9 +23,20 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
-  useDisclosure
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  Select,
+  HStack
 } from '@chakra-ui/react';
-import { FaArrowLeft, FaEdit, FaTrash, FaCalendarAlt } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaTrash, FaCalendarAlt, FaFileExport } from 'react-icons/fa';
 import './TeacherDetail.css';
 
 const TeacherDetail = () => {
@@ -32,9 +44,19 @@ const TeacherDetail = () => {
   const [teacher, setTeacher] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [kindergartenClasses, setKindergartenClasses] = useState([]);
+  const [exportMonth, setExportMonth] = useState(new Date().getMonth());
+  const [exportYear, setExportYear] = useState(new Date().getFullYear());
+  const [exportLoading, setExportLoading] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { 
+    isOpen: isExportModalOpen, 
+    onOpen: onExportModalOpen, 
+    onClose: onExportModalClose 
+  } = useDisclosure();
   const cancelRef = React.useRef();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -45,6 +67,14 @@ const TeacherDetail = () => {
         setLoading(true);
         const response = await teachersAPI.getById(teacherId);
         setTeacher(response.data);
+        
+        // Also fetch teacher's courses and classes
+        const coursesResponse = await teachersAPI.getCourses(teacherId);
+        setCourses(coursesResponse.data);
+        
+        const classesResponse = await teachersAPI.getKindergartenClasses(teacherId);
+        setKindergartenClasses(classesResponse.data);
+        
         setLoading(false);
       } catch (err) {
         console.error('Error fetching teacher details:', err);
@@ -78,6 +108,241 @@ const TeacherDetail = () => {
       });
     }
     onClose();
+  };
+  
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
+  
+  // Function to export teacher's sessions to Excel
+  const exportSessionsToExcel = async () => {
+    try {
+      setExportLoading(true);
+      
+      // Create new workbook
+      const wb = XLSX.utils.book_new();
+      
+      // 1. Teacher Info Sheet
+      const teacherData = [
+        ['Teacher Information', ''],
+        ['Name', teacher.name],
+        ['Email', teacher.email],
+        ['Phone', teacher.phone || 'N/A'],
+        ['Specialization', teacher.specialization || 'N/A'],
+        ['Location', teacher.location || 'N/A'],
+        ['Joined Date', formatDate(teacher.joinedDate)],
+        ['', ''],
+        ['Report Information', ''],
+        ['Month/Year', `${new Date(exportYear, exportMonth, 1).toLocaleString('default', { month: 'long' })} ${exportYear}`],
+        ['Report Generated', new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString()],
+        ['', ''],
+      ];
+      
+      const teacherSheet = XLSX.utils.aoa_to_sheet(teacherData);
+      
+      // Set column widths for better readability
+      teacherSheet['!cols'] = [
+        { wch: 20 }, // Column A width
+        { wch: 40 }  // Column B width
+      ];
+      
+      XLSX.utils.book_append_sheet(wb, teacherSheet, "Teacher Info");
+      
+      // Date range for filtered month
+      const startOfMonth = new Date(exportYear, exportMonth, 1);
+      const endOfMonth = new Date(exportYear, exportMonth + 1, 0);
+      
+      const monthName = startOfMonth.toLocaleString('default', { month: 'long' });
+      
+      // 2. Course Sessions Sheet
+      let courseSessionsData = [];
+      
+      // Add title and explanation
+      courseSessionsData.push([`Courses Taught by ${teacher.name} - ${monthName} ${exportYear}`]);
+      courseSessionsData.push(['A value of "1" indicates that a session was taught on that day']);
+      courseSessionsData.push([]);
+      
+      // Header row with dates 1-31
+      const courseHeaderRow = ['Course Name'];
+      const daysInMonth = endOfMonth.getDate();
+      for (let i = 1; i <= daysInMonth; i++) {
+        courseHeaderRow.push(i); // Add days 1-31 as columns
+      }
+      courseSessionsData.push(courseHeaderRow);
+      
+      // Fetch and process sessions for each course
+      for (const course of courses) {
+        try {
+          const sessionsResponse = await coursesAPI.getSessions(course._id);
+          const allSessions = sessionsResponse.data || [];
+          
+          // Filter sessions for the selected month
+          const sessionsInMonth = allSessions.filter(session => {
+            const sessionDate = new Date(session.date);
+            return sessionDate >= startOfMonth && sessionDate <= endOfMonth;
+          });
+          
+          // Create a row for this course
+          const courseRow = [course.name];
+          
+          // Initialize all days to empty
+          for (let i = 1; i <= daysInMonth; i++) {
+            courseRow.push("");
+          }
+          
+          // Mark days with sessions
+          sessionsInMonth.forEach(session => {
+            const sessionDate = new Date(session.date);
+            const day = sessionDate.getDate();
+            
+            // Only mark taught sessions
+            if (session.status === 'Taught') {
+              courseRow[day] = 1; // 1 indicates a session was taught
+            }
+          });
+          
+          // Add to data array
+          courseSessionsData.push(courseRow);
+        } catch (err) {
+          console.error(`Error fetching sessions for course ${course._id}:`, err);
+        }
+      }
+      
+      // Add a total row
+      const totalRow = ['TOTAL SESSIONS'];
+      for (let i = 1; i <= daysInMonth; i++) {
+        let count = 0;
+        // Start from index 4 to skip the header rows
+        for (let j = 4; j < courseSessionsData.length; j++) {
+          if (courseSessionsData[j][i] === 1) {
+            count++;
+          }
+        }
+        totalRow.push(count > 0 ? count : '');
+      }
+      courseSessionsData.push([]);
+      courseSessionsData.push(totalRow);
+      
+      // Add the courses sessions sheet
+      const coursesSessionsSheet = XLSX.utils.aoa_to_sheet(courseSessionsData);
+      
+      // Set column widths for better readability
+      const courseColWidths = [{ wch: 30 }]; // Column A width (course name)
+      for (let i = 0; i < daysInMonth; i++) {
+        courseColWidths.push({ wch: 5 }); // Date columns width
+      }
+      coursesSessionsSheet['!cols'] = courseColWidths;
+      
+      XLSX.utils.book_append_sheet(wb, coursesSessionsSheet, `Courses - ${monthName}`);
+      
+      // 3. Kindergarten Classes Sessions Sheet
+      let kgSessionsData = [];
+      
+      // Add title and explanation
+      kgSessionsData.push([`Kindergarten Classes Taught by ${teacher.name} - ${monthName} ${exportYear}`]);
+      kgSessionsData.push(['A value of "1" indicates that a session was taught on that day']);
+      kgSessionsData.push([]);
+      
+      // Header row with dates 1-31
+      const kgHeaderRow = ['Class Name'];
+      for (let i = 1; i <= daysInMonth; i++) {
+        kgHeaderRow.push(i); // Add days 1-31 as columns
+      }
+      kgSessionsData.push(kgHeaderRow);
+      
+      // Fetch and process sessions for each kindergarten class
+      for (const kgClass of kindergartenClasses) {
+        try {
+          const kgSessionsResponse = await kindergartenClassesAPI.getSessions(kgClass._id);
+          const allKgSessions = kgSessionsResponse.data || [];
+          
+          // Filter sessions for the selected month
+          const kgSessionsInMonth = allKgSessions.filter(session => {
+            const sessionDate = new Date(session.date);
+            return sessionDate >= startOfMonth && sessionDate <= endOfMonth;
+          });
+          
+          // Create a row for this kindergarten class
+          const kgClassRow = [kgClass.name];
+          
+          // Initialize all days to empty
+          for (let i = 1; i <= daysInMonth; i++) {
+            kgClassRow.push("");
+          }
+          
+          // Mark days with sessions
+          kgSessionsInMonth.forEach(session => {
+            const sessionDate = new Date(session.date);
+            const day = sessionDate.getDate();
+            
+            // Only mark taught sessions
+            if (session.status === 'Completed') {
+              kgClassRow[day] = 1; // 1 indicates a session was taught
+            }
+          });
+          
+          // Add to data array
+          kgSessionsData.push(kgClassRow);
+        } catch (err) {
+          console.error(`Error fetching sessions for kindergarten class ${kgClass._id}:`, err);
+        }
+      }
+      
+      // Add a total row
+      const kgTotalRow = ['TOTAL SESSIONS'];
+      for (let i = 1; i <= daysInMonth; i++) {
+        let count = 0;
+        // Start from index 4 to skip the header rows
+        for (let j = 4; j < kgSessionsData.length; j++) {
+          if (kgSessionsData[j][i] === 1) {
+            count++;
+          }
+        }
+        kgTotalRow.push(count > 0 ? count : '');
+      }
+      kgSessionsData.push([]);
+      kgSessionsData.push(kgTotalRow);
+      
+      // Add the kindergarten sessions sheet
+      const kgSessionsSheet = XLSX.utils.aoa_to_sheet(kgSessionsData);
+      
+      // Set column widths for better readability
+      const kgColWidths = [{ wch: 30 }]; // Column A width (class name)
+      for (let i = 0; i < daysInMonth; i++) {
+        kgColWidths.push({ wch: 5 }); // Date columns width
+      }
+      kgSessionsSheet['!cols'] = kgColWidths;
+      
+      XLSX.utils.book_append_sheet(wb, kgSessionsSheet, `Classes - ${monthName}`);
+      
+      // Generate filename
+      const fileName = `${teacher.name.replace(/\s+/g, '_')}_Sessions_${monthName}_${exportYear}.xlsx`;
+      
+      // Export
+      XLSX.writeFile(wb, fileName);
+      
+      toast({
+        title: 'Export successful',
+        description: `Sessions exported to ${fileName}`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+    } catch (err) {
+      console.error('Error exporting teacher sessions:', err);
+      toast({
+        title: 'Export failed',
+        description: 'Failed to export teacher sessions.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setExportLoading(false);
+      onExportModalClose();
+    }
   };
 
   if (loading) {
@@ -163,6 +428,12 @@ const TeacherDetail = () => {
                   colorScheme="brand"
                   aria-label="View schedule"
                 />
+                <IconButton
+                  icon={<FaFileExport />}
+                  colorScheme="green"
+                  aria-label="Export sessions"
+                  onClick={onExportModalOpen}
+                />
               </Flex>
             </Flex>
 
@@ -232,6 +503,74 @@ const TeacherDetail = () => {
           </AlertDialogContent>
         </AlertDialogOverlay>
       </AlertDialog>
+      
+      {/* Export Sessions Modal */}
+      <Modal isOpen={isExportModalOpen} onClose={onExportModalClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Export Teacher Sessions</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text mb={4}>
+              Export {teacher.name}'s sessions for the selected month. The export will include all courses and kindergarten classes taught by this teacher.
+            </Text>
+            
+            <HStack spacing={4}>
+              <FormControl>
+                <FormLabel>Month</FormLabel>
+                <Select 
+                  value={exportMonth} 
+                  onChange={(e) => setExportMonth(parseInt(e.target.value))}
+                >
+                  <option value={0}>January</option>
+                  <option value={1}>February</option>
+                  <option value={2}>March</option>
+                  <option value={3}>April</option>
+                  <option value={4}>May</option>
+                  <option value={5}>June</option>
+                  <option value={6}>July</option>
+                  <option value={7}>August</option>
+                  <option value={8}>September</option>
+                  <option value={9}>October</option>
+                  <option value={10}>November</option>
+                  <option value={11}>December</option>
+                </Select>
+              </FormControl>
+              
+              <FormControl>
+                <FormLabel>Year</FormLabel>
+                <Select 
+                  value={exportYear} 
+                  onChange={(e) => setExportYear(parseInt(e.target.value))}
+                >
+                  {[...Array(5)].map((_, i) => {
+                    const year = new Date().getFullYear() - 2 + i;
+                    return (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+            </HStack>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onExportModalClose}>
+              Cancel
+            </Button>
+            <Button 
+              colorScheme="green" 
+              leftIcon={<FaFileExport />}
+              onClick={exportSessionsToExcel}
+              isLoading={exportLoading}
+            >
+              Export
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };
