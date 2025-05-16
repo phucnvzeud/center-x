@@ -46,7 +46,10 @@ import {
   ModalCloseButton,
   useToast,
   useColorModeValue,
-  Select
+  Select,
+  FormControl,
+  FormLabel,
+  Textarea
 } from '@chakra-ui/react';
 import { 
   FaUser, 
@@ -73,6 +76,10 @@ const StudentManagement = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [sourceCourseId, setSourceCourseId] = useState(null);
   const [targetCourseId, setTargetCourseId] = useState('');
+  const [transferAmount, setTransferAmount] = useState(0);
+  const [transferPaid, setTransferPaid] = useState(0);
+  const [transferReason, setTransferReason] = useState('');
+  const [isTransferProcessing, setIsTransferProcessing] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
   const { isOpen: isTransferModalOpen, onOpen: onTransferModalOpen, onClose: onTransferModalClose } = useDisclosure();
@@ -204,7 +211,7 @@ const StudentManagement = () => {
   };
   
   // Handle student transfer
-  const openTransferModal = (studentId, courseId) => {
+  const openTransferModal = async (studentId, courseId) => {
     const course = courses.find(c => c._id === courseId);
     const student = course?.students.find(s => s._id === studentId);
     
@@ -212,6 +219,36 @@ const StudentManagement = () => {
       setSelectedStudent(student);
       setSourceCourseId(courseId);
       setTargetCourseId('');
+      setTransferReason('');
+      
+      // Get enrollment details to initialize payment information
+      try {
+        const enrollmentsResponse = await studentsAPI.getEnrollments(studentId);
+        const enrollment = enrollmentsResponse.data.find(e => e.course && e.course._id === courseId);
+        
+        if (enrollment) {
+          // Ensure these are proper numbers
+          const totalAmountValue = typeof enrollment.totalAmount === 'number' ? enrollment.totalAmount : 0;
+          const amountPaidValue = typeof enrollment.amountPaid === 'number' ? enrollment.amountPaid : 0;
+          
+          console.log('Initializing transfer with enrollment data:', {
+            totalAmount: totalAmountValue,
+            amountPaid: amountPaidValue
+          });
+          
+          setTransferAmount(totalAmountValue);
+          setTransferPaid(amountPaidValue);
+        } else {
+          console.log('No enrollment found for this student in this course, setting default values');
+          setTransferAmount(0);
+          setTransferPaid(0);
+        }
+      } catch (err) {
+        console.error('Error fetching enrollment details:', err);
+        setTransferAmount(0);
+        setTransferPaid(0);
+      }
+      
       onTransferModalOpen();
     } else {
       toast({
@@ -236,10 +273,12 @@ const StudentManagement = () => {
       return;
     }
     
+    setIsTransferProcessing(true);
+    
     try {
       // First get the enrollment ID from the student's enrollments
       const enrollmentsResponse = await studentsAPI.getEnrollments(selectedStudent._id);
-      const enrollment = enrollmentsResponse.data.find(e => e.course._id === sourceCourseId);
+      const enrollment = enrollmentsResponse.data.find(e => e.course && e.course._id === sourceCourseId);
       
       if (!enrollment) {
         toast({
@@ -249,61 +288,200 @@ const StudentManagement = () => {
           duration: 3000,
           isClosable: true,
         });
+        setIsTransferProcessing(false);
         return;
       }
       
-      // Call API to withdraw student from source course with the correct enrollmentId
-      await studentsAPI.withdraw(selectedStudent._id, { 
-        enrollmentId: enrollment._id,
-        newStatus: 'Withdrawn'
-      });
+      let withdrawalSuccessful = false;
       
-      // Call API to enroll student in target course
-      await studentsAPI.enroll(selectedStudent._id, { 
-        courseId: targetCourseId,
-        totalAmount: enrollment.totalAmount || 0,
-        amountPaid: enrollment.amountPaid || 0,
-        notes: `Transferred from ${enrollment.course.name}`
-      });
-      
-      // Show success message
-      toast({
-        title: 'Success',
-        description: `Transferred ${selectedStudent.name} to new course.`,
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-      
-      // Refresh both students and courses data
-      const [coursesResponse, studentsResponse] = await Promise.all([
-        coursesAPI.getAll(),
-        studentsAPI.getAll()
-      ]);
-      
-      const coursesData = coursesResponse.data;
-      const studentsData = studentsResponse.data;
-      
-      setStudents(studentsData);
-      
-      // Process updated courses with enrollment information
-      const coursesWithStudents = await processCoursesWithEnrollments(coursesData);
-      coursesWithStudents.sort((a, b) => a.name.localeCompare(b.name));
-      
-      setCourses(coursesWithStudents);
-      setDisplayedCourses(coursesWithStudents);
-      
-      // Close modal
-      onTransferModalClose();
+      try {
+        // Step 1: First withdraw the student from the source course
+        const withdrawResponse = await studentsAPI.withdraw(selectedStudent._id, { 
+          enrollmentId: enrollment._id,
+          newStatus: 'Withdrawn'
+        });
+        withdrawalSuccessful = true;
+        
+        // Step 2: Then try to enroll student in target course
+        try {
+          // Ensure values are numeric and valid
+          const totalAmountValue = Number(transferAmount) || 0;
+          const amountPaidValue = Number(transferPaid) || 0;
+          
+          // Validate the required values
+          if (!targetCourseId) {
+            throw new Error('Target course is required');
+          }
+          
+          if (isNaN(totalAmountValue) || totalAmountValue < 0) {
+            throw new Error('Total amount must be a valid number');
+          }
+          
+          // First, check if student already has an enrollment in the target course
+          const allEnrollments = await studentsAPI.getEnrollments(selectedStudent._id);
+          const existingTargetEnrollment = allEnrollments.data.find(
+            e => e.course && e.course._id === targetCourseId
+          );
+          
+          if (existingTargetEnrollment) {
+            console.log('Found existing enrollment in target course:', existingTargetEnrollment);
+            
+            // Get the source course name safely
+            const sourceCourse = enrollment.course ? enrollment.course.name || 'previous course' : 'previous course';
+            
+            // If there's an existing enrollment, update it instead of creating a new one
+            await studentsAPI.withdraw(selectedStudent._id, {
+              enrollmentId: existingTargetEnrollment._id,
+              newStatus: 'Active',
+              totalAmount: totalAmountValue,
+              amountPaid: amountPaidValue,
+              notes: transferReason
+                ? `Reactivated enrollment. Transferred from ${sourceCourse}. Reason: ${transferReason}`
+                : `Reactivated enrollment. Transferred from ${sourceCourse} on ${new Date().toLocaleDateString()}`
+            });
+            
+            console.log('Successfully reactivated existing enrollment');
+          } else {
+            // No existing enrollment, create a new one
+            console.log('Creating new enrollment in target course');
+            
+            // Get the source course name safely
+            const sourceCourse = enrollment.course ? enrollment.course.name || 'previous course' : 'previous course';
+            
+            // Log what we're about to send
+            console.log('Enrolling student with data:', {
+              studentId: selectedStudent._id,
+              courseId: targetCourseId,
+              totalAmount: totalAmountValue,
+              amountPaid: amountPaidValue
+            });
+            
+            await studentsAPI.enroll(selectedStudent._id, { 
+              courseId: targetCourseId,
+              totalAmount: totalAmountValue,
+              amountPaid: amountPaidValue,
+              enrollmentDate: new Date(),
+              notes: transferReason 
+                ? `Transferred from ${sourceCourse}. Reason: ${transferReason}` 
+                : `Transferred from ${sourceCourse} on ${new Date().toLocaleDateString()}`
+            });
+          }
+          
+          // Show success message
+          toast({
+            title: 'Success',
+            description: `Transferred ${selectedStudent.name} to new course.`,
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+          
+          // Optimized approach: Only refresh the affected courses instead of all data
+          const [sourceCourseResponse, targetCourseResponse] = await Promise.all([
+            coursesAPI.getById(sourceCourseId),
+            coursesAPI.getById(targetCourseId)
+          ]);
+          
+          // Process the two updated courses
+          const updatedSourceCourse = {
+            ...sourceCourseResponse.data,
+            students: [] // Will be populated below
+          };
+          
+          const updatedTargetCourse = {
+            ...targetCourseResponse.data,
+            students: [] // Will be populated below
+          };
+          
+          // Get enrollments for the updated courses
+          const [sourceEnrollments, targetEnrollments] = await Promise.all([
+            coursesAPI.getEnrollments(sourceCourseId),
+            coursesAPI.getEnrollments(targetCourseId)
+          ]);
+          
+          // Update the source course with active enrollments
+          updatedSourceCourse.students = sourceEnrollments.data
+            .filter(e => e.status === 'Active' || e.status === 'Completed' || e.status === 'Suspended')
+            .map(e => e.student);
+          
+          // Update the target course with active enrollments
+          updatedTargetCourse.students = targetEnrollments.data
+            .filter(e => e.status === 'Active' || e.status === 'Completed' || e.status === 'Suspended')
+            .map(e => e.student);
+          
+          // Update only the affected courses in the state
+          setCourses(prevCourses => 
+            prevCourses.map(course => {
+              if (course._id === sourceCourseId) return updatedSourceCourse;
+              if (course._id === targetCourseId) return updatedTargetCourse;
+              return course;
+            })
+          );
+          
+          // Update displayed courses
+          setDisplayedCourses(prevCourses => 
+            prevCourses.map(course => {
+              if (course._id === sourceCourseId) return updatedSourceCourse;
+              if (course._id === targetCourseId) return updatedTargetCourse;
+              return course;
+            })
+          );
+          
+          // Close modal
+          onTransferModalClose();
+        } catch (enrollError) {
+          // If enrollment fails but withdrawal succeeded, try to reactivate the student in original course
+          if (withdrawalSuccessful) {
+            try {
+              // Attempt to revert the withdrawal by reactivating the student
+              await studentsAPI.withdraw(selectedStudent._id, { 
+                enrollmentId: enrollment._id,
+                newStatus: 'Active',
+                notes: `${enrollment.notes || ''} Auto-reactivated after failed transfer attempt`
+              });
+              
+              toast({
+                title: 'Warning',
+                description: `Enrollment in new course failed. Student was reactivated in the original course.`,
+                status: 'warning',
+                duration: 5000,
+                isClosable: true,
+              });
+            } catch (revertError) {
+              // Critical failure - withdrawal succeeded but both enrollment and reactivation failed
+              console.error('Critical error: Could not revert withdrawal after enrollment failed', revertError);
+              toast({
+                title: 'Critical Error',
+                description: `Student was withdrawn but could not be enrolled or reactivated. Please check student status manually.`,
+                status: 'error',
+                duration: 8000,
+                isClosable: true,
+              });
+            }
+          }
+          throw enrollError; // Re-throw to be caught by outer catch
+        }
+      } catch (err) {
+        console.error('Error transferring student:', err);
+        toast({
+          title: 'Error',
+          description: 'Failed to transfer student. Please try again.',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
     } catch (err) {
-      console.error('Error transferring student:', err);
+      console.error('Error preparing transfer:', err);
       toast({
         title: 'Error',
-        description: 'Failed to transfer student. Please try again.',
+        description: 'Failed to prepare student transfer. Please try again.',
         status: 'error',
         duration: 3000,
         isClosable: true,
       });
+    } finally {
+      setIsTransferProcessing(false);
     }
   };
   
@@ -644,21 +822,58 @@ const StudentManagement = () => {
                     onChange={(e) => setTargetCourseId(e.target.value)}
                   >
                     {courses
-                      .filter(course => course._id !== sourceCourseId && course.status !== 'Completed' && course.status !== 'Cancelled')
+                      .filter(course => 
+                        course._id !== sourceCourseId && 
+                        course.status !== 'Completed' && 
+                        course.status !== 'Cancelled' &&
+                        course.totalStudent < (course.maxCapacity || 30) // Only show courses with available capacity
+                      )
                       .map(course => (
                         <option key={course._id} value={course._id}>
-                          {course.name} ({course.status})
+                          {course.name} ({course.status}) - {course.students?.length || 0} students
                         </option>
                       ))
                     }
                   </Select>
                 </Box>
                 
+                <Box mb={4}>
+                  <Text fontWeight="medium" mb={2}>Payment Information:</Text>
+                  <Flex gap={3}>
+                    <FormControl mb={2}>
+                      <FormLabel fontSize="sm">Total Amount</FormLabel>
+                      <Input 
+                        type="number" 
+                        value={transferAmount}
+                        onChange={(e) => setTransferAmount(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel fontSize="sm">Amount Paid</FormLabel>
+                      <Input 
+                        type="number" 
+                        value={transferPaid}
+                        onChange={(e) => setTransferPaid(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                  </Flex>
+                </Box>
+                
+                <Box mb={4}>
+                  <Text fontWeight="medium" mb={2}>Reason for Transfer:</Text>
+                  <Textarea
+                    placeholder="Enter reason for transfer (optional)" 
+                    value={transferReason}
+                    onChange={(e) => setTransferReason(e.target.value)}
+                  />
+                </Box>
+                
                 <Flex justify="flex-end" mt={6} gap={3}>
-                  <Button variant="outline" onClick={onTransferModalClose}>Cancel</Button>
+                  <Button variant="outline" onClick={onTransferModalClose} isDisabled={isTransferProcessing}>Cancel</Button>
                   <Button 
                     colorScheme="blue" 
-                    isDisabled={!targetCourseId}
+                    isDisabled={!targetCourseId || isTransferProcessing}
+                    isLoading={isTransferProcessing}
                     onClick={handleTransferSubmit}
                   >
                     Transfer
