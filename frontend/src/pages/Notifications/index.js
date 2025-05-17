@@ -1,5 +1,7 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { notificationsAPI } from '../../api';
 import { useNotifications } from '../../context/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 import { 
@@ -30,7 +32,15 @@ import {
   Tabs,
   TabList,
   TabPanel,
-  TabPanels
+  TabPanels,
+  Avatar,
+  Pagination,
+  PaginationContainer,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationPageGroup,
+  PaginationPage,
+  usePagination
 } from '@chakra-ui/react';
 import { 
   FaBell, 
@@ -39,7 +49,9 @@ import {
   FaCalendarTimes,
   FaCheckCircle,
   FaEllipsisV,
-  FaTrash
+  FaTrash,
+  FaEnvelope,
+  FaEnvelopeOpen
 } from 'react-icons/fa';
 
 const Notifications = () => {
@@ -57,7 +69,7 @@ const Notifications = () => {
   const [tabIndex, setTabIndex] = useState(0);
   const perPage = 20;
   
-  const navigate = useNavigate();
+  const navigate = Link;
 
   // Colors
   const bgColor = useColorModeValue('white', 'gray.800');

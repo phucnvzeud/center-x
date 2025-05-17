@@ -216,7 +216,7 @@ export const healthAPI = {
   }
 };
 
-export default {
+const apiExports = {
   teachers: teachersAPI,
   students: studentsAPI,
   courses: coursesAPI,
@@ -226,4 +226,6 @@ export default {
   kindergartenClasses: kindergartenClassesAPI,
   holidays: holidaysAPI,
   health: healthAPI
-}; 
+};
+
+export default apiExports; 

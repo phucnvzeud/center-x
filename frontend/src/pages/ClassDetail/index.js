@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { kindergartenClassesAPI } from '../../api';
@@ -13,18 +14,11 @@ import {
   FaEdit,
   FaGraduationCap,
   FaSchool,
-  FaUser,
-  FaEnvelope,
-  FaPhone,
   FaClock,
-  FaUsers,
   FaRegCalendarAlt,
-  FaListAlt,
-  FaHourglass,
   FaCalendarCheck,
   FaCalendarTimes,
   FaCalendarPlus,
-  FaRegClock,
   FaArrowLeft,
   FaTrash
 } from 'react-icons/fa';

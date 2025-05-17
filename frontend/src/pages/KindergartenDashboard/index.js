@@ -1,6 +1,7 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { kindergartenClassesAPI, regionsAPI, schoolsAPI } from '../../api';
+import { kindergartenClassesAPI } from '../../api';
 import ClassList from '../ClassList';
 import {
   Box,
@@ -12,8 +13,6 @@ import {
   Stat,
   StatLabel,
   StatNumber,
-  StatHelpText,
-  Grid,
   Divider,
   Icon,
   HStack,

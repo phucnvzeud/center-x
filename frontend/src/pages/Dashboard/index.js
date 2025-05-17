@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps, no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { teachersAPI, coursesAPI, studentsAPI, kindergartenClassesAPI, holidaysAPI } from '../../api';

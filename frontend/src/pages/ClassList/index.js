@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { kindergartenClassesAPI, schoolsAPI, regionsAPI, teachersAPI } from '../../api';

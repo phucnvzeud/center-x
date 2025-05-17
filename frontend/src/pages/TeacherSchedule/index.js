@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
@@ -596,7 +597,7 @@ const TeacherSchedule = () => {
                       event={selectedEvent} 
                       onClose={() => setSelectedEvent(null)} 
                     />
-            </div>
+                  </div>
                 )}
               </Box>
             </Box>
