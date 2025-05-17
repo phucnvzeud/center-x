@@ -26,7 +26,8 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   useColorModeValue,
-  useBreakpointValue
+  useBreakpointValue,
+  GridItem
 } from '@chakra-ui/react';
 import { FaSearch, FaPlus, FaFilter, FaEllipsisV, FaEdit, FaTrash, FaEye, FaCalendarAlt, FaChalkboardTeacher, FaSchool } from 'react-icons/fa';
 
@@ -431,10 +432,12 @@ const ClassList = ({ limit, compact = false }) => {
                 >
                 <Flex mb={2} justify="space-between" align="flex-start">
                   <Box>
-                    <Heading size="sm" mb={1}>{kClass.name}</Heading>
-                    <Badge px={2} py={1} mb={2} bg={statusColorScheme.bg} color={statusColorScheme.color}>
-                      {kClass.status}
-                    </Badge>
+                    <Flex align="center" gap={2}>
+                      <Heading size="sm" margin="0">{kClass.name}</Heading>
+                      <Badge px={2} py={1} bg={statusColorScheme.bg} color={statusColorScheme.color} alignSelf="center" marginTop="1px">
+                        {kClass.status}
+                      </Badge>
+                    </Flex>
                   </Box>
                   <Menu>
                     <MenuButton
@@ -481,27 +484,57 @@ const ClassList = ({ limit, compact = false }) => {
                   </Menu>
                 </Flex>
                 
-                <VStack align="stretch" spacing={2} fontSize="sm">
-                  <Flex align="center">
-                    <Box as={FaChalkboardTeacher} color="brand.500" mr={2} />
-                    <Text fontWeight="medium">Teacher:</Text>
-                    <Text ml={1}>{getTeacherName(kClass)}</Text>
-                  </Flex>
+                <VStack align="stretch" spacing={3} fontSize="sm">
+                  <Box>
+                    <Flex>
+                      <Box width="24px" textAlign="center" mr={1}>
+                        <FaChalkboardTeacher style={{
+                          display: 'inline-block',
+                          verticalAlign: 'middle',
+                          position: 'relative',
+                          top: '-1px',
+                          color: '#3182CE'
+                        }} />
+                      </Box>
+                      <Box as="span" fontWeight="medium" width="70px">Teacher:</Box>
+                      <Box as="span" flexGrow={1}>{getTeacherName(kClass)}</Box>
+                    </Flex>
+                  </Box>
                   
                   {kClass.school && (
-                    <Flex align="center">
-                      <Box as={FaSchool} color="green.500" mr={2} />
-                      <Text fontWeight="medium">School:</Text>
-                      <Text ml={1}>{kClass.school.name}</Text>
-                    </Flex>
+                    <Box>
+                      <Flex>
+                        <Box width="24px" textAlign="center" mr={1}>
+                          <FaSchool style={{
+                            display: 'inline-block',
+                            verticalAlign: 'middle',
+                            position: 'relative',
+                            top: '-1px',
+                            color: '#38A169'
+                          }} />
+                        </Box>
+                        <Box as="span" fontWeight="medium" width="70px">School:</Box>
+                        <Box as="span" flexGrow={1}>{kClass.school.name}</Box>
+                      </Flex>
+                    </Box>
                   )}
                   
                   {kClass.daySchedule && (
-                    <Flex align="center">
-                      <Box as={FaCalendarAlt} color="blue.500" mr={2} />
-                      <Text fontWeight="medium">Schedule:</Text>
-                      <Text ml={1}>{kClass.daySchedule}</Text>
-                    </Flex>
+                    <Box>
+                      <Flex>
+                        <Box width="24px" textAlign="center" mr={1}>
+                          <FaCalendarAlt style={{
+                            display: 'inline-block',
+                            verticalAlign: 'middle',
+                            position: 'relative',
+                            top: '-1px',
+                            color: '#3182CE'
+                          }} />
+                        </Box>
+                        <Box as="span" fontWeight="medium" width="70px">Schedule:</Box>
+                        <Box as="span" flexGrow={1}>{kClass.daySchedule}</Box>
+                      </Flex>
+                    </Box>
                   )}
                 </VStack>
               </Box>

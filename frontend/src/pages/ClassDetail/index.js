@@ -792,9 +792,21 @@ const ClassDetail = () => {
       grouped[monthKey].sessions.push(session);
     });
 
-    // Sort months in descending order (most recent first)
+    // Sort months in chronological order
     return Object.fromEntries(
-      Object.entries(grouped).sort(([a], [b]) => b.localeCompare(a))
+      Object.entries(grouped).sort(([keyA], [keyB]) => {
+        // Parse the month keys (YYYY-MM format)
+        const [yearA, monthA] = keyA.split('-').map(num => parseInt(num, 10));
+        const [yearB, monthB] = keyB.split('-').map(num => parseInt(num, 10));
+        
+        // Compare years first
+        if (yearA !== yearB) {
+          return yearA - yearB;
+        }
+        
+        // If same year, compare months
+        return monthA - monthB;
+      })
     );
   }, [sessions]);
 
@@ -930,7 +942,7 @@ const ClassDetail = () => {
           
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={{ base: 5, md: 8 }}>
             {/* Left Column: Basic Information */}
-            <VStack align="stretch" spacing={4}>
+            <VStack align="stretch" spacing={2}>
               <InfoItem label="Class Name" value={kClass.name} />
               <InfoItem label="School" value={kClass.school?.name || 'N/A'} />
               <InfoItem label="Teacher" value={kClass.teacher ? kClass.teacher.name : (kClass.teacherName || 'N/A')} />
@@ -1161,17 +1173,20 @@ const ClassDetail = () => {
                             as={expandedMonths[monthKey] ? FaChevronDown : FaChevronRight} 
                             mr={2} 
                         color={chevronIconColor}
+                            boxSize="12px"
                           />
-                      <Text fontWeight="semibold" color={headingColor}>
+                      <Text fontWeight="semibold" color={headingColor} mb="0">
                         {monthData.label}
                           </Text>
-                      <HStack spacing={2} ml={2}>
+                      <HStack spacing={2} ml={2} align="center">
                         <Badge 
                           colorScheme="blue" 
                           borderRadius="full"
                           px={2}
                           py={1}
                           fontSize="xs"
+                          display="flex"
+                          alignItems="center"
                         >
                           {monthData.sessions.length} total
                         </Badge>
@@ -1532,7 +1547,7 @@ const InfoItem = ({ label, value, children, isLink = null }) => {
       {children ? (
         <Box flex={1} textAlign={{ sm: 'left' }}>{children}</Box>
       ) : isLink ? (
-        <Link href={isLink} color="blue.500" _hover={{ textDecoration: 'underline' }} isExternal={isLink.startsWith('mailto:')}>
+        <Link href={isLink} color="blue.500" _hover={{ textDecoration: 'underline' }} isExternal={isLink.startsWith('mailto:')} flex={1} textAlign={{ sm: 'left' }}>
           {value}
         </Link>
       ) : (
