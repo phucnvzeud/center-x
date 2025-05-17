@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { coursesAPI, studentsAPI, teachersAPI, branchesAPI } from '../../api';
+import SessionActions from '../../components/SessionActions';
 import * as XLSX from 'xlsx';
 import {
   Box,
@@ -421,6 +422,23 @@ const CourseDetail = () => {
   const toggleAbsenceDropdown = (index, event) => {
     event.stopPropagation(); // Prevent event from bubbling up
     setActiveAbsenceDropdown(activeAbsenceDropdown === index ? null : index);
+  };
+  
+  // Handle opening a modal with absence options when Mark Absent is clicked
+  const openAbsenceMenu = (sessionIndex) => {
+    // Using a modal dialog to select absence reason
+    const absenceType = window.confirm(
+      "Select absence reason:\n\n" +
+      "- Click 'OK' for Personal Reason\n" +
+      "- Click 'Cancel' to cancel"
+    );
+    
+    if (absenceType) {
+      handleQuickStatusUpdate(sessionIndex, 'Absent (Personal Reason)');
+    } else {
+      // Could show another dialog for more options in a real implementation
+      // For now just do nothing when canceled
+    }
   };
 
   // Filter sessions if taught are hidden
@@ -1246,7 +1264,19 @@ const CourseDetail = () => {
                       isThisSessionFuture ? 'blue.50' : undefined
                     }
                     _hover={{ bg: 'gray.50' }}
+                    position="relative"
                 >
+                    {!isThisSessionFuture && (
+                      <SessionActions
+                        session={session}
+                        onMarkCompleted={() => handleQuickStatusUpdate(originalIndex, 'Taught')}
+                        onMarkCanceled={() => openAbsenceMenu(originalIndex)}
+                        onAdvancedEdit={() => openUpdateModal(session, originalIndex)}
+                        isLoading={isUpdateLoading}
+                        completedLabel="Mark Taught"
+                        canceledLabel="Mark Absent"
+                      />
+                    )}
                     <Td textAlign="center" fontWeight="medium">{sessionNumber}</Td>
                     <Td>{formatDate(session.date)}</Td>
                     <Td>{getSessionDayAndTime(session.date)}</Td>
@@ -1266,51 +1296,10 @@ const CourseDetail = () => {
                     {isUpdateLoading ? (
                         <Spinner size="sm" />
                     ) : (
-                        <HStack spacing={2}>
-                        {!isThisSessionFuture && session.status === 'Pending' && (
-                            <>
-                              <Button 
-                                size="xs"
-                                colorScheme="green"
-                              onClick={() => handleQuickStatusUpdate(originalIndex, 'Taught')}
-                            >
-                              Mark Taught
-                              </Button>
-                            
-                              <Menu>
-                                <MenuButton 
-                                  as={Button} 
-                                  size="xs" 
-                                  colorScheme="red"
-                                  onClick={(e) => e.stopPropagation()}
-                              >
-                                Mark Absent
-                                </MenuButton>
-                                <MenuList>
-                                  <MenuItem onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Personal Reason)')}>
-                                    Personal Reason
-                                  </MenuItem>
-                                  <MenuItem onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Holiday)')}>
-                                    Holiday
-                                  </MenuItem>
-                                  <MenuItem onClick={() => handleQuickStatusUpdate(originalIndex, 'Absent (Other Reason)')}>
-                                    Other Reason
-                                  </MenuItem>
-                                </MenuList>
-                              </Menu>
-                            </>
-                        )}
-                        
-                          <IconButton
-                            icon={<FaEdit />}
-                            aria-label="Edit session"
-                            size="sm"
-                            colorScheme="blue"
-                            variant="ghost"
-                          onClick={() => openUpdateModal(session, originalIndex)}
-                            isDisabled={isThisSessionFuture}
-                          title={isThisSessionFuture ? "Cannot update future sessions" : "Edit session"}
-                          />
+                        <HStack spacing={2} visibility="hidden">
+                          <IconButton icon={<FaCheck />} size="xs" aria-label="Placeholder" />
+                          <IconButton icon={<FaTimes />} size="xs" aria-label="Placeholder" />
+                          <IconButton icon={<FaEdit />} size="xs" aria-label="Placeholder" />
                         </HStack>
                     )}
                     </Td>

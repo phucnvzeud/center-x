@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { kindergartenClassesAPI } from '../../api';
+import { clearCache, generateCacheKey } from '../../api/cache';
+import SessionActions from '../../components/SessionActions';
 import { 
   FaChevronDown, 
   FaChevronRight, 
@@ -111,6 +113,8 @@ const ClassDetail = () => {
   const [customSessionModalOpen, setCustomSessionModalOpen] = useState(false);
   const [customSessionForm, setCustomSessionForm] = useState({
     date: new Date().toISOString().split('T')[0],
+    startTime: '09:00', // Default start time
+    endTime: '10:00',   // Default end time
     notes: ''
   });
   const [deleteSessionModalOpen, setDeleteSessionModalOpen] = useState(false);
@@ -348,11 +352,28 @@ const ClassDetail = () => {
       
       const updateData = {
         status: newStatus,
-        notes,
+        notes: notes,
         addCompensatory
       };
       
       await kindergartenClassesAPI.updateSession(classId, sessionIndex, updateData);
+
+      // Clear relevant caches
+      const sessionsCacheKey = generateCacheKey('kindergartenClassesAPI.getSessions', [classId]);
+      const sessionStatsCacheKey = generateCacheKey('kindergartenClassesAPI.getSessionStats', [classId]);
+      const classByIdCacheKey = generateCacheKey('kindergartenClassesAPI.getById', [classId]);
+      
+      clearCache([sessionsCacheKey, sessionStatsCacheKey, classByIdCacheKey]);
+      // console.log('Cleared caches for:', sessionsCacheKey, sessionStatsCacheKey, classByIdCacheKey); // For debugging
+      
+      // Optimistically update the local sessions state for immediate UI feedback
+      setSessions(prevSessions => 
+        prevSessions.map((s, idx) => 
+          idx === sessionIndex 
+            ? { ...s, status: newStatus, notes: updateData.notes } // Use notes from updateData
+            : s
+        )
+      );
       
       // Success message
       if (newStatus === 'Canceled' && addCompensatory) {
@@ -412,17 +433,35 @@ const ClassDetail = () => {
 
   const handleCustomSessionSubmit = async () => {
     try {
-      // Basic validation
+      // Validation
       if (!customSessionForm.date) {
         toast.error('Please select a date');
+        return;
+      }
+      
+      if (!customSessionForm.startTime) {
+        toast.error('Please select a start time');
+        return;
+      }
+      
+      if (!customSessionForm.endTime) {
+        toast.error('Please select an end time');
         return;
       }
 
       // Show loading state
       setSessionActionLoading(true);
+      
+      // Clone the form data and ensure date is in proper format
+      const formData = {
+        ...customSessionForm,
+        date: new Date(customSessionForm.date).toISOString()
+      };
+
+      console.log('Submitting custom session data:', formData);
 
       // Add the custom session
-      const response = await kindergartenClassesAPI.addCustomSession(classId, customSessionForm);
+      const response = await kindergartenClassesAPI.addCustomSession(classId, formData);
       
       if (response.status === 201) {
         toast.success('Custom session added successfully');
@@ -431,6 +470,8 @@ const ClassDetail = () => {
         setCustomSessionModalOpen(false);
         setCustomSessionForm({
           date: new Date().toISOString().split('T')[0],
+          startTime: '09:00',
+          endTime: '10:00',
           notes: ''
         });
         
@@ -443,7 +484,16 @@ const ClassDetail = () => {
       }
     } catch (err) {
       console.error('Error adding custom session:', err);
-      toast.error('Error adding custom session');
+      // More detailed error logging for debugging
+      if (err.response) {
+        console.error('Error response:', {
+          data: err.response.data,
+          status: err.response.status,
+          headers: err.response.headers
+        });
+      }
+      const errorMessage = err.response?.data?.message || 'Failed to add custom session';
+      toast.error(errorMessage);
     } finally {
       setSessionActionLoading(false);
     }
@@ -1115,9 +1165,32 @@ const ClassDetail = () => {
                       <Text fontWeight="semibold" color={headingColor}>
                         {monthData.label}
                           </Text>
-                      <Badge ml={2} colorScheme="blue" borderRadius="full">
-                        {monthData.sessions.length}
+                      <HStack spacing={2} ml={2}>
+                        <Badge 
+                          colorScheme="blue" 
+                          borderRadius="full"
+                          px={2}
+                          py={1}
+                          fontSize="xs"
+                        >
+                          {monthData.sessions.length} total
                         </Badge>
+                        {monthData.sessions.filter(session => session.status === 'Scheduled').length > 0 && (
+                          <Badge 
+                            colorScheme="red" 
+                            borderRadius="full"
+                            display="flex"
+                            alignItems="center"
+                            px={2}
+                            py={1}
+                            fontSize="xs"
+                            opacity="0.85"
+                          >
+                            <Box as={FaRegCalendarAlt} mr={1} boxSize="10px" />
+                            {monthData.sessions.filter(session => session.status === 'Scheduled').length} scheduled
+                          </Badge>
+                        )}
+                      </HStack>
                     </Flex>
                       </Flex>
                       
@@ -1148,7 +1221,22 @@ const ClassDetail = () => {
                                   <Tr 
                                   key={`${monthKey}-${idx}`}
                                   bg={isToday ? todaySessionTrBg : undefined}
+                                  position="relative"
                                   >
+                                    <SessionActions
+                                      session={session}
+                                      onMarkCompleted={() => handleQuickStatusUpdate(session.index, 'Completed')}
+                                      onMarkCanceled={() => handleQuickStatusUpdate(session.index, 'Canceled')}
+                                      onAdvancedEdit={() => handleAdvancedUpdate(session, session.index)}
+                                      onDelete={() => {
+                                        setSessionToDeleteId(session.index);
+                                        setDeleteSessionModalOpen(true);
+                                      }}
+                                      isLoading={updatingSessionId !== null}
+                                      completedLabel="Mark Completed"
+                                      canceledLabel="Mark Canceled"
+                                      showDelete={true}
+                                    />
                                   <Td>{idx + 1}</Td>
                                   <Td fontWeight={isToday ? "bold" : "normal"}>
                                     {formattedDate}
@@ -1181,60 +1269,11 @@ const ClassDetail = () => {
                                     {session.notes || '-'}
                                     </Td>
                                     <Td>
-                                      <HStack spacing={2}>
-                                      {session.status !== 'Completed' && (
-                                        <Tooltip label="Mark Complete" placement="top">
-                                            <IconButton
-                                              icon={updatingSessionId === session.index ? <Spinner size="sm" /> : <FaCheck />}
-                                              colorScheme="green"
-                                            variant="outline"
-                                            size="xs"
-                                            isDisabled={updatingSessionId !== null}
-                                            onClick={() => handleQuickStatusUpdate(session.index, 'Completed')}
-                                              aria-label="Mark as completed"
-                                            />
-                                          </Tooltip>
-                                      )}
-                                      
-                                      {session.status !== 'Canceled' && (
-                                        <Tooltip label="Mark Canceled" placement="top">
-                                            <IconButton
-                                              icon={updatingSessionId === session.index ? <Spinner size="sm" /> : <FaTimes />}
-                                              colorScheme="red"
-                                            variant="outline"
-                                            size="xs"
-                                            isDisabled={updatingSessionId !== null}
-                                            onClick={() => handleQuickStatusUpdate(session.index, 'Canceled')}
-                                              aria-label="Mark as canceled"
-                                            />
-                                          </Tooltip>
-                                      )}
-                                      
-                                      <Tooltip label="Advanced Edit" placement="top">
-                                            <IconButton
-                                          icon={<FaEdit />}
-                                              colorScheme="blue"
-                                          variant="outline"
-                                          size="xs"
-                                          onClick={() => handleAdvancedUpdate(session, session.index)}
-                                          aria-label="Advanced edit"
-                                            />
-                                          </Tooltip>
-                                        
-                                      <Tooltip label="Delete Session Permanently" placement="top">
-                                          <IconButton
-                                          icon={<FaTrash />}
-                                          colorScheme="red"
-                                            variant="ghost"
-                                          size="xs"
-                                            onClick={() => {
-                                            setSessionToDeleteId(session.index);
-                                            setDeleteSessionModalOpen(true);
-                                            }}
-                                          aria-label="Delete session permanently"
-                                          isDisabled={updatingSessionId !== null}
-                                          />
-                                        </Tooltip>
+                                      <HStack spacing={2} visibility="hidden">
+                                        <IconButton icon={<FaCheck />} size="xs" aria-label="Placeholder" />
+                                        <IconButton icon={<FaTimes />} size="xs" aria-label="Placeholder" />
+                                        <IconButton icon={<FaEdit />} size="xs" aria-label="Placeholder" />
+                                        <IconButton icon={<FaTrash />} size="xs" aria-label="Placeholder" />
                                       </HStack>
                                     </Td>
                                   </Tr>
@@ -1351,23 +1390,43 @@ const ClassDetail = () => {
               <VStack spacing={4} align="stretch">
                 <FormControl isRequired>
                   <FormLabel>Date</FormLabel>
-              <Input
+                  <Input
                     type="date"
                     name="date"
                     value={customSessionForm.date}
                     onChange={handleCustomSessionFormChange}
-              />
-            </FormControl>
+                  />
+                </FormControl>
+                <SimpleGrid columns={2} spacing={4}>
+                  <FormControl isRequired>
+                    <FormLabel>Start Time</FormLabel>
+                    <Input
+                      type="time"
+                      name="startTime"
+                      value={customSessionForm.startTime}
+                      onChange={handleCustomSessionFormChange}
+                    />
+                  </FormControl>
+                  <FormControl isRequired>
+                    <FormLabel>End Time</FormLabel>
+                    <Input
+                      type="time"
+                      name="endTime"
+                      value={customSessionForm.endTime}
+                      onChange={handleCustomSessionFormChange}
+                    />
+                  </FormControl>
+                </SimpleGrid>
                 <FormControl>
                   <FormLabel>Notes</FormLabel>
-              <Textarea
+                  <Textarea
                     name="notes"
                     value={customSessionForm.notes}
                     onChange={handleCustomSessionFormChange}
                     placeholder="Reason for adding this custom session"
-                rows={4}
+                    rows={4}
                   />
-            </FormControl>
+                </FormControl>
               </VStack>
           </ModalBody>
           <ModalFooter>

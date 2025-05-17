@@ -190,7 +190,7 @@ const kindergartenClassesBaseAPI = {
   getSessions: (id) => api.get(`/kindergarten-classes/${id}/sessions`),
   getSessionStats: (id) => api.get(`/kindergarten-classes/${id}/sessions/stats`),
   getStats: () => api.get('/kindergarten-classes/stats/overview'),
-  addCustomSession: (id, data) => api.post(`/kindergarten-classes/${id}/sessions/custom`),
+  addCustomSession: (id, data) => api.post(`/kindergarten-classes/${id}/sessions/custom`, data),
   deleteSession: (classId, sessionIndex) => api.delete(`/kindergarten-classes/${classId}/sessions/${sessionIndex}`)
 };
 export const kindergartenClassesAPI = createCachedAPI(kindergartenClassesBaseAPI, 'kindergartenClassesAPI');

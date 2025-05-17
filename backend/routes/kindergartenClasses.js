@@ -274,6 +274,14 @@ router.post('/:id/sessions/custom', async (req, res) => {
       return res.status(400).json({ message: 'Date is required' });
     }
     
+    if (!startTime) {
+      return res.status(400).json({ message: 'Start time is required' });
+    }
+    
+    if (!endTime) {
+      return res.status(400).json({ message: 'End time is required' });
+    }
+    
     // Find the class
     const kClass = await KindergartenClass.findById(req.params.id);
     if (!kClass) {
@@ -283,6 +291,8 @@ router.post('/:id/sessions/custom', async (req, res) => {
     // Create the new custom session
     const customSession = {
       date: new Date(date),
+      startTime,
+      endTime,
       status: 'Completed', // Automatically mark as completed
       notes: notes || `Custom session added on ${new Date().toLocaleDateString()}`,
       isCustom: true // Flag to identify custom sessions

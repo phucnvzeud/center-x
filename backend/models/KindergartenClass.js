@@ -6,6 +6,14 @@ const SessionSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  startTime: {
+    type: String,
+    default: null
+  },
+  endTime: {
+    type: String,
+    default: null
+  },
   status: {
     type: String,
     enum: ['Scheduled', 'Completed', 'Canceled', 'Holiday Break', 'Compensatory'],

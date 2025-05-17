@@ -43,6 +43,7 @@ const ClassList = ({ limit, compact = false }) => {
   const [teacherFilter, setTeacherFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
   const [schoolFilter, setSchoolFilter] = useState(schoolId || '');
+  const [showFinished, setShowFinished] = useState(false);
   
   // Data for filters
   const [teachers, setTeachers] = useState([]);
@@ -90,11 +91,14 @@ const ClassList = ({ limit, compact = false }) => {
       try {
         setLoading(true);
         
+        // If showFinished is false and no status filter is explicitly set, default to Active
+        const effectiveStatusFilter = (!showFinished && !statusFilter) ? 'Active' : statusFilter;
+        
         // If a school ID is provided in the URL, it takes precedence
         if (isSchoolSpecific) {
           const [schoolResponse, classesResponse] = await Promise.all([
             schoolsAPI.getById(schoolId),
-            schoolsAPI.getClasses(schoolId, statusFilter)
+            schoolsAPI.getClasses(schoolId, effectiveStatusFilter)
           ]);
           
           setSchool(schoolResponse.data);
@@ -103,7 +107,7 @@ const ClassList = ({ limit, compact = false }) => {
           // Build filters for API request
           const filters = {};
           
-          if (statusFilter) filters.status = statusFilter;
+          if (effectiveStatusFilter) filters.status = effectiveStatusFilter;
           if (teacherFilter) filters.teacher = teacherFilter;
           if (schoolFilter) filters.school = schoolFilter;
           // Region filter needs to be handled by filtering the results client-side
@@ -136,7 +140,7 @@ const ClassList = ({ limit, compact = false }) => {
     };
     
     fetchData();
-  }, [schoolId, isSchoolSpecific, statusFilter, teacherFilter, regionFilter, schoolFilter, schools]);
+  }, [schoolId, isSchoolSpecific, statusFilter, teacherFilter, regionFilter, schoolFilter, schools, showFinished]);
 
   const handleDeleteClass = async (classId) => {
     if (window.confirm('Are you sure you want to delete this class?')) {
@@ -162,6 +166,7 @@ const ClassList = ({ limit, compact = false }) => {
     setStatusFilter('');
     setTeacherFilter('');
     setRegionFilter('');
+    setShowFinished(false);
     if (!isSchoolSpecific) {
       setSchoolFilter('');
     }
@@ -257,6 +262,20 @@ const ClassList = ({ limit, compact = false }) => {
           {isSchoolSpecific && school ? `Classes in ${school.name}` : 'All Kindergarten Classes'}
           </Heading>
           <HStack spacing={2}>
+            <Button 
+              size="sm"
+              variant={showFinished ? "solid" : "outline"} 
+              colorScheme={showFinished ? "blue" : "gray"}
+              onClick={() => {
+                // When toggling, reset any explicit status filter
+                if (statusFilter === 'Completed') {
+                  setStatusFilter('');
+                }
+                setShowFinished(!showFinished);
+              }}
+            >
+              {showFinished ? "Show Active" : "Show Finished"}
+            </Button>
             <Button 
               leftIcon={<FaFilter />}
               size="sm"

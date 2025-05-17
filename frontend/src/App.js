@@ -256,40 +256,40 @@ function App() {
         }}
       >
         <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/test" element={<TestComponent />} />
-            <Route path="/teachers" element={<Teachers />} />
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/test" element={<TestComponent />} />
+              <Route path="/teachers" element={<Teachers />} />
             <Route path="/teachers/:teacherId" element={<TeacherDetail />} />
             <Route path="/teachers/:teacherId/edit" element={<TeacherEdit />} />
-            <Route path="/teachers/manage" element={<TeachersManagement />} />
-            <Route path="/teachers/:teacherId/schedule" element={<TeacherSchedule />} />
-            <Route path="/courses" element={<Courses />} />
-            <Route path="/courses/new" element={<CourseForm />} />
-            <Route path="/courses/edit/:courseId" element={<CourseForm />} />
-            <Route path="/courses/:courseId" element={<CourseDetail />} />
-            <Route path="/courses/:courseId/sessions" element={<Sessions />} />
+              <Route path="/teachers/manage" element={<TeachersManagement />} />
+              <Route path="/teachers/:teacherId/schedule" element={<TeacherSchedule />} />
+              <Route path="/courses" element={<Courses />} />
+              <Route path="/courses/new" element={<CourseForm />} />
+              <Route path="/courses/edit/:courseId" element={<CourseForm />} />
+              <Route path="/courses/:courseId" element={<CourseDetail />} />
+              <Route path="/courses/:courseId/sessions" element={<Sessions />} />
             <Route path="/students" element={<StudentManagement />} />
             <Route path="/students/manage" element={<StudentManagement />} />
             <Route path="/students/new" element={<StudentForm />} />
             <Route path="/students/:studentId" element={<StudentDetail />} />
             <Route path="/students/:studentId/edit" element={<StudentForm />} />
-            <Route path="/kindergarten" element={<KindergartenDashboard />} />
-            <Route path="/kindergarten/regions" element={<RegionList />} />
-            <Route path="/kindergarten/regions/new" element={<RegionForm />} />
-            <Route path="/kindergarten/regions/edit/:regionId" element={<RegionForm />} />
-            <Route path="/kindergarten/regions/:regionId/schools" element={<SchoolList />} />
-            <Route path="/kindergarten/schools" element={<SchoolList />} />
-            <Route path="/kindergarten/schools/new" element={<SchoolForm />} />
-            <Route path="/kindergarten/schools/edit/:schoolId" element={<SchoolForm />} />
-            <Route path="/kindergarten/schools/:schoolId/classes" element={<ClassList />} />
-            <Route path="/kindergarten/classes" element={<ClassList />} />
-            <Route path="/kindergarten/classes/new" element={<ClassForm />} />
-            <Route path="/kindergarten/classes/edit/:classId" element={<ClassForm />} />
-            <Route path="/kindergarten/classes/:classId" element={<ClassDetail />} />
-            <Route path="/branches" element={<Branches />} />
-            <Route path="/notifications" element={<Notifications />} />
-          </Routes>
+              <Route path="/kindergarten" element={<KindergartenDashboard />} />
+              <Route path="/kindergarten/regions" element={<RegionList />} />
+              <Route path="/kindergarten/regions/new" element={<RegionForm />} />
+              <Route path="/kindergarten/regions/edit/:regionId" element={<RegionForm />} />
+              <Route path="/kindergarten/regions/:regionId/schools" element={<SchoolList />} />
+              <Route path="/kindergarten/schools" element={<SchoolList />} />
+              <Route path="/kindergarten/schools/new" element={<SchoolForm />} />
+              <Route path="/kindergarten/schools/edit/:schoolId" element={<SchoolForm />} />
+              <Route path="/kindergarten/schools/:schoolId/classes" element={<ClassList />} />
+              <Route path="/kindergarten/classes" element={<ClassList />} />
+              <Route path="/kindergarten/classes/new" element={<ClassForm />} />
+              <Route path="/kindergarten/classes/edit/:classId" element={<ClassForm />} />
+              <Route path="/kindergarten/classes/:classId" element={<ClassDetail />} />
+              <Route path="/branches" element={<Branches />} />
+              <Route path="/notifications" element={<Notifications />} />
+            </Routes>
         </Layout>
       </Router>
     </NotificationProvider>

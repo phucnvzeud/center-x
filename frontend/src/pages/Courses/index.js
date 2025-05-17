@@ -17,7 +17,7 @@ import {
   useColorModeValue,
   HStack
 } from '@chakra-ui/react';
-import { FaSearch, FaFilter, FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaEye, FaUserGraduate } from 'react-icons/fa';
+import { FaSearch, FaFilter, FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaEye, FaUserGraduate, FaClock } from 'react-icons/fa';
 
 const Courses = () => {
   const navigate = useNavigate();
@@ -28,10 +28,11 @@ const Courses = () => {
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Active');
   const [levelFilter, setLevelFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
   const [teacherFilter, setTeacherFilter] = useState('');
+  const [showFinished, setShowFinished] = useState(false);
   
   // Reference data
   const [branches, setBranches] = useState([]);
@@ -45,19 +46,88 @@ const Courses = () => {
   useEffect(() => {
     fetchCourses();
     fetchReferenceData();
-  }, []);
+  }, [showFinished]); // Re-fetch when showFinished changes
   
   // Apply filters whenever filter criteria change
   useEffect(() => {
     applyFilters();
-  }, [courses, searchTerm, statusFilter, levelFilter, branchFilter, teacherFilter]);
+  }, [courses, searchTerm, statusFilter, levelFilter, branchFilter, teacherFilter, showFinished]);
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
       const response = await coursesAPI.getAll();
-      setCourses(response.data);
-      setFilteredCourses(response.data);
+      
+      // For active courses, fetch sessions data
+      const coursesData = response.data;
+      const activeCourses = coursesData.filter(course => course.status === 'Active');
+      
+      // Create an array of promises for fetching sessions for active courses
+      const sessionPromises = activeCourses.map(course => 
+        coursesAPI.getSessions(course._id)
+          .then(sessionsResponse => ({
+            courseId: course._id,
+            sessions: sessionsResponse.data
+          }))
+          .catch(err => {
+            console.error(`Error fetching sessions for course ${course._id}:`, err);
+            return { courseId: course._id, sessions: [] };
+          })
+      );
+      
+      // Wait for all session requests to complete
+      const sessionResults = await Promise.all(sessionPromises);
+      
+      // Create a map of course ID to sessions
+      const sessionsMap = {};
+      sessionResults.forEach(result => {
+        sessionsMap[result.courseId] = result.sessions;
+      });
+      
+      // Add remaining sessions to each course
+      const coursesWithRemainingSessions = coursesData.map(course => {
+        let remainingSessions = 0;
+        
+        if (course.status === 'Active') {
+          const sessions = sessionsMap[course._id] || [];
+          remainingSessions = sessions.filter(session => 
+            !session.status || 
+            (session.status !== 'Taught' && 
+             session.status !== 'Canceled' && 
+             !session.status.startsWith('Absent'))
+          ).length;
+        }
+        
+        return {
+          ...course,
+          remainingSessions: remainingSessions
+        };
+      });
+      
+      // Sort courses by remaining sessions (fewest first)
+      coursesWithRemainingSessions.sort((a, b) => {
+        // Active courses first
+        if (a.status === 'Active' && b.status !== 'Active') return -1;
+        if (a.status !== 'Active' && b.status === 'Active') return 1;
+        
+        // For active courses, sort by remaining sessions
+        if (a.status === 'Active' && b.status === 'Active') {
+          return a.remainingSessions - b.remainingSessions;
+        }
+        
+        // Default sorting
+        return 0;
+      });
+      
+      setCourses(coursesWithRemainingSessions);
+      
+      // Apply initial filtering based on showFinished state
+      let initialFiltered = coursesWithRemainingSessions;
+      if (!showFinished && statusFilter === 'Active') {
+        initialFiltered = coursesWithRemainingSessions.filter(course => course.status === 'Active');
+      }
+      
+      setFilteredCourses(initialFiltered);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching courses:', err);
@@ -94,6 +164,9 @@ const Courses = () => {
     // Apply status filter
     if (statusFilter) {
       result = result.filter(course => course.status === statusFilter);
+    } else if (!showFinished) {
+      // If no status filter is set but showFinished is false, exclude Finished courses
+      result = result.filter(course => course.status !== 'Finished');
     }
     
     // Apply level filter
@@ -110,6 +183,21 @@ const Courses = () => {
     if (teacherFilter) {
       result = result.filter(course => course.teacher?._id === teacherFilter);
     }
+    
+    // Sort by remaining sessions (courses with the fewest remaining sessions first)
+    result.sort((a, b) => {
+      // Active courses first
+      if (a.status === 'Active' && b.status !== 'Active') return -1;
+      if (a.status !== 'Active' && b.status === 'Active') return 1;
+      
+      // For active courses, sort by remaining sessions
+      if (a.status === 'Active' && b.status === 'Active') {
+        return a.remainingSessions - b.remainingSessions;
+      }
+      
+      // Default sorting
+      return 0;
+    });
     
     setFilteredCourses(result);
   };
@@ -149,10 +237,11 @@ const Courses = () => {
   
   const clearFilters = () => {
     setSearchTerm('');
-    setStatusFilter('');
+    setStatusFilter('Active');
     setLevelFilter('');
     setBranchFilter('');
     setTeacherFilter('');
+    setShowFinished(false);
   };
   
   const toggleFilters = () => {
@@ -190,6 +279,20 @@ const Courses = () => {
       <Flex justify="space-between" align="center" mb={6}>
         <Heading fontSize="xl" fontWeight="semibold">Courses</Heading>
         <HStack spacing={2}>
+          <Button 
+            size="sm"
+            variant={showFinished ? "solid" : "outline"} 
+            colorScheme={showFinished ? "blue" : "gray"}
+            onClick={() => {
+              // When toggling, reset any explicit status filter if it was set to Finished
+              if (statusFilter === 'Finished') {
+                setStatusFilter('Active');
+              }
+              setShowFinished(!showFinished);
+            }}
+          >
+            {showFinished ? "Show Active" : "Show Finished"}
+          </Button>
           <Button 
             leftIcon={<FaFilter />}
             size="sm"
@@ -318,6 +421,13 @@ const Courses = () => {
                     {course.level && (
                       <Badge px={2} py={1} bg="purple.100" color="purple.700" borderRadius="full">
                         {course.level}
+                      </Badge>
+                    )}
+                    
+                    {course.status === 'Active' && (
+                      <Badge px={2} py={1} bg="orange.100" color="orange.700" borderRadius="full" display="flex" alignItems="center">
+                        <Box as={FaClock} mr={1} size="12px" />
+                        {course.remainingSessions} sessions left
                       </Badge>
                     )}
                   </Flex>
