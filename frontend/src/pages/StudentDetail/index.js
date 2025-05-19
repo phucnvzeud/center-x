@@ -52,11 +52,13 @@ import {
   FaMoneyBillWave
 } from 'react-icons/fa';
 import { studentsAPI, coursesAPI } from '../../api';
+import { useTranslation } from 'react-i18next';
 
 const StudentDetail = () => {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { t } = useTranslation();
   
   const [student, setStudent] = useState(null);
   const [enrollments, setEnrollments] = useState([]);
@@ -195,35 +197,23 @@ const StudentDetail = () => {
       await studentsAPI.enroll(studentId, enrollmentData);
       
       toast({
-        title: 'Enrollment successful',
-        description: 'Student has been enrolled in the course.',
+        title: t('students.enrollment_saved'),
         status: 'success',
         duration: 3000,
         isClosable: true
       });
       
-      // Refresh enrollments
+      // Reload enrollments and close modal
       const enrollmentsResponse = await studentsAPI.getEnrollments(studentId);
       setEnrollments(enrollmentsResponse.data);
-      
-      // Update available courses
-      const enrolledCourseIds = enrollmentsResponse.data
-        .filter(e => e.status !== 'Withdrawn')
-        .map(e => e.course._id);
-      
-      setAvailableCourses(courses.filter(
-        course => !enrolledCourseIds.includes(course._id) &&
-                 course.status !== 'Completed' &&
-                 course.status !== 'Cancelled'
-      ));
       
       closeEnrollModal();
       setLoading(false);
     } catch (err) {
       console.error('Error enrolling student:', err);
       toast({
-        title: 'Enrollment failed',
-        description: err.response?.data?.message || 'Failed to enroll student. Please try again.',
+        title: t('common.error'),
+        description: err.message,
         status: 'error',
         duration: 3000,
         isClosable: true
@@ -235,27 +225,30 @@ const StudentDetail = () => {
   const handleUpdatePayment = async (e) => {
     e.preventDefault();
     
+    if (!selectedEnrollment) return;
+    
     try {
       setLoading(true);
       
-      // Update enrollment payment information
-      await studentsAPI.withdraw(studentId, {
-        enrollmentId: selectedEnrollment._id,
-        newStatus: selectedEnrollment.status, // Keep the same status
+      // Update enrollment payment details
+      await studentsAPI.updateEnrollment(
+        studentId, 
+        selectedEnrollment._id, 
+        {
         totalAmount: parseFloat(enrollmentData.totalAmount),
         amountPaid: parseFloat(enrollmentData.amountPaid),
         notes: enrollmentData.notes
-      });
+        }
+      );
       
       toast({
-        title: 'Payment updated',
-        description: 'Payment information has been updated successfully.',
+        title: t('students.payment_updated'),
         status: 'success',
         duration: 3000,
         isClosable: true
       });
       
-      // Refresh enrollments
+      // Reload enrollments and close modal
       const enrollmentsResponse = await studentsAPI.getEnrollments(studentId);
       setEnrollments(enrollmentsResponse.data);
       
@@ -264,8 +257,8 @@ const StudentDetail = () => {
     } catch (err) {
       console.error('Error updating payment:', err);
       toast({
-        title: 'Payment update failed',
-        description: 'Failed to update payment information. Please try again.',
+        title: t('common.error'),
+        description: err.message,
         status: 'error',
         duration: 3000,
         isClosable: true
@@ -275,22 +268,16 @@ const StudentDetail = () => {
   };
   
   const handleWithdrawFromCourse = async (enrollment) => {
-    if (!window.confirm(`Are you sure you want to withdraw ${student.name} from this course?`)) {
-      return;
-    }
+    if (!window.confirm(t('common.confirmDelete'))) return;
     
     try {
       setLoading(true);
       
       // Withdraw student from course
-      await studentsAPI.withdraw(studentId, {
-        enrollmentId: enrollment._id,
-        newStatus: 'Withdrawn'
-      });
+      await studentsAPI.withdrawFromCourse(studentId, enrollment._id);
       
       toast({
-        title: 'Student withdrawn',
-        description: 'Student has been withdrawn from the course.',
+        title: t('students.student_withdrawn'),
         status: 'success',
         duration: 3000,
         isClosable: true
@@ -326,17 +313,35 @@ const StudentDetail = () => {
   };
   
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return t('common.not_provided');
     return new Date(dateString).toLocaleDateString();
   };
   
-  const getPaymentStatusColor = (status) => {
-    switch (status) {
-      case 'Paid': return 'green';
-      case 'Partial': return 'yellow';
-      case 'Pending': return 'orange';
-      default: return 'gray';
+  const getPaymentStatusColor = (enrollment) => {
+    const { totalAmount, amountPaid } = enrollment;
+    
+    // Calculate payment status
+    let status, colorScheme;
+    
+    if (!totalAmount || totalAmount === 0) {
+      status = t('course_management.course_detail.no_payment');
+      colorScheme = 'gray';
+    } else if (amountPaid >= totalAmount) {
+      status = t('course_management.course_detail.full_payment');
+      colorScheme = 'green';
+    } else if (amountPaid > 0) {
+      status = t('course_management.course_detail.partial_payment');
+      colorScheme = 'yellow';
+    } else {
+      status = t('course_management.course_detail.no_payment');
+      colorScheme = 'red';
     }
+    
+    return (
+      <Badge colorScheme={colorScheme}>
+        {status}
+      </Badge>
+    );
   };
   
   const getEnrollmentStatusColor = (status) => {
@@ -353,7 +358,7 @@ const StudentDetail = () => {
     return (
       <Flex justify="center" align="center" height="100vh">
         <Spinner size="xl" thickness="4px" color="purple.500" />
-        <Text ml={4} fontSize="xl">Loading student data...</Text>
+        <Text ml={4} fontSize="xl">{t('students.loading')}</Text>
       </Flex>
     );
   }
@@ -362,21 +367,20 @@ const StudentDetail = () => {
     return (
       <Alert status="error" variant="solid">
         <AlertIcon />
-        {error}
+        <Text>{error}</Text>
       </Alert>
     );
   }
   
   return (
-    <Box p={5}>
+    <Box maxW="1200px" mx="auto" mb={8}>
       <Flex mb={6} align="center">
         <Button
           leftIcon={<FaArrowLeft />}
           variant="ghost"
           onClick={() => navigate('/students')}
-          mr={4}
         >
-          Back to Students
+          {t('common.back')}
         </Button>
         <Heading size="lg">{student?.name}</Heading>
         <Button
@@ -384,139 +388,116 @@ const StudentDetail = () => {
           colorScheme="blue"
           variant="outline"
           ml="auto"
-          onClick={() => navigate(`/students/${studentId}/edit`)}
+          onClick={() => navigate(`/students/edit/${studentId}`)}
         >
-          Edit
+          {t('students.edit')}
         </Button>
       </Flex>
       
-      <Flex direction={{ base: 'column', lg: 'row' }} gap={6}>
-        {/* Student Information */}
         <Box 
           bg="white" 
           p={6} 
           borderRadius="md" 
           boxShadow="sm"
-          flex="1"
-          borderWidth="1px"
-          borderColor="gray.200"
+        mb={6}
         >
-          <Heading size="md" mb={4}>Student Information</Heading>
+        <Heading size="md" mb={4}>{t('students.student_information')}</Heading>
           
           <VStack spacing={3} align="stretch">
-            <Flex justify="space-between">
-              <Text fontWeight="bold">Name:</Text>
-              <Text>{student?.name}</Text>
+          <Flex>
+            <Text fontWeight="bold">{t('students.name')}:</Text>
+            <Text ml={2}>{student?.name}</Text>
             </Flex>
             
-            <Flex justify="space-between">
-              <Text fontWeight="bold">Email:</Text>
-              <Text>{student?.email}</Text>
+          <Flex>
+            <Text fontWeight="bold">{t('students.email')}:</Text>
+            <Text ml={2}>{student?.email || t('common.not_provided')}</Text>
             </Flex>
             
-            <Flex justify="space-between">
-              <Text fontWeight="bold">Phone:</Text>
-              <Text>{student?.phone || 'Not provided'}</Text>
+          <Flex>
+            <Text fontWeight="bold">{t('students.phone')}:</Text>
+            <Text ml={2}>{student?.phone || t('common.not_provided')}</Text>
             </Flex>
             
-            <Flex justify="space-between">
-              <Text fontWeight="bold">Date of Birth:</Text>
-              <Text>{student?.dateOfBirth ? formatDate(student.dateOfBirth) : 'Not provided'}</Text>
+          <Flex>
+            <Text fontWeight="bold">{t('students.dob')}:</Text>
+            <Text ml={2}>{student?.dateOfBirth ? formatDate(student.dateOfBirth) : t('common.not_provided')}</Text>
             </Flex>
             
-            <Flex justify="space-between">
-              <Text fontWeight="bold">Language Level:</Text>
-              <Badge colorScheme="purple">{student?.languageLevel || 'Beginner'}</Badge>
+          <Flex align="center">
+            <Text fontWeight="bold">{t('students.language_level')}:</Text>
+            <Badge colorScheme="purple" ml={2}>{student?.languageLevel || t('students.beginner')}</Badge>
             </Flex>
             
-            <Flex justify="space-between">
-              <Text fontWeight="bold">Status:</Text>
-              <Badge colorScheme={student?.active ? 'green' : 'red'}>
-                {student?.active ? 'Active' : 'Inactive'}
-              </Badge>
+          <Flex align="center">
+            <Text fontWeight="bold">{t('students.status')}:</Text>
+            <Badge colorScheme={student?.status === 'Active' ? 'green' : 'gray'} ml={2}>{student?.status}</Badge>
             </Flex>
             
-            <Flex justify="space-between">
-              <Text fontWeight="bold">Enrolled Since:</Text>
-              <Text>{student?.enrollmentDate ? formatDate(student.enrollmentDate) : 'N/A'}</Text>
+          <Flex>
+            <Text fontWeight="bold">{t('students.enrolled_since')}:</Text>
+            <Text ml={2}>{student?.createdAt ? formatDate(student.createdAt) : t('common.not_provided')}</Text>
             </Flex>
             
-            {student?.address && (
-              <>
-                <Text fontWeight="bold">Address:</Text>
-                <Text>{student.address}</Text>
-              </>
-            )}
-            
-            {student?.notes && (
-              <>
-                <Text fontWeight="bold">Notes:</Text>
-                <Text>{student.notes}</Text>
-              </>
-            )}
+          <Flex>
+            <Text fontWeight="bold">{t('students.address')}:</Text>
+            <Text ml={2}>{student?.address || t('common.not_provided')}</Text>
+          </Flex>
+          
+          <Flex>
+            <Text fontWeight="bold">{t('students.notes')}:</Text>
+            <Text ml={2}>{student?.notes || t('common.not_provided')}</Text>
+          </Flex>
           </VStack>
         </Box>
         
-        {/* Enrollments */}
         <Box 
           bg="white" 
           p={6} 
           borderRadius="md" 
           boxShadow="sm"
-          flex="2"
-          borderWidth="1px"
-          borderColor="gray.200"
         >
           <Flex justify="space-between" align="center" mb={4}>
-            <Heading size="md">Course Enrollments</Heading>
+          <Heading size="md">{t('students.course_enrollments')}</Heading>
             <Button
               leftIcon={<FaUserPlus />}
               colorScheme="purple"
               size="sm"
               onClick={openEnrollmentModal}
             >
-              Enroll in Course
+            {t('students.add_enrollment')}
             </Button>
           </Flex>
           
-          {enrollments.length > 0 ? (
             <Box overflowX="auto">
               <Table variant="simple" size="sm">
                 <Thead>
                   <Tr>
-                    <Th>Course</Th>
-                    <Th>Enrollment Date</Th>
-                    <Th>Status</Th>
-                    <Th>Payment</Th>
-                    <Th width="50px">Actions</Th>
+                <Th>{t('students.course')}</Th>
+                <Th>{t('students.start_date')}</Th>
+                <Th>{t('students.payment_status')}</Th>
+                <Th>{t('students.actions')}</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
                   {enrollments.map(enrollment => (
                     <Tr key={enrollment._id}>
                       <Td>
-                        <Link to={`/courses/${enrollment.course?._id}`}>
                           <Text color="blue.500" fontWeight="medium">
-                            {enrollment.course?.name || 'Unknown Course'}
+                      <Link to={`/courses/${enrollment.course._id}`}>
+                        {enrollment.course.name}
+                      </Link>
                           </Text>
-                        </Link>
-                      </Td>
-                      <Td>{formatDate(enrollment.enrollmentDate)}</Td>
-                      <Td>
-                        <Badge colorScheme={getEnrollmentStatusColor(enrollment.status)}>
-                          {enrollment.status}
-                        </Badge>
                       </Td>
                       <Td>
                         <Flex align="center">
-                          <Badge colorScheme={getPaymentStatusColor(enrollment.paymentStatus)} mr={2}>
-                            {enrollment.paymentStatus}
-                          </Badge>
+                      <Box as={FaCalendarAlt} color="gray.500" mr={2} />
                           <Text fontSize="sm" whiteSpace="nowrap">
-                            ${enrollment.amountPaid || 0} of ${enrollment.totalAmount || 0}
+                        {formatDate(enrollment.enrollmentDate)}
                           </Text>
                         </Flex>
                       </Td>
+                  <Td>{getPaymentStatusColor(enrollment)}</Td>
                       <Td>
                         <Menu>
                           <MenuButton
@@ -526,28 +507,12 @@ const StudentDetail = () => {
                             size="sm"
                           />
                           <MenuList>
-                            <MenuItem 
-                              icon={<FaMoneyBillWave />}
-                              onClick={() => openUpdatePaymentModal(enrollment)}
-                            >
-                              Update Payment
+                        <MenuItem icon={<FaMoneyBillWave />} onClick={() => openUpdatePaymentModal(enrollment)}>
+                          {t('students.update_payment')}
                             </MenuItem>
-                            <MenuItem 
-                              icon={<FaCalendarAlt />}
-                              as={Link}
-                              to={`/courses/${enrollment.course?._id}`}
-                            >
-                              View Course
-                            </MenuItem>
-                            {enrollment.status !== 'Withdrawn' && (
-                              <MenuItem 
-                                icon={<FaTrash />}
-                                color="red.500"
-                                onClick={() => handleWithdrawFromCourse(enrollment)}
-                              >
-                                Withdraw
+                        <MenuItem icon={<FaTrash />} onClick={() => handleWithdrawFromCourse(enrollment)}>
+                          {t('students.withdraw')}
                               </MenuItem>
-                            )}
                           </MenuList>
                         </Menu>
                       </Td>
@@ -556,60 +521,55 @@ const StudentDetail = () => {
                 </Tbody>
               </Table>
             </Box>
-          ) : (
-            <Flex 
+        
+        {enrollments.length === 0 && (
+          <Box
+            mt={4}
+            p={8}
+            textAlign="center"
               direction="column" 
               align="center" 
               justify="center" 
-              p={10} 
-              borderWidth="1px" 
+            borderWidth={1}
               borderRadius="md" 
               borderStyle="dashed"
             >
-              <Box color="purple.500" mb={3} fontSize="3xl">
-                <FaGraduationCap />
-              </Box>
-              <Text mb={5}>
-                This student is not enrolled in any courses yet.
-              </Text>
+            <Text mb={4}>{t('students.no_enrollments')}</Text>
               <Button
                 leftIcon={<FaUserPlus />}
                 colorScheme="purple"
                 onClick={openEnrollmentModal}
               >
-                Enroll in Course
+              {t('students.enroll_in_course')}
               </Button>
-            </Flex>
+          </Box>
           )}
         </Box>
-      </Flex>
       
-      {/* Enroll in Course Modal */}
+      {/* Enrollment Modal */}
       <Modal isOpen={isEnrollModalOpen} onClose={closeEnrollModal}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Enroll in Course</ModalHeader>
+          <ModalHeader>{t('students.enroll_student')}</ModalHeader>
           <ModalCloseButton />
+          <ModalBody>
           <form onSubmit={handleSubmitEnrollment}>
-            <ModalBody pb={6}>
+              <VStack spacing={4}>
               <FormControl isRequired>
-                <FormLabel>Select Course</FormLabel>
+                  <FormLabel>{t('students.course')}</FormLabel>
                 <Select
                   name="courseId"
                   value={enrollmentData.courseId}
                   onChange={handleEnrollmentInputChange}
                 >
                   {availableCourses.map(course => (
-                    <option key={course._id} value={course._id}>
-                      {course.name} ({course.status})
-                    </option>
+                      <option key={course._id} value={course._id}>{course.name}</option>
                   ))}
                 </Select>
               </FormControl>
               
-              <HStack mt={4} spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel>Total Amount</FormLabel>
+                  <FormLabel>{t('students.total_amount')}</FormLabel>
                   <Input
                     name="totalAmount"
                     type="number"
@@ -619,7 +579,7 @@ const StudentDetail = () => {
                 </FormControl>
                 
                 <FormControl>
-                  <FormLabel>Amount Paid</FormLabel>
+                  <FormLabel>{t('students.amount_paid')}</FormLabel>
                   <Input
                     name="amountPaid"
                     type="number"
@@ -627,10 +587,9 @@ const StudentDetail = () => {
                     onChange={handleEnrollmentInputChange}
                   />
                 </FormControl>
-              </HStack>
               
-              <FormControl mt={4}>
-                <FormLabel>Enrollment Date</FormLabel>
+                <FormControl isRequired>
+                  <FormLabel>{t('students.enrollment_date')}</FormLabel>
                 <Input
                   name="enrollmentDate"
                   type="date"
@@ -639,38 +598,36 @@ const StudentDetail = () => {
                 />
               </FormControl>
               
-              <FormControl mt={4}>
-                <FormLabel>Notes</FormLabel>
+                <FormControl>
+                  <FormLabel>{t('students.notes')}</FormLabel>
                 <Textarea
                   name="notes"
                   value={enrollmentData.notes}
                   onChange={handleEnrollmentInputChange}
-                  placeholder="Any notes about this enrollment"
+                    placeholder={t('students.enrollment_notes')}
                 />
               </FormControl>
-            </ModalBody>
             
-            <ModalFooter>
-              <Button onClick={closeEnrollModal} mr={3}>Cancel</Button>
               <Button colorScheme="blue" type="submit" isLoading={loading}>
-                Enroll
+                  {t('students.save')}
               </Button>
-            </ModalFooter>
+              </VStack>
           </form>
+          </ModalBody>
         </ModalContent>
       </Modal>
       
-      {/* Update Payment Modal */}
+      {/* Payment Update Modal */}
       <Modal isOpen={isPaymentModalOpen} onClose={closePaymentModal}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Update Payment</ModalHeader>
+          <ModalHeader>{t('students.update_payment')}</ModalHeader>
           <ModalCloseButton />
+          <ModalBody>
           <form onSubmit={handleUpdatePayment}>
-            <ModalBody pb={6}>
-              <HStack spacing={4}>
+              <VStack spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel>Total Amount</FormLabel>
+                  <FormLabel>{t('students.total_amount')}</FormLabel>
                   <Input
                     name="totalAmount"
                     type="number"
@@ -679,8 +636,8 @@ const StudentDetail = () => {
                   />
                 </FormControl>
                 
-                <FormControl isRequired>
-                  <FormLabel>Amount Paid</FormLabel>
+                <FormControl>
+                  <FormLabel>{t('students.amount_paid')}</FormLabel>
                   <Input
                     name="amountPaid"
                     type="number"
@@ -688,26 +645,23 @@ const StudentDetail = () => {
                     onChange={handleEnrollmentInputChange}
                   />
                 </FormControl>
-              </HStack>
               
-              <FormControl mt={4}>
-                <FormLabel>Notes</FormLabel>
+                <FormControl>
+                  <FormLabel>{t('students.notes')}</FormLabel>
                 <Textarea
                   name="notes"
                   value={enrollmentData.notes}
                   onChange={handleEnrollmentInputChange}
-                  placeholder="Any notes about payment"
+                    placeholder={t('students.payment_notes')}
                 />
               </FormControl>
-            </ModalBody>
             
-            <ModalFooter>
-              <Button onClick={closePaymentModal} mr={3}>Cancel</Button>
               <Button colorScheme="blue" type="submit" isLoading={loading}>
-                Update
+                  {t('students.save')}
               </Button>
-            </ModalFooter>
+              </VStack>
           </form>
+          </ModalBody>
         </ModalContent>
       </Modal>
     </Box>

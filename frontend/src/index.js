@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
@@ -6,6 +6,13 @@ import reportWebVitals from './reportWebVitals';
 import { ChakraProvider } from '@chakra-ui/react';
 import theme from './theme';
 import 'aos/dist/aos.css';
+// Import i18n instance
+import './i18n';
+
+// Import test localization script in development mode
+if (process.env.NODE_ENV === 'development') {
+  import('./utils/testLocalization');
+}
 
 // =====================================================
 // Silence all React warnings from third-party libraries
@@ -75,12 +82,26 @@ console.warn = function() {
   return originalWarn.apply(console, args);
 };
 
+// Loading component for suspense fallback
+const Loader = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '100vh' 
+  }}>
+    Loading...
+  </div>
+);
+
 // AOS will be initialized in App.js
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <ChakraProvider theme={theme}>
-      <App />
+      <Suspense fallback={<Loader />}>
+        <App />
+      </Suspense>
     </ChakraProvider>
   </React.StrictMode>
 );

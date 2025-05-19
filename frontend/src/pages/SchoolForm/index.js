@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { schoolsAPI, regionsAPI } from '../../api';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Button,
@@ -28,6 +29,7 @@ import {
 import { FaArrowLeft, FaChevronRight } from 'react-icons/fa';
 
 const SchoolForm = () => {
+  const { t } = useTranslation();
   const { schoolId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -79,13 +81,13 @@ const SchoolForm = () => {
         setLoading(false);
       } catch (err) {
         console.error('Error fetching form data:', err);
-        setError('Failed to load form data. Please try again later.');
+        setError(t('kindergarten.school.error'));
         setLoading(false);
       }
     };
     
     fetchData();
-  }, [schoolId, isEditMode]);
+  }, [schoolId, isEditMode, t]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -97,12 +99,12 @@ const SchoolForm = () => {
     
     // Basic validation
     if (!school.name.trim()) {
-      setError('School name is required.');
+      setError(t('kindergarten.school.name_required'));
       return;
     }
     
     if (!school.region) {
-      setError('Please select a region.');
+      setError(t('kindergarten.school.region_required'));
       return;
     }
     
@@ -125,7 +127,7 @@ const SchoolForm = () => {
       }
     } catch (err) {
       console.error('Error saving school:', err);
-      setError('Failed to save school. Please check all fields and try again.');
+      setError(t('kindergarten.school.save_error'));
       setFormSubmitting(false);
     }
   };
@@ -134,7 +136,7 @@ const SchoolForm = () => {
     return (
       <Flex justify="center" align="center" height="50vh">
         <Spinner size="xl" color="blue.500" thickness="4px" />
-        <Text ml={4} fontSize="lg" color="gray.600">Loading school data...</Text>
+        <Text ml={4} fontSize="lg" color="gray.600">{t('kindergarten.school.loading')}</Text>
       </Flex>
     );
   }
@@ -142,7 +144,7 @@ const SchoolForm = () => {
   return (
     <Container maxW="container.md" py={6}>
       <Flex mb={6} justify="space-between" alignItems="center">
-        <Heading size="lg">{isEditMode ? 'Edit School' : 'Create New School'}</Heading>
+        <Heading size="lg">{isEditMode ? t('kindergarten.school.edit') : t('kindergarten.school.create')}</Heading>
         <Button 
           as={Link} 
           to={defaultRegionId ? `/kindergarten/regions/${defaultRegionId}/schools` : '/kindergarten/schools'} 
@@ -151,7 +153,7 @@ const SchoolForm = () => {
           colorScheme="gray" 
           variant="outline"
         >
-          Back to Schools
+          {t('kindergarten.school.back_to_schools')}
         </Button>
       </Flex>
       
@@ -174,7 +176,7 @@ const SchoolForm = () => {
       >
         <VStack spacing={6} align="stretch">
           <FormControl isRequired>
-            <FormLabel>School Name</FormLabel>
+            <FormLabel>{t('kindergarten.school.name')}</FormLabel>
             <Input
               id="name"
               name="name"
@@ -185,7 +187,7 @@ const SchoolForm = () => {
           </FormControl>
           
           <FormControl isRequired>
-            <FormLabel>Region</FormLabel>
+            <FormLabel>{t('kindergarten.school.region')}</FormLabel>
             <Select
               id="region"
               name="region"
@@ -193,7 +195,7 @@ const SchoolForm = () => {
               onChange={handleInputChange}
               isDisabled={formSubmitting}
             >
-              <option value="">Select a region</option>
+              <option value="">{t('kindergarten.school.select_region')}</option>
               {regions.map(region => (
                 <option key={region._id} value={region._id}>{region.name}</option>
               ))}
@@ -201,7 +203,7 @@ const SchoolForm = () => {
           </FormControl>
           
           <FormControl>
-            <FormLabel>Address (Optional)</FormLabel>
+            <FormLabel>{t('kindergarten.school.address')}</FormLabel>
             <Input
               id="address"
               name="address"
@@ -211,21 +213,24 @@ const SchoolForm = () => {
             />
           </FormControl>
           
-          <FormControl>
-            <FormLabel>Contact Person (Optional)</FormLabel>
-            <Input
-              id="contactPerson"
-              name="contactPerson"
-              value={school.contactPerson || ''}
-              onChange={handleInputChange}
-              isDisabled={formSubmitting}
-            />
-          </FormControl>
-          
+          <Heading size="sm" mt={2}>{t('kindergarten.school.contact_info')}</Heading>
           <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
             <GridItem>
               <FormControl>
-                <FormLabel>Contact Email (Optional)</FormLabel>
+                <FormLabel>{t('kindergarten.school.contact_person')}</FormLabel>
+                <Input
+                  id="contactPerson"
+                  name="contactPerson"
+                  value={school.contactPerson || ''}
+                  onChange={handleInputChange}
+                  isDisabled={formSubmitting}
+                />
+              </FormControl>
+            </GridItem>
+            
+            <GridItem>
+              <FormControl>
+                <FormLabel>{t('kindergarten.school.contact_email')}</FormLabel>
                 <Input
                   id="contactEmail"
                   name="contactEmail"
@@ -237,9 +242,9 @@ const SchoolForm = () => {
               </FormControl>
             </GridItem>
             
-            <GridItem>
+            <GridItem colSpan={{ base: 1, md: 2 }}>
               <FormControl>
-                <FormLabel>Contact Phone (Optional)</FormLabel>
+                <FormLabel>{t('kindergarten.school.contact_phone')}</FormLabel>
                 <Input
                   id="contactPhone"
                   name="contactPhone"
@@ -254,19 +259,19 @@ const SchoolForm = () => {
           <Flex justify="flex-end" gap={3} mt={4}>
             <Button 
               as={Link}
-              to={defaultRegionId ? `/kindergarten/regions/${defaultRegionId}/schools` : '/kindergarten/schools'} 
+              to={defaultRegionId ? `/kindergarten/regions/${defaultRegionId}/schools` : '/kindergarten/schools'}
               variant="outline" 
               isDisabled={formSubmitting}
             >
-              Cancel
+              {t('kindergarten.school.cancel')}
             </Button>
             <Button 
               type="submit" 
               colorScheme="blue"
               isLoading={formSubmitting}
-              loadingText="Saving"
+              loadingText={t('common.loading')}
             >
-              {isEditMode ? 'Update School' : 'Create School'}
+              {isEditMode ? t('kindergarten.school.update') : t('kindergarten.school.create_button')}
             </Button>
           </Flex>
         </VStack>
@@ -279,13 +284,13 @@ const SchoolForm = () => {
         color="gray.500"
       >
         <BreadcrumbItem>
-          <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
+          <BreadcrumbLink as={Link} to="/kindergarten">{t('kindergarten.dashboard')}</BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbItem>
-          <BreadcrumbLink as={Link} to="/kindergarten/schools">Schools</BreadcrumbLink>
+          <BreadcrumbLink as={Link} to="/kindergarten/schools">{t('kindergarten.schools')}</BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbItem isCurrentPage>
-          <Text fontWeight="medium">{isEditMode ? 'Edit School' : 'New School'}</Text>
+          <Text fontWeight="medium">{isEditMode ? t('kindergarten.school.edit') : t('kindergarten.school.create')}</Text>
         </BreadcrumbItem>
       </Breadcrumb>
     </Container>

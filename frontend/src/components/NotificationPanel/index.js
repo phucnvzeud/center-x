@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../context/NotificationContext';
-import { formatDistanceToNow } from 'date-fns';
 import { BsCheck2All, BsTrash, BsCheckAll, BsBell, BsCalendarX, BsCalendarCheck } from 'react-icons/bs';
+import { useAppTranslation, translateNotificationMessage, formatDistanceToNowLocalized } from '../../utils/i18nHelper';
 import './NotificationPanel.css';
 
 const NotificationPanel = ({ onClose }) => {
@@ -17,6 +17,7 @@ const NotificationPanel = ({ onClose }) => {
   
   const navigate = useNavigate();
   const panelRef = useRef(null);
+  const { t } = useAppTranslation();
 
   // Handle click outside the panel to close it
   useEffect(() => {
@@ -56,40 +57,35 @@ const NotificationPanel = ({ onClose }) => {
   const getNotificationIcon = (notification) => {
     switch (notification.action) {
       case 'create':
-        return <BsCalendarCheck size={16} className="notification-icon-create" />;
+        return <BsCalendarCheck size={18} className="notification-icon-create" />;
       case 'delete':
-        return <BsCalendarX size={16} className="notification-icon-delete" />;
       case 'cancel':
-        return <BsCalendarX size={16} className="notification-icon-cancel" />;
+        return <BsCalendarX size={18} className="notification-icon-delete" />;
       case 'ending_soon':
-        return <BsBell size={16} className="notification-icon-ending-soon" />;
+        return <BsBell size={18} className="notification-icon-ending-soon" />;
       default:
-        return <BsBell size={16} />;
+        return <BsBell size={18} />;
     }
   };
 
   return (
     <div className="notification-panel" ref={panelRef}>
       <div className="notification-panel-header">
-        <h3>Notifications</h3>
-        <button 
-          className="mark-all-read-btn" 
-          onClick={markAllAsRead}
-          title="Mark all as read"
-        >
-          <BsCheckAll size={18} />
-          <span>Mark all read</span>
+        <h3>{t('notifications.title')}</h3>
+        <button className="mark-all-read-btn" onClick={markAllAsRead}>
+          <BsCheckAll size={16} />
+          {t('notifications.mark_all_read')}
         </button>
       </div>
       
       <div className="notification-panel-content">
-        {loading && <div className="notification-loading">Loading...</div>}
+        {loading && <div className="notification-loading">{t('notifications.loading')}</div>}
         
         {error && <div className="notification-error-message">{error}</div>}
         
         {!loading && notifications.length === 0 && (
           <div className="no-notifications">
-            <p>No notifications yet</p>
+            <p>{t('notifications.no_notifications')}</p>
           </div>
         )}
         
@@ -103,9 +99,11 @@ const NotificationPanel = ({ onClose }) => {
               {getNotificationIcon(notification)}
             </div>
             <div className="notification-content">
-              <div className="notification-message">{notification.message}</div>
+              <div className="notification-message">
+                {translateNotificationMessage(notification.message, notification, t)}
+              </div>
               <div className="notification-time">
-                {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                {formatDistanceToNowLocalized(new Date(notification.createdAt))}
               </div>
             </div>
             <div className="notification-actions">
@@ -116,7 +114,7 @@ const NotificationPanel = ({ onClose }) => {
                     e.stopPropagation();
                     markAsRead(notification._id);
                   }}
-                  title="Mark as read"
+                  title={t('notifications.mark_as_read')}
                 >
                   <BsCheck2All size={16} />
                 </button>
@@ -127,7 +125,7 @@ const NotificationPanel = ({ onClose }) => {
                   e.stopPropagation();
                   deleteNotification(notification._id);
                 }}
-                title="Delete"
+                title={t('notifications.delete')}
               >
                 <BsTrash size={16} />
               </button>

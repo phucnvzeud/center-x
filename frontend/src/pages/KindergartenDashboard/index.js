@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { kindergartenClassesAPI } from '../../api';
+import { useTranslation } from 'react-i18next';
 import ClassList from '../ClassList';
 import {
   Box,
@@ -22,6 +23,7 @@ import {
 import { FaGlobeAsia, FaSchool, FaChalkboardTeacher, FaUserGraduate, FaPlus } from 'react-icons/fa';
 
 const KindergartenDashboard = () => {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({
     classes: { total: 0, active: 0, inactive: 0 },
     students: { total: 0 },
@@ -47,19 +49,19 @@ const KindergartenDashboard = () => {
         setLoading(false);
       } catch (err) {
         console.error('Error fetching kindergarten dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again later.');
+        setError(t('kindergarten.error'));
         setLoading(false);
       }
     };
     
     fetchData();
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
       <Box p={4} textAlign="center">
         <Spinner color="brand.500" size="lg" />
-        <Text mt={2} color="gray.500">Loading kindergarten system data...</Text>
+        <Text mt={2} color="gray.500">{t('kindergarten.loading')}</Text>
       </Box>
     );
   }
@@ -67,10 +69,10 @@ const KindergartenDashboard = () => {
   if (error) {
     return (
       <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
-        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Heading size="md" mb={2} color="red.600">{t('common.error')}</Heading>
         <Text mb={4}>{error}</Text>
         <Button colorScheme="red" variant="outline" onClick={() => window.location.reload()}>
-          Retry
+          {t('kindergarten.retry')}
         </Button>
       </Box>
     );
@@ -80,22 +82,22 @@ const KindergartenDashboard = () => {
     <Box>
       {/* Header with Quick Actions */}
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading fontSize="xl" fontWeight="semibold">Kindergarten Management</Heading>
+        <Heading fontSize="xl" fontWeight="semibold">{t('kindergarten.management')}</Heading>
         <HStack spacing={2}>
           <Button as={Link} to="/kindergarten/regions/new" leftIcon={<FaPlus />} size="sm" colorScheme="blue" variant="outline">
-            New Region
+            {t('kindergarten.new_region')}
           </Button>
           <Button as={Link} to="/kindergarten/schools/new" leftIcon={<FaPlus />} size="sm" colorScheme="green" variant="outline">
-            New School
+            {t('kindergarten.new_school')}
           </Button>
           <Button as={Link} to="/kindergarten/classes/new" leftIcon={<FaPlus />} size="sm" colorScheme="brand">
-            New Class
+            {t('kindergarten.new_class')}
           </Button>
         </HStack>
       </Flex>
       
       {/* Clickable Stats Cards */}
-      <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3} mb={4}>
+      <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} mb={6}>
         <Box 
           as={Link} 
           to="/kindergarten/regions"
@@ -122,7 +124,7 @@ const KindergartenDashboard = () => {
             <Flex align="center">
               <Icon as={FaGlobeAsia} color="blue.500" boxSize={5} mr={2} />
               <Box>
-                <StatLabel fontSize="xs">Regions</StatLabel>
+                <StatLabel fontSize="xs">{t('kindergarten.regions')}</StatLabel>
                 <Flex align="center">
                   <StatNumber fontSize="lg">{stats.regions.total}</StatNumber>
                   <Text 
@@ -131,7 +133,7 @@ const KindergartenDashboard = () => {
                     color="blue.500"
                     fontWeight="medium"
                   >
-                    View
+                    {t('kindergarten.view')}
                   </Text>
                 </Flex>
               </Box>
@@ -165,7 +167,7 @@ const KindergartenDashboard = () => {
             <Flex align="center">
               <Icon as={FaSchool} color="green.500" boxSize={5} mr={2} />
               <Box>
-                <StatLabel fontSize="xs">Schools</StatLabel>
+                <StatLabel fontSize="xs">{t('kindergarten.schools')}</StatLabel>
                 <Flex align="center">
                   <StatNumber fontSize="lg">{stats.schools.total}</StatNumber>
                   <Text 
@@ -174,7 +176,7 @@ const KindergartenDashboard = () => {
                     color="green.500"
                     fontWeight="medium"
                   >
-                    View
+                    {t('kindergarten.view')}
                   </Text>
                 </Flex>
               </Box>
@@ -208,12 +210,12 @@ const KindergartenDashboard = () => {
             <Flex align="center">
               <Icon as={FaChalkboardTeacher} color="brand.500" boxSize={5} mr={2} />
               <Box>
-                <StatLabel fontSize="xs">Classes</StatLabel>
+                <StatLabel fontSize="xs">{t('kindergarten.classes')}</StatLabel>
                 <Flex align="center">
                   <StatNumber fontSize="lg">{stats.classes.total}</StatNumber>
                   <HStack ml={2} spacing={1} fontSize="2xs">
-                    <Text color="green.500" fontWeight="medium">{stats.classes.active} A</Text>
-                    <Text color="gray.500">{stats.classes.inactive} I</Text>
+                    <Text color="green.500" fontWeight="medium">{stats.classes.active} {t('kindergarten.active')}</Text>
+                    <Text color="gray.500">{stats.classes.inactive} {t('kindergarten.inactive')}</Text>
                   </HStack>
                 </Flex>
               </Box>
@@ -225,7 +227,7 @@ const KindergartenDashboard = () => {
           <Flex align="center">
             <Icon as={FaUserGraduate} color="purple.500" boxSize={5} mr={2} />
             <Box>
-              <StatLabel fontSize="xs">Students</StatLabel>
+              <StatLabel fontSize="xs">{t('kindergarten.students')}</StatLabel>
               <StatNumber fontSize="lg">{stats.students.total}</StatNumber>
             </Box>
           </Flex>
@@ -238,7 +240,7 @@ const KindergartenDashboard = () => {
       
       {/* Classes Management - Full View */}
       <Box>
-        <Heading fontSize="lg" fontWeight="semibold" mb={4}>Kindergarten Classes</Heading>
+        <Heading fontSize="lg" fontWeight="semibold" mb={4}>{t('kindergarten.classes')}</Heading>
         <ClassList />
       </Box>
     </Box>

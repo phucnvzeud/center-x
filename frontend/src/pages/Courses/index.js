@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { coursesAPI, branchesAPI, teachersAPI } from '../../api';
+import { useTranslation } from 'react-i18next';
 import { 
   Box, 
   Heading, 
@@ -19,8 +20,10 @@ import {
   HStack
 } from '@chakra-ui/react';
 import { FaSearch, FaFilter, FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaEye, FaUserGraduate, FaClock } from 'react-icons/fa';
+import i18n from '../../i18n';
 
 const Courses = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
@@ -132,7 +135,7 @@ const Courses = () => {
       setLoading(false);
     } catch (err) {
       console.error('Error fetching courses:', err);
-      setError('Failed to load courses. Please try again later.');
+      setError(t('course_management.load_error'));
       setLoading(false);
     }
   };
@@ -214,8 +217,15 @@ const Courses = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return t('common.not_provided');
+    // Use the current language for date formatting
+    const currentLanguage = i18n.language || 'en';
+    const languageMap = {
+      'en': 'en-US',
+      'vi': 'vi-VN'
+    };
+    const locale = languageMap[currentLanguage] || 'en-US';
+    return new Date(dateString).toLocaleDateString(locale, {
       year: 'numeric', 
       month: 'short', 
       day: 'numeric'
@@ -224,14 +234,14 @@ const Courses = () => {
 
   const handleDeleteCourse = async (courseId, e) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+    if (window.confirm(t('course_management.delete_confirmation'))) {
       try {
         await coursesAPI.remove(courseId);
         // Refresh the course list
         fetchCourses();
       } catch (err) {
         console.error('Error deleting course:', err);
-        setError('Failed to delete course. Please try again later.');
+        setError(t('course_management.delete_error'));
       }
     }
   };
@@ -258,7 +268,7 @@ const Courses = () => {
     return (
       <Box p={4} textAlign="center">
         <Spinner color="brand.500" size="lg" />
-        <Text mt={2} color="gray.500">Loading courses...</Text>
+        <Text mt={2} color="gray.500">{t('course_management.loading')}</Text>
       </Box>
     );
   }
@@ -266,10 +276,10 @@ const Courses = () => {
   if (error) {
     return (
       <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
-        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Heading size="md" mb={2} color="red.600">{t('common.error')}</Heading>
         <Text mb={4}>{error}</Text>
         <Button colorScheme="red" variant="outline" onClick={() => window.location.reload()}>
-          Retry
+          {t('common.reset')}
         </Button>
       </Box>
     );
@@ -278,7 +288,7 @@ const Courses = () => {
   return (
     <Box maxW="1200px" mx="auto">
       <Flex justify="space-between" align="center" mb={6}>
-        <Heading fontSize="xl" fontWeight="semibold">Courses</Heading>
+        <Heading fontSize="xl" fontWeight="semibold">{t('course_management.courses')}</Heading>
         <HStack spacing={2}>
           <Button 
             size="sm"
@@ -292,7 +302,7 @@ const Courses = () => {
               setShowFinished(!showFinished);
             }}
           >
-            {showFinished ? "Show Active" : "Show Finished"}
+            {showFinished ? t('course_management.filter.show_active') : t('course_management.filter.show_finished')}
           </Button>
           <Button 
             leftIcon={<FaFilter />}
@@ -301,7 +311,7 @@ const Courses = () => {
             colorScheme="gray"
             variant="outline"
           >
-            {isFiltersVisible ? 'Hide Filters' : 'Show Filters'}
+            {isFiltersVisible ? t('course_management.filter.hide_filters') : t('course_management.filter.show_filters')}
           </Button>
           <Button 
             as={Link} 
@@ -310,7 +320,7 @@ const Courses = () => {
             colorScheme="brand"
             size="sm"
           >
-            New Course
+            {t('course_management.new_course')}
           </Button>
         </HStack>
       </Flex>
@@ -320,7 +330,7 @@ const Courses = () => {
           <Stack spacing={4} direction={{ base: 'column', md: 'row' }}>
             <Box flex="1">
               <Input
-                placeholder="Search by name..."
+                placeholder={t('course_management.filter.search_by_name')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 leftElement={<FaSearch color="gray.300" />}
@@ -331,12 +341,12 @@ const Courses = () => {
               <Select 
                 value={statusFilter} 
                 onChange={(e) => setStatusFilter(e.target.value)}
-                placeholder="All Statuses"
+                placeholder={t('course_management.filter.all_statuses')}
               >
-                <option value="Active">Active</option>
-                <option value="Upcoming">Upcoming</option>
-                <option value="Finished">Finished</option>
-                <option value="Cancelled">Cancelled</option>
+                <option value="Active">{t('course_management.status.active')}</option>
+                <option value="Upcoming">{t('course_management.status.upcoming')}</option>
+                <option value="Finished">{t('course_management.status.finished')}</option>
+                <option value="Cancelled">{t('course_management.status.cancelled')}</option>
               </Select>
             </Box>
             
@@ -344,14 +354,14 @@ const Courses = () => {
               <Select 
                 value={levelFilter} 
                 onChange={(e) => setLevelFilter(e.target.value)}
-                placeholder="All Levels"
+                placeholder={t('course_management.filter.all_levels')}
               >
-                <option value="Beginner">Beginner</option>
-                <option value="Elementary">Elementary</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Upper Intermediate">Upper Intermediate</option>
-                <option value="Advanced">Advanced</option>
-                <option value="Proficient">Proficient</option>
+                <option value="Beginner">{t('course_management.level.beginner')}</option>
+                <option value="Elementary">{t('course_management.level.elementary')}</option>
+                <option value="Intermediate">{t('course_management.level.intermediate')}</option>
+                <option value="Upper Intermediate">{t('course_management.level.upper_intermediate')}</option>
+                <option value="Advanced">{t('course_management.level.advanced')}</option>
+                <option value="Proficient">{t('course_management.level.proficient')}</option>
               </Select>
             </Box>
             
@@ -359,7 +369,7 @@ const Courses = () => {
               <Select 
                 value={branchFilter} 
                 onChange={(e) => setBranchFilter(e.target.value)}
-                placeholder="All Branches"
+                placeholder={t('course_management.filter.all_branches')}
               >
                 {branches.map(branch => (
                   <option key={branch._id} value={branch._id}>{branch.name}</option>
@@ -371,7 +381,7 @@ const Courses = () => {
               <Select 
                 value={teacherFilter} 
                 onChange={(e) => setTeacherFilter(e.target.value)}
-                placeholder="All Teachers"
+                placeholder={t('course_management.filter.all_teachers')}
               >
                 {teachers.map(teacher => (
                   <option key={teacher._id} value={teacher._id}>{teacher.name}</option>
@@ -380,7 +390,7 @@ const Courses = () => {
             </Box>
             
             <Button onClick={clearFilters} variant="outline" size="md">
-              Clear
+              {t('course_management.filter.clear')}
             </Button>
           </Stack>
         </Box>
@@ -388,7 +398,7 @@ const Courses = () => {
       
       {filteredCourses.length === 0 ? (
         <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" textAlign="center" borderRadius="md">
-          <Text color="gray.500">No courses found. Adjust your filters or add a new course to get started.</Text>
+          <Text color="gray.500">{t('course_management.no_courses')}</Text>
         </Box>
           ) : (
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
@@ -416,19 +426,19 @@ const Courses = () => {
                   <Heading size="md" mb={2} noOfLines={1}>{course.name}</Heading>
                   <Flex gap={2} flexWrap="wrap">
                     <Badge px={2} py={1} bg={statusColorScheme.bg} color={statusColorScheme.color} borderRadius="full">
-                  {course.status}
+                      {t(`course_management.status.${course.status.toLowerCase()}`)}
                     </Badge>
                     
                     {course.level && (
                       <Badge px={2} py={1} bg="purple.100" color="purple.700" borderRadius="full">
-                        {course.level}
+                        {t(`course_management.level.${course.level.toLowerCase().replace(/\s+/g, '_')}`)}
                       </Badge>
                     )}
                     
                     {course.status === 'Active' && (
                       <Badge px={2} py={1} bg="orange.100" color="orange.700" borderRadius="full" display="flex" alignItems="center">
                         <Box as={FaClock} mr={1} size="12px" />
-                        {course.remainingSessions} sessions left
+                        {course.remainingSessions} {t('course_management.course_info.sessions_left')}
                       </Badge>
                     )}
                   </Flex>
@@ -438,25 +448,25 @@ const Courses = () => {
                   <Stack spacing={3} mb={3} fontSize="sm">
                     {course.teacher && (
                       <Flex align="center">
-                        <Text fontWeight="medium" width="80px">Teacher:</Text>
+                        <Text fontWeight="medium" width="80px">{t('course_management.course_info.teacher')}:</Text>
                         <Text noOfLines={1}>{course.teacher.name}</Text>
                       </Flex>
                     )}
                     
                     {course.branch && (
                       <Flex align="center">
-                        <Text fontWeight="medium" width="80px">Branch:</Text>
+                        <Text fontWeight="medium" width="80px">{t('course_management.course_info.branch')}:</Text>
                         <Text noOfLines={1}>{course.branch.name}</Text>
                       </Flex>
                     )}
                     
                     <Flex align="center">
-                      <Text fontWeight="medium" width="80px">Start:</Text>
+                      <Text fontWeight="medium" width="80px">{t('course_management.course_info.start')}:</Text>
                       <Text>{formatDate(course.startDate)}</Text>
                     </Flex>
                 
                     <Flex align="center">
-                      <Text fontWeight="medium" width="80px">End:</Text>
+                      <Text fontWeight="medium" width="80px">{t('course_management.course_info.end')}:</Text>
                       <Text>{formatDate(course.endDate)}</Text>
                     </Flex>
                   </Stack>
@@ -466,7 +476,7 @@ const Courses = () => {
                   <Flex justify="flex-end" gap={1}>
                     <IconButton
                       icon={<FaEye />}
-                      aria-label="View course details"
+                      aria-label={t('course_management.actions.view_course')}
                       size="sm"
                       variant="ghost"
                       colorScheme="gray"
@@ -477,7 +487,7 @@ const Courses = () => {
                     />
                     <IconButton
                       icon={<FaEdit />}
-                      aria-label="Edit course"
+                      aria-label={t('course_management.actions.edit_course')}
                       size="sm"
                       variant="ghost"
                       colorScheme="blue"
@@ -488,7 +498,7 @@ const Courses = () => {
                     />
                     <IconButton
                       icon={<FaCalendarAlt />}
-                      aria-label="Course sessions"
+                      aria-label={t('course_management.actions.course_sessions')}
                       size="sm"
                       variant="ghost"
                       colorScheme="green"
@@ -499,7 +509,7 @@ const Courses = () => {
                     />
                     <IconButton
                       icon={<FaUserGraduate />}
-                      aria-label="Students"
+                      aria-label={t('course_management.actions.students')}
                       size="sm"
                       variant="ghost"
                       colorScheme="brand"
@@ -510,7 +520,7 @@ const Courses = () => {
                     />
                     <IconButton
                       icon={<FaTrash />}
-                      aria-label="Delete course"
+                      aria-label={t('course_management.actions.delete_course')}
                       size="sm"
                       variant="ghost"
                       colorScheme="red"

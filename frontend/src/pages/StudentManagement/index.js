@@ -65,8 +65,10 @@ import {
   FaFilter,
   FaExchangeAlt
 } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 
 const StudentManagement = () => {
+  const { t } = useTranslation();
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -554,7 +556,7 @@ const StudentManagement = () => {
     return (
       <Flex justify="center" align="center" height="100vh">
         <Spinner size="xl" thickness="4px" color="purple.500" />
-        <Text ml={4} fontSize="xl">Loading student data...</Text>
+        <Text ml={4} fontSize="xl">{t('common.loading_students')}</Text>
       </Flex>
     );
   }
@@ -571,13 +573,13 @@ const StudentManagement = () => {
   return (
     <Box p={5}>
       <Flex mb={6} justify="space-between" align="center">
-        <Heading size="lg">Student Management</Heading>
+        <Heading size="lg">{t('students.management')}</Heading>
         <Button 
           colorScheme="purple" 
           leftIcon={<FaUser />}
           onClick={() => navigate('/students/new')}
         >
-          Add Student
+          {t('students.add')}
         </Button>
       </Flex>
       
@@ -588,7 +590,7 @@ const StudentManagement = () => {
             <FaSearch color="gray.300" />
           </InputLeftElement>
           <Input
-            placeholder="Search students by name, email or phone"
+            placeholder={t('students.search_placeholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             borderRadius="md"
@@ -608,7 +610,7 @@ const StudentManagement = () => {
         
         <HStack spacing={4} ml="auto">
           <Text fontSize="sm" color="gray.600">
-            {displayedCourses.reduce((count, course) => count + (course.students?.length || 0), 0)} students in {displayedCourses.length} courses
+            {displayedCourses.reduce((count, course) => count + (course.students?.length || 0), 0)} {t('students.students_in_courses')} {displayedCourses.length} {t('courses.name').toLowerCase()}
           </Text>
         </HStack>
       </Flex>
@@ -653,11 +655,11 @@ const StudentManagement = () => {
                               {course.status}
                             </Badge>
                             <Text fontSize="sm" color="gray.600">
-                              {course.students.length} students
+                              {course.students.length} {t('courses.students')}
                             </Text>
                             {course.teacher && (
                               <Text fontSize="sm" color="gray.600">
-                                Teacher: {course.teacher.name}
+                                {t('courses.teacher')}: {course.teacher.name}
                               </Text>
                             )}
                           </HStack>
@@ -674,11 +676,11 @@ const StudentManagement = () => {
                         <Thead bg="gray.50">
                           <Tr>
                             <Th width="40px">#</Th>
-                            <Th>Student</Th>
-                            <Th>Contact</Th>
-                            <Th>Enrollment Date</Th>
-                            <Th>Status</Th>
-                            <Th width="80px" className="actions-column">Actions</Th>
+                            <Th>{t('students.student')}</Th>
+                            <Th>{t('students.contact')}</Th>
+                            <Th>{t('students.enrollment_date')}</Th>
+                            <Th>{t('common.status')}</Th>
+                            <Th width="80px" className="actions-column">{t('common.actions')}</Th>
                           </Tr>
                         </Thead>
                         <Tbody>
@@ -744,9 +746,9 @@ const StudentManagement = () => {
                                     variant="ghost"
                                     size="sm"
                                   />
-                                                                      <MenuList fontSize="sm">                                      <MenuItem                                         icon={<FaEdit />}                                         onClick={() => navigate(`/students/${student._id}/edit`)}                                      >                                        Edit Student                                      </MenuItem>                                      <MenuItem                                         icon={<FaExchangeAlt />}                                         onClick={() => openTransferModal(student._id, course._id)}                                      >                                        Transfer to Another Course                                      </MenuItem>
+                                                                      <MenuList fontSize="sm">                                      <MenuItem                                         icon={<FaEdit />}                                         onClick={() => navigate(`/students/${student._id}/edit`)}                                      >                                        {t('students.edit')}                                      </MenuItem>                                      <MenuItem                                         icon={<FaExchangeAlt />}                                         onClick={() => openTransferModal(student._id, course._id)}                                      >                                        {t('students.transfer_to_another')}                                      </MenuItem>
                                     <MenuItem icon={<FaTrash />} color="red.500" onClick={() => handleWithdrawStudent(student._id, course._id)}>
-                                      Withdraw from Course
+                                      {t('students.withdraw_from_course')}
                                     </MenuItem>
                                   </MenuList>
                                 </Menu>
@@ -758,7 +760,7 @@ const StudentManagement = () => {
                     </Box>
                   ) : (
                     <Box p={4} textAlign="center">
-                      <Text color="gray.500">No students enrolled in this course</Text>
+                      <Text color="gray.500">{t('students.no_students_enrolled')}</Text>
                       <Button 
                         mt={2} 
                         size="sm" 
@@ -767,7 +769,7 @@ const StudentManagement = () => {
                         leftIcon={<FaUser />}
                         onClick={() => navigate(`/courses/${course._id}`)}
                       >
-                        Add Students
+                        {t('students.add_students')}
                       </Button>
                     </Box>
                   )}
@@ -781,7 +783,7 @@ const StudentManagement = () => {
                       as={Link}
                       to={`/courses/${course._id}`}
                     >
-                      Go to Course
+                      {t('students.go_to_course')}
                     </Button>
                   </Flex>
                 </AccordionPanel>
@@ -792,11 +794,11 @@ const StudentManagement = () => {
       ) : (
         <Box p={8} textAlign="center" borderWidth="1px" borderRadius="lg">
           <Text mb={4} fontSize="lg">
-            {searchTerm ? 'No students match your search criteria' : 'No courses or students found'}
+            {searchTerm ? t('students.no_match') : t('students.no_courses_found')}
           </Text>
           {searchTerm && (
             <Button variant="outline" onClick={handleClearSearch}>
-              Clear Search
+              {t('students.clear_search')}
             </Button>
           )}
         </Box>
@@ -806,19 +808,19 @@ const StudentManagement = () => {
       <Modal isOpen={isTransferModalOpen} onClose={onTransferModalClose} size="md">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Transfer Student</ModalHeader>
+          <ModalHeader>{t('students.transfer_student')}</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
             {selectedStudent && (
               <>
                 <Text mb={4}>
-                  Transfer <b>{selectedStudent.name}</b> to another course:
+                  {t('students.transfer')} <b>{selectedStudent.name}</b> {t('students.transfer_to')}:
                 </Text>
                 
                 <Box mb={4}>
-                  <Text fontWeight="medium" mb={2}>Select Target Course:</Text>
+                  <Text fontWeight="medium" mb={2}>{t('students.select_target_course')}:</Text>
                   <Select 
-                    placeholder="Select course" 
+                    placeholder={t('students.select_course')} 
                     value={targetCourseId} 
                     onChange={(e) => setTargetCourseId(e.target.value)}
                   >
@@ -831,7 +833,7 @@ const StudentManagement = () => {
                       )
                       .map(course => (
                         <option key={course._id} value={course._id}>
-                          {course.name} ({course.status}) - {course.students?.length || 0} students
+                          {course.name} ({course.status}) - {course.students?.length || 0} {t('courses.students')}
                         </option>
                       ))
                     }
@@ -839,10 +841,10 @@ const StudentManagement = () => {
                 </Box>
                 
                 <Box mb={4}>
-                  <Text fontWeight="medium" mb={2}>Payment Information:</Text>
+                  <Text fontWeight="medium" mb={2}>{t('students.payment_information')}:</Text>
                   <Flex gap={3}>
                     <FormControl mb={2}>
-                      <FormLabel fontSize="sm">Total Amount</FormLabel>
+                      <FormLabel fontSize="sm">{t('students.total_amount')}</FormLabel>
                       <Input 
                         type="number" 
                         value={transferAmount}
@@ -850,7 +852,7 @@ const StudentManagement = () => {
                       />
                     </FormControl>
                     <FormControl>
-                      <FormLabel fontSize="sm">Amount Paid</FormLabel>
+                      <FormLabel fontSize="sm">{t('students.amount_paid')}</FormLabel>
                       <Input 
                         type="number" 
                         value={transferPaid}
@@ -861,23 +863,23 @@ const StudentManagement = () => {
                 </Box>
                 
                 <Box mb={4}>
-                  <Text fontWeight="medium" mb={2}>Reason for Transfer:</Text>
+                  <Text fontWeight="medium" mb={2}>{t('students.reason_for_transfer')}:</Text>
                   <Textarea
-                    placeholder="Enter reason for transfer (optional)" 
+                    placeholder={t('students.enter_reason')}
                     value={transferReason}
                     onChange={(e) => setTransferReason(e.target.value)}
                   />
                 </Box>
                 
                 <Flex justify="flex-end" mt={6} gap={3}>
-                  <Button variant="outline" onClick={onTransferModalClose} isDisabled={isTransferProcessing}>Cancel</Button>
+                  <Button variant="outline" onClick={onTransferModalClose} isDisabled={isTransferProcessing}>{t('common.cancel')}</Button>
                   <Button 
                     colorScheme="blue" 
                     isDisabled={!targetCourseId || isTransferProcessing}
                     isLoading={isTransferProcessing}
                     onClick={handleTransferSubmit}
                   >
-                    Transfer
+                    {t('students.transfer')}
                   </Button>
                 </Flex>
               </>

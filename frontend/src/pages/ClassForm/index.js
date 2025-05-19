@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { kindergartenClassesAPI, schoolsAPI, teachersAPI } from '../../api';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Button,
@@ -39,6 +40,7 @@ const AGE_GROUPS = [
 ];
 
 const ClassForm = () => {
+  const { t } = useTranslation();
   const { classId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -277,7 +279,7 @@ const ClassForm = () => {
     return (
       <Flex justify="center" align="center" height="50vh">
         <Spinner size="xl" color="blue.500" thickness="4px" />
-        <Text ml={4} fontSize="lg" color="gray.600">Loading class data...</Text>
+        <Text ml={4} fontSize="lg" color="gray.600">{t('kindergarten.class.loading')}</Text>
       </Flex>
     );
   }
@@ -285,7 +287,7 @@ const ClassForm = () => {
   return (
     <Container maxW="container.lg" py={6}>
       <Flex mb={6} justify="space-between" alignItems="center">
-        <Heading size="lg">{isEditMode ? 'Edit Class' : 'Create New Class'}</Heading>
+        <Heading size="lg">{isEditMode ? t('kindergarten.class.edit') : t('kindergarten.class.create')}</Heading>
         <Button 
           as={Link} 
           to={defaultSchoolId ? `/kindergarten/schools/${defaultSchoolId}/classes` : '/kindergarten/classes'} 
@@ -294,14 +296,18 @@ const ClassForm = () => {
           colorScheme="gray" 
           variant="outline"
         >
-          Back to Classes
+          {t('kindergarten.class.back_to_classes')}
         </Button>
       </Flex>
       
       {error && (
         <Alert status="error" mb={6} borderRadius="md">
           <AlertIcon />
-          {error}
+          {t(error.includes('class name') ? 'kindergarten.class.name_required' : 
+              error.includes('school') ? 'kindergarten.class.school_required' : 
+              error.includes('teacher') ? 'kindergarten.class.teacher_required' : 
+              error.includes('schedule') ? 'kindergarten.class.schedule_required' : 
+              'kindergarten.class.save_error')}
         </Alert>
       )}
       
@@ -317,13 +323,13 @@ const ClassForm = () => {
       >
         <VStack spacing={8} align="stretch">
           <Box>
-            <Heading size="md" mb={4}>Basic Information</Heading>
+            <Heading size="md" mb={4}>{t('kindergarten.class.class_detail.basic_details')}</Heading>
             <Divider mb={4} />
             
             <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
               <GridItem>
                 <FormControl isRequired>
-                  <FormLabel>Class Name</FormLabel>
+                  <FormLabel>{t('kindergarten.class.name')}</FormLabel>
                   <Input
                     id="name"
                     name="name"
@@ -336,7 +342,7 @@ const ClassForm = () => {
               
               <GridItem>
                 <FormControl isRequired>
-                  <FormLabel>Age Group</FormLabel>
+                  <FormLabel>{t('kindergarten.class.age_group')}</FormLabel>
                   <Select
                     id="ageGroup"
                     name="ageGroup"
@@ -345,7 +351,7 @@ const ClassForm = () => {
                     isDisabled={formSubmitting}
                   >
                     {AGE_GROUPS.map(group => (
-                      <option key={group} value={group}>{group}</option>
+                      <option key={group} value={group}>{t(`age_groups.${group}`)}</option>
                     ))}
                   </Select>
                 </FormControl>
@@ -353,7 +359,7 @@ const ClassForm = () => {
               
               <GridItem>
                 <FormControl isRequired>
-                  <FormLabel>School</FormLabel>
+                  <FormLabel>{t('kindergarten.class.school')}</FormLabel>
                   <Select
                     id="school"
                     name="school"
@@ -361,7 +367,7 @@ const ClassForm = () => {
                     onChange={handleInputChange}
                     isDisabled={formSubmitting || defaultSchoolId}
                   >
-                    <option value="">Select a school</option>
+                    <option value="">{t('kindergarten.class.select_school')}</option>
                     {schools.map(school => (
                       <option key={school._id} value={school._id}>{school.name}</option>
                     ))}
@@ -371,7 +377,7 @@ const ClassForm = () => {
               
               <GridItem>
                 <FormControl isRequired>
-                  <FormLabel>Teacher</FormLabel>
+                  <FormLabel>{t('kindergarten.class.teacher')}</FormLabel>
                   <Select
                     id="teacher"
                     name="teacher"
@@ -379,7 +385,7 @@ const ClassForm = () => {
                     onChange={handleInputChange}
                     isDisabled={formSubmitting}
                   >
-                    <option value="">Select a teacher</option>
+                    <option value="">{t('kindergarten.class.select_teacher')}</option>
                     {teachers.map(teacher => (
                       <option key={teacher._id} value={teacher._id}>{teacher.name}</option>
                     ))}
@@ -389,7 +395,7 @@ const ClassForm = () => {
               
               <GridItem>
                 <FormControl>
-                  <FormLabel>Student Count</FormLabel>
+                  <FormLabel>{t('kindergarten.class.class_detail.student_count')}</FormLabel>
                   <NumberInput
                     min={0}
                     value={kClass.studentCount}
@@ -406,7 +412,7 @@ const ClassForm = () => {
               
               <GridItem>
                 <FormControl isRequired>
-                  <FormLabel>Status</FormLabel>
+                  <FormLabel>{t('kindergarten.class.status')}</FormLabel>
                   <Select
                     id="status"
                     name="status"
@@ -414,9 +420,9 @@ const ClassForm = () => {
                     onChange={handleInputChange}
                     isDisabled={formSubmitting}
                   >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Completed">Completed</option>
+                    <option value="Active">{t('common.active')}</option>
+                    <option value="Inactive">{t('common.inactive')}</option>
+                    <option value="Completed">{t('common.completed')}</option>
                   </Select>
                 </FormControl>
               </GridItem>
@@ -424,13 +430,13 @@ const ClassForm = () => {
           </Box>
           
           <Box>
-            <Heading size="md" mb={4}>Schedule Information</Heading>
+            <Heading size="md" mb={4}>{t('kindergarten.class.class_detail.weekly_schedule')}</Heading>
             <Divider mb={4} />
             
             <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6} mb={6}>
               <GridItem>
                 <FormControl isRequired>
-                  <FormLabel>Start Date</FormLabel>
+                  <FormLabel>{t('kindergarten.class.class_detail.start_date')}</FormLabel>
                   <Input
                     type="date"
                     id="startDate"
@@ -444,7 +450,7 @@ const ClassForm = () => {
               
               <GridItem>
                 <FormControl isRequired>
-                  <FormLabel>Total Sessions</FormLabel>
+                  <FormLabel>{t('kindergarten.class.class_detail.total_sessions')}</FormLabel>
                   <NumberInput
                     min={1}
                     value={kClass.totalSessions}
@@ -461,7 +467,7 @@ const ClassForm = () => {
             </Grid>
             
             <FormControl mb={6}>
-              <FormLabel>Weekly Schedule</FormLabel>
+              <FormLabel>{t('kindergarten.class.class_detail.weekly_schedule')}</FormLabel>
               <VStack spacing={3} align="stretch">
                 {kClass.weeklySchedule.map((schedule, index) => (
                   <Flex 
@@ -482,7 +488,7 @@ const ClassForm = () => {
                       isDisabled={formSubmitting}
                     >
                       {DAYS_OF_WEEK.map(day => (
-                        <option key={day} value={day}>{day}</option>
+                        <option key={day} value={day}>{t(`days.${day.toLowerCase()}`)}</option>
                       ))}
                     </Select>
                     
@@ -494,7 +500,7 @@ const ClassForm = () => {
                         width="auto"
                         isDisabled={formSubmitting}
                       />
-                      <Text>to</Text>
+                      <Text>{t('common.time')}</Text>
                       <Input
                         type="time"
                         value={schedule.endTime}
@@ -505,13 +511,12 @@ const ClassForm = () => {
                     </HStack>
                     
                     <IconButton
-                      aria-label="Remove schedule"
                       icon={<FaTrash />}
-                      colorScheme="red"
                       variant="ghost"
+                      colorScheme="red"
                       size="sm"
                       onClick={() => handleRemoveSchedule(index)}
-                      ml={2}
+                      aria-label={t('common.delete')}
                       isDisabled={formSubmitting}
                     />
                   </Flex>
@@ -524,16 +529,15 @@ const ClassForm = () => {
                   size="sm"
                   onClick={handleAddSchedule}
                   alignSelf="flex-start"
-                  mt={2}
                   isDisabled={formSubmitting}
                 >
-                  Add Schedule
+                  {t('course_management.form.add_schedule')}
                 </Button>
               </VStack>
             </FormControl>
             
             <FormControl>
-              <FormLabel>Holidays (Optional)</FormLabel>
+              <FormLabel>{t('kindergarten.class.class_detail.holidays')}</FormLabel>
               <VStack spacing={3} align="stretch">
                 {kClass.holidays.map((holiday, index) => (
                   <Flex 
@@ -548,7 +552,7 @@ const ClassForm = () => {
                   >
                     <Input
                       type="date"
-                      value={holiday.date}
+                      value={holiday.date.split('T')[0]}
                       onChange={(e) => handleHolidayChange(index, 'date', e.target.value)}
                       width="auto"
                       mr={4}
@@ -558,19 +562,18 @@ const ClassForm = () => {
                     <Input
                       value={holiday.name}
                       onChange={(e) => handleHolidayChange(index, 'name', e.target.value)}
-                      placeholder="Holiday name"
+                      placeholder={t('kindergarten.class.class_detail.holiday_name')}
                       flex="1"
                       isDisabled={formSubmitting}
                     />
                     
                     <IconButton
-                      aria-label="Remove holiday"
                       icon={<FaTrash />}
-                      colorScheme="red"
                       variant="ghost"
+                      colorScheme="red"
                       size="sm"
                       onClick={() => handleRemoveHoliday(index)}
-                      ml={2}
+                      aria-label={t('common.delete')}
                       isDisabled={formSubmitting}
                     />
                   </Flex>
@@ -586,7 +589,7 @@ const ClassForm = () => {
                   mt={2}
                   isDisabled={formSubmitting}
                 >
-                  Add Holiday
+                  {t('kindergarten.class.class_detail.add_holiday')}
                 </Button>
               </VStack>
             </FormControl>
@@ -599,15 +602,15 @@ const ClassForm = () => {
               variant="outline" 
               isDisabled={formSubmitting}
             >
-              Cancel
+              {t('kindergarten.class.cancel')}
             </Button>
             <Button 
               type="submit" 
               colorScheme="blue"
               isLoading={formSubmitting}
-              loadingText="Saving"
+              loadingText={t('common.loading')}
             >
-              {isEditMode ? 'Update Class' : 'Create Class'}
+              {isEditMode ? t('kindergarten.class.update') : t('kindergarten.class.create_button')}
             </Button>
           </Flex>
         </VStack>
@@ -620,13 +623,13 @@ const ClassForm = () => {
         color="gray.500"
       >
         <BreadcrumbItem>
-          <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
+          <BreadcrumbLink as={Link} to="/kindergarten">{t('kindergarten.dashboard')}</BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbItem>
-          <BreadcrumbLink as={Link} to="/kindergarten/classes">Classes</BreadcrumbLink>
+          <BreadcrumbLink as={Link} to="/kindergarten/classes">{t('kindergarten.classes')}</BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbItem isCurrentPage>
-          <Text fontWeight="medium">{isEditMode ? 'Edit Class' : 'New Class'}</Text>
+          <Text fontWeight="medium">{isEditMode ? t('kindergarten.class.edit') : t('kindergarten.class.create')}</Text>
         </BreadcrumbItem>
       </Breadcrumb>
     </Container>

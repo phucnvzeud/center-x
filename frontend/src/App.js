@@ -1,8 +1,10 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
 import AOS from 'aos';
+import { useTranslation } from 'react-i18next';
+import { I18nProvider } from './utils/i18nHelper';
 import Dashboard from './pages/Dashboard';
 import Teachers from './pages/Teachers';
 import Courses from './pages/Courses';
@@ -22,6 +24,7 @@ import ClassForm from './pages/ClassForm';
 import ClassDetail from './pages/ClassDetail';
 import TestComponent from './pages/ClassDetail/TestComponent';
 import Notifications from './pages/Notifications';
+import LanguageSwitcher from './components/LanguageSwitcher';
 import { NotificationProvider } from './context/NotificationContext';
 import { Box, Flex, Text, Input, InputGroup, InputLeftElement, Button, IconButton, Drawer, DrawerBody, DrawerHeader, DrawerOverlay, DrawerContent, DrawerCloseButton, useDisclosure, VStack, HStack, Heading, Divider, useColorModeValue, Image } from '@chakra-ui/react';
 import { FaGraduationCap, FaUserTie, FaBook, FaBuilding, FaHome, FaBell, FaBars, FaSearch, FaUserGraduate } from 'react-icons/fa';
@@ -34,6 +37,7 @@ import StudentDetail from './pages/StudentDetail';
 // Layout component with sidebar
 function Layout({ children }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { t } = useTranslation();
 
   return (
     <Flex w="100%" h="100vh">
@@ -57,7 +61,7 @@ function Layout({ children }) {
         <DrawerOverlay />
         <DrawerContent>
           <DrawerCloseButton />
-          <DrawerHeader borderBottomWidth="1px">Center X</DrawerHeader>
+          <DrawerHeader borderBottomWidth="1px">{t('app.title')}</DrawerHeader>
           <DrawerBody p={0}>
             <SidebarContent />
           </DrawerBody>
@@ -90,15 +94,16 @@ function Layout({ children }) {
             <InputLeftElement pointerEvents="none">
               <FaSearch color="gray.400" />
             </InputLeftElement>
-            <Input placeholder="Search..." borderColor="gray.200" />
+            <Input placeholder={t('common.search')} borderColor="gray.200" />
           </InputGroup>
           
           <HStack spacing={4}>
+            <LanguageSwitcher />
             <Button 
               size="sm" 
               variant="outline"
             >
-              Development
+              {t('ui.development')}
             </Button>
           </HStack>
         </Flex>
@@ -115,6 +120,7 @@ function Layout({ children }) {
 // Sidebar content component
 function SidebarContent() {
   const location = useLocation();
+  const { t } = useTranslation();
   
   const NavItem = ({ icon, children, to, section }) => {
     const isActive = location.pathname === to || (section && location.pathname.startsWith(section));
@@ -180,43 +186,43 @@ function SidebarContent() {
         <Box mr={2} color="brand.500">
           <FaGraduationCap size="24px" />
         </Box>
-        <Heading size="md" fontWeight="semibold">Center X</Heading>
+        <Heading size="md" fontWeight="semibold">{t('app.title')}</Heading>
       </Flex>
       
       <Box px={4} mb={8}>
         <Text color="gray.500" fontSize="xs" fontWeight="medium" mb={2} textTransform="uppercase">
-          Projects
+          {t('ui.projects')}
         </Text>
         <NavItem icon={<FaHome />} to="/">
-          Dashboard
+          {t('nav.dashboard')}
         </NavItem>
         <NavItem icon={<FaUserTie />} to="/teachers" section="/teachers">
-          Teachers
+          {t('nav.teachers')}
         </NavItem>
         {location.pathname.startsWith('/teachers') && (
           <SubNavItem to="/teachers/manage">
-            Manage Teachers
+            {t('nav.manage_teachers')}
           </SubNavItem>
         )}
         <NavItem icon={<FaBook />} to="/courses" section="/courses">
-          Courses
+          {t('nav.courses')}
         </NavItem>
         <NavItem icon={<FaUserGraduate />} to="/students" section="/students">
-          Students
+          {t('nav.students')}
         </NavItem>
         {location.pathname.startsWith('/students') && (
           <SubNavItem to="/students/manage">
-            Manage Students
+            {t('nav.manage_students')}
           </SubNavItem>
         )}
         <NavItem icon={<FaGraduationCap />} to="/kindergarten" section="/kindergarten">
-          Kindergarten
+          {t('nav.kindergarten')}
         </NavItem>
         <NavItem icon={<FaBuilding />} to="/branches">
-          Branches
+          {t('nav.branches')}
         </NavItem>
         <NavItem icon={<FaBell />} to="/notifications">
-          Notifications
+          {t('nav.notifications')}
         </NavItem>
       </Box>
       
@@ -224,13 +230,13 @@ function SidebarContent() {
       
       <Box px={4}>
         <Text color="gray.500" fontSize="xs" fontWeight="medium" mb={2} textTransform="uppercase">
-          Workspace
+          {t('ui.workspace')}
         </Text>
         <NavItem icon={<Box as="span" w="4px" h="4px" bg="gray.400" />} to="/billing">
-          Billing
+          {t('nav.billing')}
         </NavItem>
         <NavItem icon={<Box as="span" w="4px" h="4px" bg="gray.400" />} to="/settings">
-          Settings
+          {t('nav.settings')}
         </NavItem>
       </Box>
     </Box>
@@ -249,6 +255,7 @@ function App() {
   }, []);
 
   return (
+    <I18nProvider>
     <NotificationProvider>
       <Router
         future={{
@@ -261,9 +268,10 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/test" element={<TestComponent />} />
               <Route path="/teachers" element={<Teachers />} />
+                <Route path="/teachers/manage" element={<TeachersManagement />} />
+                <Route path="/teachers/new" element={<Navigate to="/teachers/manage" replace />} />
             <Route path="/teachers/:teacherId" element={<TeacherDetail />} />
             <Route path="/teachers/:teacherId/edit" element={<TeacherEdit />} />
-              <Route path="/teachers/manage" element={<TeachersManagement />} />
               <Route path="/teachers/:teacherId/schedule" element={<TeacherSchedule />} />
               <Route path="/courses" element={<Courses />} />
               <Route path="/courses/new" element={<CourseForm />} />
@@ -294,6 +302,7 @@ function App() {
         </Layout>
       </Router>
     </NotificationProvider>
+    </I18nProvider>
   );
 }
 

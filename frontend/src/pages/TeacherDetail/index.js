@@ -38,8 +38,10 @@ import {
 } from '@chakra-ui/react';
 import { FaArrowLeft, FaEdit, FaTrash, FaCalendarAlt, FaFileExport } from 'react-icons/fa';
 import './TeacherDetail.css';
+import { useTranslation } from 'react-i18next';
 
 const TeacherDetail = () => {
+  const { t } = useTranslation();
   const { teacherId } = useParams();
   const [teacher, setTeacher] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +67,23 @@ const TeacherDetail = () => {
     const fetchTeacherDetails = async () => {
       try {
         setLoading(true);
+        
+        // Skip API calls if we're in the "new" teacher route
+        if (teacherId === 'new' || !teacherId) {
+          setError(t('teachers.cannot_view_details'));
+          setLoading(false);
+          return;
+        }
+        
         const response = await teachersAPI.getById(teacherId);
+        
+        // Check if valid response
+        if (!response.data || (typeof response.data === 'object' && Object.keys(response.data).length === 0)) {
+          setError(t('teachers.teacher_not_found', { id: teacherId }));
+          setLoading(false);
+          return;
+        }
+        
         setTeacher(response.data);
         
         // Also fetch teacher's courses and classes
@@ -78,20 +96,22 @@ const TeacherDetail = () => {
         setLoading(false);
       } catch (err) {
         console.error('Error fetching teacher details:', err);
-        setError('Failed to load teacher details. Please try again later.');
+        setError(t('teachers.error_loading_details', { 
+          errorType: err.response?.status === 404 ? t('teachers.not_found') : t('teachers.try_again')
+        }));
         setLoading(false);
       }
     };
 
     fetchTeacherDetails();
-  }, [teacherId]);
+  }, [teacherId, t]);
 
   const handleDelete = async () => {
     try {
       await teachersAPI.remove(teacherId);
       toast({
-        title: 'Teacher deleted',
-        description: 'The teacher has been successfully removed',
+        title: t('teachers.teacher_deleted'),
+        description: t('teachers.teacher_deleted_success'),
         status: 'success',
         duration: 5000,
         isClosable: true,
@@ -100,8 +120,8 @@ const TeacherDetail = () => {
     } catch (err) {
       console.error('Error deleting teacher:', err);
       toast({
-        title: 'Error',
-        description: 'Failed to delete teacher. Please try again.',
+        title: t('common.error'),
+        description: t('teachers.delete_error'),
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -112,7 +132,7 @@ const TeacherDetail = () => {
   
   // Format date for display
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return t('common.not_provided');
     return new Date(dateString).toLocaleDateString();
   };
   
@@ -126,17 +146,17 @@ const TeacherDetail = () => {
       
       // 1. Teacher Info Sheet
       const teacherData = [
-        ['Teacher Information', ''],
-        ['Name', teacher.name],
-        ['Email', teacher.email],
-        ['Phone', teacher.phone || 'N/A'],
-        ['Specialization', teacher.specialization || 'N/A'],
-        ['Location', teacher.location || 'N/A'],
-        ['Joined Date', formatDate(teacher.joinedDate)],
+        [t('teachers.export.teacher_information'), ''],
+        [t('teachers.name'), teacher.name],
+        [t('teachers.email'), teacher.email],
+        [t('teachers.phone'), teacher.phone || t('common.not_provided')],
+        [t('teachers.specialization'), teacher.specialization || t('common.not_provided')],
+        [t('teachers.location'), teacher.location || t('common.not_provided')],
+        [t('teachers.joined'), formatDate(teacher.joinedDate)],
         ['', ''],
-        ['Report Information', ''],
-        ['Month/Year', `${new Date(exportYear, exportMonth, 1).toLocaleString('default', { month: 'long' })} ${exportYear}`],
-        ['Report Generated', new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString()],
+        [t('teachers.export.report_information'), ''],
+        [t('teachers.export.month_year'), `${new Date(exportYear, exportMonth, 1).toLocaleString('default', { month: 'long' })} ${exportYear}`],
+        [t('teachers.export.report_generated'), new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString()],
         ['', ''],
       ];
       
@@ -148,7 +168,7 @@ const TeacherDetail = () => {
         { wch: 40 }  // Column B width
       ];
       
-      XLSX.utils.book_append_sheet(wb, teacherSheet, "Teacher Info");
+      XLSX.utils.book_append_sheet(wb, teacherSheet, t('teachers.export.teacher_info'));
       
       // Date range for filtered month
       const startOfMonth = new Date(exportYear, exportMonth, 1);
@@ -160,12 +180,12 @@ const TeacherDetail = () => {
       let courseSessionsData = [];
       
       // Add title and explanation
-      courseSessionsData.push([`Courses Taught by ${teacher.name} - ${monthName} ${exportYear}`]);
-      courseSessionsData.push(['A value of "1" indicates that a session was taught on that day']);
+      courseSessionsData.push([t('teachers.export.courses_taught_by', { name: teacher.name, month: monthName, year: exportYear })]);
+      courseSessionsData.push([t('teachers.export.value_explanation')]);
       courseSessionsData.push([]);
       
       // Header row with dates 1-31
-      const courseHeaderRow = ['Course Name'];
+      const courseHeaderRow = [t('courses.course_name')];
       const daysInMonth = endOfMonth.getDate();
       for (let i = 1; i <= daysInMonth; i++) {
         courseHeaderRow.push(i); // Add days 1-31 as columns
@@ -211,7 +231,7 @@ const TeacherDetail = () => {
       }
       
       // Add a total row
-      const totalRow = ['TOTAL SESSIONS'];
+      const totalRow = [t('teachers.export.total_sessions')];
       for (let i = 1; i <= daysInMonth; i++) {
         let count = 0;
         // Start from index 4 to skip the header rows
@@ -235,18 +255,18 @@ const TeacherDetail = () => {
       }
       coursesSessionsSheet['!cols'] = courseColWidths;
       
-      XLSX.utils.book_append_sheet(wb, coursesSessionsSheet, `Courses - ${monthName}`);
+      XLSX.utils.book_append_sheet(wb, coursesSessionsSheet, `${t('courses.title')} - ${monthName}`);
       
       // 3. Kindergarten Classes Sessions Sheet
       let kgSessionsData = [];
       
       // Add title and explanation
-      kgSessionsData.push([`Kindergarten Classes Taught by ${teacher.name} - ${monthName} ${exportYear}`]);
-      kgSessionsData.push(['A value of "1" indicates that a session was taught on that day']);
+      kgSessionsData.push([t('teachers.export.kindergarten_taught_by', { name: teacher.name, month: monthName, year: exportYear })]);
+      kgSessionsData.push([t('teachers.export.value_explanation')]);
       kgSessionsData.push([]);
       
       // Header row with dates 1-31
-      const kgHeaderRow = ['Class Name'];
+      const kgHeaderRow = [t('kindergarten.class.name')];
       for (let i = 1; i <= daysInMonth; i++) {
         kgHeaderRow.push(i); // Add days 1-31 as columns
       }
@@ -291,7 +311,7 @@ const TeacherDetail = () => {
       }
       
       // Add a total row
-      const kgTotalRow = ['TOTAL SESSIONS'];
+      const kgTotalRow = [t('teachers.export.total_sessions')];
       for (let i = 1; i <= daysInMonth; i++) {
         let count = 0;
         // Start from index 4 to skip the header rows
@@ -315,17 +335,17 @@ const TeacherDetail = () => {
       }
       kgSessionsSheet['!cols'] = kgColWidths;
       
-      XLSX.utils.book_append_sheet(wb, kgSessionsSheet, `Classes - ${monthName}`);
+      XLSX.utils.book_append_sheet(wb, kgSessionsSheet, `${t('kindergarten.classes')} - ${monthName}`);
       
       // Generate filename
-      const fileName = `${teacher.name.replace(/\s+/g, '_')}_Sessions_${monthName}_${exportYear}.xlsx`;
+      const fileName = `${teacher.name.replace(/\s+/g, '_')}_${t('teachers.export.sessions')}_${monthName}_${exportYear}.xlsx`;
       
       // Export
       XLSX.writeFile(wb, fileName);
       
       toast({
-        title: 'Export successful',
-        description: `Sessions exported to ${fileName}`,
+        title: t('teachers.export.success'),
+        description: t('teachers.export.success_description', { fileName }),
         status: 'success',
         duration: 5000,
         isClosable: true,
@@ -333,8 +353,8 @@ const TeacherDetail = () => {
     } catch (err) {
       console.error('Error exporting teacher sessions:', err);
       toast({
-        title: 'Export failed',
-        description: 'Failed to export teacher sessions.',
+        title: t('teachers.export.failed'),
+        description: t('teachers.export.failed_description'),
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -349,7 +369,7 @@ const TeacherDetail = () => {
     return (
       <Box p={4} textAlign="center">
         <Spinner color="brand.500" size="lg" />
-        <Text mt={2} color="gray.500">Loading teacher details...</Text>
+        <Text mt={2} color="gray.500">{t('teachers.loading')}</Text>
       </Box>
     );
   }
@@ -357,10 +377,10 @@ const TeacherDetail = () => {
   if (error) {
     return (
       <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
-        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Heading size="md" mb={2} color="red.600">{t('common.error')}</Heading>
         <Text mb={4}>{error}</Text>
         <Button colorScheme="red" variant="outline" onClick={() => window.location.reload()}>
-          Retry
+          {t('teachers.retry')}
         </Button>
       </Box>
     );
@@ -369,10 +389,10 @@ const TeacherDetail = () => {
   if (!teacher) {
     return (
       <Box p={4} bg="yellow.50" borderWidth="1px" borderColor="yellow.200">
-        <Heading size="md" mb={2} color="yellow.600">Teacher Not Found</Heading>
-        <Text mb={4}>The requested teacher could not be found.</Text>
+        <Heading size="md" mb={2} color="yellow.600">{t('teachers.teacher_not_found_title')}</Heading>
+        <Text mb={4}>{t('teachers.teacher_not_found_description')}</Text>
         <Button as={Link} to="/teachers" leftIcon={<FaArrowLeft />} colorScheme="yellow" variant="outline">
-          Back to Teachers
+          {t('teachers.back_to_teachers')}
         </Button>
       </Box>
     );
@@ -385,11 +405,11 @@ const TeacherDetail = () => {
           as={Link}
           to="/teachers"
           icon={<FaArrowLeft />}
-          aria-label="Back to teachers"
+          aria-label={t('teachers.back_to_teachers')}
           mr={4}
           variant="outline"
         />
-        <Heading fontSize="xl" fontWeight="semibold">Teacher Details</Heading>
+        <Heading fontSize="xl" fontWeight="semibold">{t('teachers.teacher_details')}</Heading>
       </Flex>
 
       <Box bg={bgColor} borderWidth="1px" borderColor={borderColor} borderRadius="md" overflow="hidden">
@@ -412,13 +432,13 @@ const TeacherDetail = () => {
                   icon={<FaEdit />}
                   colorScheme="blue"
                   variant="outline"
-                  aria-label="Edit teacher"
+                  aria-label={t('teachers.edit_teacher')}
                 />
                 <IconButton
                   icon={<FaTrash />}
                   colorScheme="red"
                   variant="outline"
-                  aria-label="Delete teacher"
+                  aria-label={t('teachers.delete_teacher')}
                   onClick={onOpen}
                 />
                 <IconButton
@@ -426,41 +446,41 @@ const TeacherDetail = () => {
                   to={`/teachers/${teacherId}/schedule`}
                   icon={<FaCalendarAlt />}
                   colorScheme="brand"
-                  aria-label="View schedule"
+                  aria-label={t('teachers.view_schedule')}
                 />
                 <IconButton
                   icon={<FaFileExport />}
                   colorScheme="green"
-                  aria-label="Export sessions"
+                  aria-label={t('teachers.export_sessions')}
                   onClick={onExportModalOpen}
                 />
               </Flex>
             </Flex>
 
             <Badge bg="brand.50" color="brand.700" fontWeight="medium" px={2} py={1} mb={4}>
-              {teacher.specialization || 'No specialization'}
+              {teacher.specialization || t('teachers.no_specialization')}
             </Badge>
 
             <Divider my={4} />
 
             <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)' }} gap={4}>
               <GridItem>
-                <Text fontWeight="bold">Email:</Text>
+                <Text fontWeight="bold">{t('teachers.email')}:</Text>
                 <Text>{teacher.email}</Text>
               </GridItem>
               <GridItem>
-                <Text fontWeight="bold">Phone:</Text>
-                <Text>{teacher.phone || 'Not provided'}</Text>
+                <Text fontWeight="bold">{t('teachers.phone')}:</Text>
+                <Text>{teacher.phone || t('common.not_provided')}</Text>
               </GridItem>
               {teacher.location && (
                 <GridItem>
-                  <Text fontWeight="bold">Location:</Text>
+                  <Text fontWeight="bold">{t('teachers.location')}:</Text>
                   <Text>{teacher.location}</Text>
                 </GridItem>
               )}
               {teacher.joinedDate && (
                 <GridItem>
-                  <Text fontWeight="bold">Joined:</Text>
+                  <Text fontWeight="bold">{t('teachers.joined')}:</Text>
                   <Text>{new Date(teacher.joinedDate).toLocaleDateString()}</Text>
                 </GridItem>
               )}
@@ -469,7 +489,7 @@ const TeacherDetail = () => {
             {teacher.bio && (
               <>
                 <Divider my={4} />
-                <Text fontWeight="bold">Biography:</Text>
+                <Text fontWeight="bold">{t('teachers.bio')}:</Text>
                 <Text>{teacher.bio}</Text>
               </>
             )}
@@ -485,19 +505,19 @@ const TeacherDetail = () => {
         <AlertDialogOverlay>
           <AlertDialogContent>
             <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Delete Teacher
+              {t('teachers.delete_teacher')}
             </AlertDialogHeader>
 
             <AlertDialogBody>
-              Are you sure you want to delete {teacher.name}? This action cannot be undone.
+              {t('teachers.delete_confirmation', { name: teacher.name })}
             </AlertDialogBody>
 
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onClose}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button colorScheme="red" onClick={handleDelete} ml={3}>
-                Delete
+                {t('common.delete')}
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -508,37 +528,37 @@ const TeacherDetail = () => {
       <Modal isOpen={isExportModalOpen} onClose={onExportModalClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Export Teacher Sessions</ModalHeader>
+          <ModalHeader>{t('teachers.export.title')}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <Text mb={4}>
-              Export {teacher.name}'s sessions for the selected month. The export will include all courses and kindergarten classes taught by this teacher.
+              {t('teachers.export.description', { name: teacher.name })}
             </Text>
             
             <HStack spacing={4}>
               <FormControl>
-                <FormLabel>Month</FormLabel>
+                <FormLabel>{t('teachers.export.month')}</FormLabel>
                 <Select 
                   value={exportMonth} 
                   onChange={(e) => setExportMonth(parseInt(e.target.value))}
                 >
-                  <option value={0}>January</option>
-                  <option value={1}>February</option>
-                  <option value={2}>March</option>
-                  <option value={3}>April</option>
-                  <option value={4}>May</option>
-                  <option value={5}>June</option>
-                  <option value={6}>July</option>
-                  <option value={7}>August</option>
-                  <option value={8}>September</option>
-                  <option value={9}>October</option>
-                  <option value={10}>November</option>
-                  <option value={11}>December</option>
+                  <option value={0}>{t('teachers.export.january')}</option>
+                  <option value={1}>{t('teachers.export.february')}</option>
+                  <option value={2}>{t('teachers.export.march')}</option>
+                  <option value={3}>{t('teachers.export.april')}</option>
+                  <option value={4}>{t('teachers.export.may')}</option>
+                  <option value={5}>{t('teachers.export.june')}</option>
+                  <option value={6}>{t('teachers.export.july')}</option>
+                  <option value={7}>{t('teachers.export.august')}</option>
+                  <option value={8}>{t('teachers.export.september')}</option>
+                  <option value={9}>{t('teachers.export.october')}</option>
+                  <option value={10}>{t('teachers.export.november')}</option>
+                  <option value={11}>{t('teachers.export.december')}</option>
                 </Select>
               </FormControl>
               
               <FormControl>
-                <FormLabel>Year</FormLabel>
+                <FormLabel>{t('teachers.export.year')}</FormLabel>
                 <Select 
                   value={exportYear} 
                   onChange={(e) => setExportYear(parseInt(e.target.value))}
@@ -558,7 +578,7 @@ const TeacherDetail = () => {
 
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={onExportModalClose}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button 
               colorScheme="green" 
@@ -566,7 +586,7 @@ const TeacherDetail = () => {
               onClick={exportSessionsToExcel}
               isLoading={exportLoading}
             >
-              Export
+              {t('teachers.export.download')}
             </Button>
           </ModalFooter>
         </ModalContent>

@@ -14,6 +14,19 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @desc    Handle GET /api/teachers/new specifically
+// @route   GET /api/teachers/new
+// @access  Public
+router.get('/new', (req, res) => {
+  // "new" is not a valid ObjectId, so this prevents a 500 error from findById("new")
+  // Typically, creating a new teacher would be a POST to /api/teachers
+  // and the UI route /teachers/new would display a form, not fetch a teacher with ID "new".
+  res.status(400).json({
+    message: "The path GET /api/teachers/new is not for fetching a teacher. Did you mean to navigate to a 'create teacher' page, or POST to /api/teachers?",
+    note: "This route is handled to prevent a 500 error from Mongoose trying to cast 'new' to an ObjectId."
+  });
+});
+
 // @desc    Get teacher by ID
 // @route   GET /api/teachers/:id
 // @access  Public

@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { teachersAPI } from '../../api';
 import { Box, Heading, Text, SimpleGrid, Flex, Button, Badge, Spinner, useColorModeValue } from '@chakra-ui/react';
-import { FaPlus, FaArrowRight } from 'react-icons/fa';
+import { FaArrowRight } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 import './Teachers.css';
 
 const Teachers = () => {
+  const { t } = useTranslation();
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,19 +22,19 @@ const Teachers = () => {
         setLoading(false);
       } catch (err) {
         console.error('Error fetching teachers:', err);
-        setError('Failed to load teachers. Please try again later.');
+        setError(t('teachers.error'));
         setLoading(false);
       }
     };
 
     fetchTeachers();
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
       <Box p={4} textAlign="center">
         <Spinner color="brand.500" size="lg" />
-        <Text mt={2} color="gray.500">Loading teachers...</Text>
+        <Text mt={2} color="gray.500">{t('teachers.loading')}</Text>
       </Box>
     );
   }
@@ -40,10 +42,10 @@ const Teachers = () => {
   if (error) {
     return (
       <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
-        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Heading size="md" mb={2} color="red.600">{t('common.error')}</Heading>
         <Text mb={4}>{error}</Text>
         <Box as="button" bg="red.100" px={4} py={2} color="red.700" fontWeight="medium" _hover={{ bg: "red.200" }} onClick={() => window.location.reload()}>
-          Retry
+          {t('teachers.retry')}
         </Box>
       </Box>
     );
@@ -52,16 +54,7 @@ const Teachers = () => {
   return (
     <Box>
       <Flex justifyContent="space-between" alignItems="center" mb={6}>
-        <Heading fontSize="xl" fontWeight="semibold">Teachers</Heading>
-        <Button 
-          as={Link} 
-          to={'/teachers/new'}
-          colorScheme="brand" 
-          size="sm"
-          leftIcon={<FaPlus />}
-        >
-          Add Teacher
-        </Button>
+        <Heading fontSize="xl" fontWeight="semibold">{t('teachers.teachers')}</Heading>
       </Flex>
       
       <Box 
@@ -75,10 +68,10 @@ const Teachers = () => {
         <Flex alignItems="center" justifyContent="space-between">
           <Box>
             <Heading size="sm" color="green.700" mb={1}>
-              New Feature: Teacher Session Reports
+              {t('teachers.new_feature')}
             </Heading>
             <Text fontSize="sm" color="green.600">
-              You can now export monthly session reports for each teacher. These reports show all courses and classes taught by a teacher in a specific month.
+              {t('teachers.new_feature_description')}
             </Text>
           </Box>
           <Button
@@ -90,14 +83,14 @@ const Teachers = () => {
             mr={2}
             rightIcon={<FaArrowRight />}
           >
-            Try it now
+            {t('teachers.try_it_now')}
           </Button>
         </Flex>
       </Box>
       
       {teachers.length === 0 ? (
         <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" textAlign="center">
-          <Text color="gray.500">No teachers found. Add your first teacher to get started.</Text>
+          <Text color="gray.500">{t('teachers.no_teachers')}</Text>
         </Box>
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
@@ -114,7 +107,7 @@ const Teachers = () => {
               <Box mb={4}>
                 <Heading size="sm" mb={1}>{teacher.name}</Heading>
                 <Text fontSize="sm" color="gray.500" mb={2}>{teacher.email}</Text>
-                <Badge bg="brand.50" color="brand.700" fontWeight="medium" px={2} py={1}>{teacher.specialization || 'No specialization'}</Badge>
+                <Badge bg="brand.50" color="brand.700" fontWeight="medium" px={2} py={1}>{teacher.specialization || t('teachers.no_specialization')}</Badge>
               </Box>
               <Flex justifyContent="flex-end" mt={4} gap={2}>
                 <Button 
@@ -124,7 +117,7 @@ const Teachers = () => {
                   size="sm"
                   colorScheme="gray"
                 >
-                  View Details
+                  {t('teachers.view_details')}
                 </Button>
                 <Button 
                   as={Link}
@@ -133,7 +126,7 @@ const Teachers = () => {
                   size="sm"
                   colorScheme="brand"
                 >
-                  View Schedule
+                  {t('teachers.view_schedule')}
                 </Button>
               </Flex>
             </Box>

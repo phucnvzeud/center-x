@@ -9,6 +9,7 @@ import getDay from 'date-fns/getDay';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { teachersAPI, coursesAPI, kindergartenClassesAPI } from '../../api';
 import './TeacherSchedule.css';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Container,
@@ -48,6 +49,7 @@ const localizer = dateFnsLocalizer({
 
 // Custom tooltip component for event details
 const EventTooltip = ({ event, onClose }) => {
+  const { t } = useTranslation();
   if (!event) return null;
   
   const isKindergarten = event.type === 'kindergarten';
@@ -76,15 +78,15 @@ const EventTooltip = ({ event, onClose }) => {
         
         {isKindergarten ? (
           <div className="tooltip-details">
-            <div><strong>School:</strong> {resource.school?.name || 'N/A'}</div>
-            <div><strong>Age Group:</strong> {resource.ageGroup || 'N/A'}</div>
-            <div><strong>Students:</strong> {resource.studentCount || 0}</div>
+            <div><strong>{t('teachers.schedule.school')}:</strong> {resource.school?.name || t('common.not_provided')}</div>
+            <div><strong>{t('teachers.schedule.age_group')}:</strong> {resource.ageGroup || t('common.not_provided')}</div>
+            <div><strong>{t('teachers.schedule.students')}:</strong> {resource.studentCount || 0}</div>
           </div>
         ) : (
           <div className="tooltip-details">
-            <div><strong>Level:</strong> {resource.level || 'N/A'}</div>
-            <div><strong>Branch:</strong> {resource.branch?.name || 'N/A'}</div>
-            <div><strong>Students:</strong> {resource.totalStudent || 0}/{resource.maxStudents || 'N/A'}</div>
+            <div><strong>{t('teachers.schedule.level')}:</strong> {resource.level || t('common.not_provided')}</div>
+            <div><strong>{t('teachers.schedule.branch')}:</strong> {resource.branch?.name || t('common.not_provided')}</div>
+            <div><strong>{t('teachers.schedule.students')}:</strong> {resource.totalStudent || 0}/{resource.maxStudents || t('common.not_provided')}</div>
           </div>
         )}
       </div>
@@ -93,6 +95,7 @@ const EventTooltip = ({ event, onClose }) => {
 };
 
 const TeacherSchedule = () => {
+  const { t } = useTranslation();
   const { teacherId } = useParams();
   const [teacher, setTeacher] = useState(null);
   const [courses, setCourses] = useState([]);
@@ -125,8 +128,23 @@ const TeacherSchedule = () => {
       try {
         setLoading(true);
         
+        // Skip API calls if we're in the "new" teacher route
+        if (teacherId === 'new' || !teacherId) {
+          setError(t('teachers.cannot_view_schedule'));
+          setLoading(false);
+          return;
+        }
+        
         // Fetch teacher details
         const teacherResponse = await teachersAPI.getById(teacherId);
+        
+        // Check if valid response
+        if (!teacherResponse.data || (typeof teacherResponse.data === 'object' && Object.keys(teacherResponse.data).length === 0)) {
+          setError(t('teachers.teacher_not_found', { id: teacherId }));
+          setLoading(false);
+          return;
+        }
+        
         setTeacher(teacherResponse.data);
         
         // Fetch all courses
@@ -152,7 +170,9 @@ const TeacherSchedule = () => {
         setLoading(false);
       } catch (err) {
         console.error('Error fetching teacher schedule data:', err);
-        setError('Failed to load schedule. Please try again later.');
+        setError(t('teachers.schedule.error', {
+          errorType: err.response?.status === 404 ? t('teachers.not_found') : t('common.try_again')
+        }));
         setLoading(false);
       }
     };
@@ -160,7 +180,7 @@ const TeacherSchedule = () => {
     if (teacherId) {
       fetchTeacherData();
     }
-  }, [teacherId]);
+  }, [teacherId, t]);
 
   const generateCalendarEvents = (teacherCourses, teacherKindergartenClasses) => {
     const calendarEvents = [];
@@ -252,7 +272,7 @@ const TeacherSchedule = () => {
             
             // Create the event
             calendarEvents.push({
-              title: `${course.name} (${course.level || 'N/A'})`,
+              title: `${course.name} (${course.level || t('common.not_provided')})`,
               start: startDateTime,
               end: endDateTime,
               courseId: course._id,
@@ -375,7 +395,7 @@ const TeacherSchedule = () => {
             
             // Create the event with different styling for kindergarten classes
             const newEvent = {
-              title: `[KG] ${kClass.name} (${kClass.school?.name || 'N/A'})`,
+              title: `[${t('teachers.schedule.kindergarten')}] ${kClass.name} (${kClass.school?.name || t('common.not_provided')})`,
               start: startDateTime,
               end: endDateTime,
               classId: kClass._id,
@@ -446,11 +466,11 @@ const TeacherSchedule = () => {
     let timeOfDayLabel = '';
     
     if (startHour >= 6 && startHour < 12) {
-      timeOfDayLabel = 'Morning';
+      timeOfDayLabel = t('teachers.schedule.morning');
     } else if (startHour >= 12 && startHour < 17) {
-      timeOfDayLabel = 'Afternoon';
+      timeOfDayLabel = t('teachers.schedule.afternoon');
     } else {
-      timeOfDayLabel = 'Evening';
+      timeOfDayLabel = t('teachers.schedule.evening');
     }
     
     // Format event time for compact display
@@ -485,7 +505,7 @@ const TeacherSchedule = () => {
           {event.title}
         </strong>
         <p className="event-details">
-          {startTime} - {endTime} • {duration}min
+          {startTime} - {endTime} • {duration}{t('teachers.schedule.minutes')}
           {event.type === 'kindergarten' ? 
             (event.resource.school ? ` • ${event.resource.school.name}` : '') :
             (event.resource.branch ? ` • ${event.resource.branch.name}` : '')
@@ -499,7 +519,7 @@ const TeacherSchedule = () => {
     return (
       <Flex justify="center" align="center" height="50vh">
         <Spinner size="xl" color="blue.500" thickness="4px" />
-        <Text ml={4} fontSize="lg" color="gray.600">Loading teacher schedule...</Text>
+        <Text ml={4} fontSize="lg" color="gray.600">{t('teachers.schedule.loading')}</Text>
       </Flex>
     );
   }
@@ -518,32 +538,32 @@ const TeacherSchedule = () => {
   return (
     <Container maxW="container.xl" py={6}>
       <Heading size="lg" mb={4}>
-        {teacher ? `${teacher.name}'s Schedule` : 'Teacher Schedule'}
+        {teacher ? t('teachers.schedule.title_with_name', { name: teacher.name }) : t('teachers.schedule.title')}
       </Heading>
       
       {teacher && (
         <Box mb={6}>
           <HStack spacing={4} mb={4}>
             <Badge colorScheme="purple" fontSize="sm" px={2} py={1}>
-              {teacher.specialization || 'No Specialization'}
+              {teacher.specialization || t('teachers.no_specialization')}
             </Badge>
             {teacher.active !== undefined && (
               <Badge colorScheme={teacher.active ? "green" : "red"} fontSize="sm" px={2} py={1}>
-                {teacher.active ? 'Active' : 'Inactive'}
+                {teacher.active ? t('common.active') : t('common.inactive')}
               </Badge>
             )}
           </HStack>
           
           <Text color="gray.600" fontSize="sm">
-            Email: {teacher.email || 'N/A'} • Phone: {teacher.phone || 'N/A'}
+            {t('teachers.email')}: {teacher.email || t('common.not_provided')} • {t('teachers.phone')}: {teacher.phone || t('common.not_provided')}
           </Text>
         </Box>
       )}
       
       <Tabs variant="enclosed" colorScheme="blue" size="md">
         <TabList>
-          <Tab>Calendar View</Tab>
-          <Tab>Assignments</Tab>
+          <Tab>{t('teachers.schedule.calendar')}</Tab>
+          <Tab>{t('teachers.schedule.assignments')}</Tab>
         </TabList>
         
         <TabPanels>
@@ -559,16 +579,16 @@ const TeacherSchedule = () => {
             >
               <Flex justify="center" mb={4} wrap="wrap" gap={4}>
                 <Tag size="md" colorScheme="green" borderRadius="full" variant="solid">
-                  Morning Classes (6:00 - 11:59)
+                  {t('teachers.schedule.morning_classes')}
                 </Tag>
                 <Tag size="md" colorScheme="orange" borderRadius="full" variant="solid">
-                  Afternoon Classes (12:00 - 16:59)
+                  {t('teachers.schedule.afternoon_classes')}
                 </Tag>
                 <Tag size="md" colorScheme="red" borderRadius="full" variant="solid">
-                  Evening Classes (17:00 - 22:00)
+                  {t('teachers.schedule.evening_classes')}
                 </Tag>
                 <Tag size="md" colorScheme="purple" borderRadius="full" variant="solid">
-                  Kindergarten Classes
+                  {t('teachers.schedule.kindergarten_classes')}
                 </Tag>
               </Flex>
               
@@ -585,6 +605,14 @@ const TeacherSchedule = () => {
                   onSelectEvent={handleSelectEvent}
                   components={{
                     event: EventComponent
+                  }}
+                  messages={{
+                    today: t('teachers.schedule.today'),
+                    month: t('teachers.schedule.month'),
+                    week: t('teachers.schedule.week'),
+                    day: t('teachers.schedule.day'),
+                    agenda: t('teachers.schedule.agenda'),
+                    noEventsInRange: t('teachers.schedule.no_events')
                   }}
                 />
                 
@@ -607,7 +635,7 @@ const TeacherSchedule = () => {
             <VStack spacing={6} align="stretch">
               {courses.length > 0 && (
                 <Box>
-                  <Heading size="md" mb={4}>Courses</Heading>
+                  <Heading size="md" mb={4}>{t('courses.title')}</Heading>
                   <List spacing={3}>
                     {courses.map(course => (
                       <ListItem 
@@ -620,24 +648,24 @@ const TeacherSchedule = () => {
                       >
                         <Heading size="sm" mb={2}>{course.name}</Heading>
                         <Flex mb={2} wrap="wrap" gap={2}>
-                          <Badge colorScheme="blue">{course.level || 'N/A'}</Badge>
+                          <Badge colorScheme="blue">{course.level || t('common.not_provided')}</Badge>
                           <Badge colorScheme="green">
-                            {course.branch && course.branch.name ? course.branch.name : 'N/A'}
+                            {course.branch && course.branch.name ? course.branch.name : t('common.not_provided')}
                           </Badge>
                         </Flex>
                           {course.weeklySchedule && course.weeklySchedule.length > 0 ? (
                           <Box bg={cardBg} p={2} borderRadius="md" fontSize="sm">
-                            <Text fontWeight="medium" mb={1}>Schedule:</Text>
+                            <Text fontWeight="medium" mb={1}>{t('courses.schedule')}:</Text>
                             <List>
                               {course.weeklySchedule.map((schedule, idx) => (
                                 <ListItem key={idx}>
-                                  {schedule.day}: {schedule.startTime} - {schedule.endTime}
+                                  {t(`days.${schedule.day.toLowerCase()}`)}: {schedule.startTime} - {schedule.endTime}
                                 </ListItem>
                               ))}
                             </List>
                           </Box>
                           ) : (
-                          <Text fontSize="sm" color="gray.500">No schedule defined</Text>
+                          <Text fontSize="sm" color="gray.500">{t('teachers.schedule.no_schedule')}</Text>
                           )}
                       </ListItem>
                     ))}
@@ -647,7 +675,7 @@ const TeacherSchedule = () => {
               
               {kindergartenClasses.length > 0 && (
                 <Box>
-                  <Heading size="md" mb={4}>Kindergarten Classes</Heading>
+                  <Heading size="md" mb={4}>{t('teachers.kindergarten_classes')}</Heading>
                   <List spacing={3}>
                     {kindergartenClasses.map(kClass => (
                       <ListItem 
@@ -661,23 +689,23 @@ const TeacherSchedule = () => {
                         <Heading size="sm" mb={2}>{kClass.name}</Heading>
                         <Flex mb={2} wrap="wrap" gap={2}>
                           <Badge colorScheme="purple">
-                            {kClass.school && kClass.school.name ? kClass.school.name : 'N/A'}
+                            {kClass.school && kClass.school.name ? kClass.school.name : t('common.not_provided')}
                           </Badge>
-                          <Badge colorScheme="teal">{kClass.ageGroup || 'N/A'}</Badge>
+                          <Badge colorScheme="teal">{kClass.ageGroup || t('common.not_provided')}</Badge>
                         </Flex>
                           {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
                           <Box bg={cardBg} p={2} borderRadius="md" fontSize="sm">
-                            <Text fontWeight="medium" mb={1}>Schedule:</Text>
+                            <Text fontWeight="medium" mb={1}>{t('courses.schedule')}:</Text>
                             <List>
                               {kClass.weeklySchedule.map((schedule, idx) => (
                                 <ListItem key={idx}>
-                                  {schedule.day}: {schedule.startTime} - {schedule.endTime}
+                                  {t(`days.${schedule.day.toLowerCase()}`)}: {schedule.startTime} - {schedule.endTime}
                                 </ListItem>
                               ))}
                             </List>
                           </Box>
                         ) : (
-                          <Text fontSize="sm" color="gray.500">No schedule defined</Text>
+                          <Text fontSize="sm" color="gray.500">{t('teachers.schedule.no_schedule')}</Text>
                         )}
                       </ListItem>
                     ))}
@@ -688,7 +716,7 @@ const TeacherSchedule = () => {
               {courses.length === 0 && kindergartenClasses.length === 0 && (
                 <Alert status="info">
                   <AlertIcon />
-                  This teacher has no assigned courses or classes.
+                  {t('teachers.schedule.no_assignments')}
                 </Alert>
               )}
             </VStack>

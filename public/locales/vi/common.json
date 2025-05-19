@@ -1,0 +1,81 @@
+{
+  "app": {
+    "title": "Quản Lý Center X",
+    "footer": "© 2023 Quản Lý Center X. Tất cả quyền được bảo lưu."
+  },
+  "nav": {
+    "dashboard": "Bảng Điều Khiển",
+    "kindergarten": "Mẫu Giáo",
+    "courses": "Khóa Học",
+    "teachers": "Giáo Viên",
+    "students": "Học Sinh",
+    "sessions": "Buổi Học",
+    "reports": "Báo Cáo",
+    "settings": "Cài Đặt",
+    "profile": "Hồ Sơ",
+    "logout": "Đăng Xuất"
+  },
+  "kindergarten": {
+    "classes": "Lớp Học",
+    "schools": "Trường Học",
+    "regions": "Khu Vực",
+    "dashboard": "Bảng Điều Khiển Mẫu Giáo"
+  },
+  "common": {
+    "status": "Trạng Thái",
+    "active": "Đang Hoạt Động",
+    "inactive": "Không Hoạt Động",
+    "completed": "Hoàn Thành",
+    "canceled": "Đã Hủy",
+    "loading": "Đang Tải...",
+    "search": "Tìm Kiếm",
+    "reset": "Đặt Lại",
+    "filter": "Lọc",
+    "add": "Thêm",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "back": "Quay Lại",
+    "submit": "Gửi",
+    "name": "Tên",
+    "email": "Email",
+    "phone": "Điện Thoại",
+    "address": "Địa Chỉ",
+    "description": "Mô Tả",
+    "startDate": "Ngày Bắt Đầu",
+    "endDate": "Ngày Kết Thúc",
+    "date": "Ngày",
+    "time": "Thời Gian",
+    "selectOption": "Chọn một tùy chọn...",
+    "noData": "Không có dữ liệu",
+    "error": "Lỗi",
+    "success": "Thành Công",
+    "warning": "Cảnh Báo",
+    "info": "Thông Tin",
+    "view": "Xem",
+    "actions": "Thao Tác",
+    "confirm": "Xác Nhận",
+    "confirmDelete": "Bạn có chắc chắn muốn xóa cái này?",
+    "yes": "Có",
+    "no": "Không"
+  },
+  "auth": {
+    "login": "Đăng Nhập",
+    "register": "Đăng Ký",
+    "forgotPassword": "Quên Mật Khẩu",
+    "resetPassword": "Đặt Lại Mật Khẩu",
+    "username": "Tên Đăng Nhập",
+    "password": "Mật Khẩu",
+    "confirmPassword": "Xác Nhận Mật Khẩu",
+    "rememberMe": "Ghi Nhớ Đăng Nhập",
+    "loginSuccess": "Đăng nhập thành công",
+    "loginFailed": "Đăng nhập thất bại",
+    "logoutSuccess": "Đăng xuất thành công"
+  },
+  "language": {
+    "select": "Ngôn Ngữ",
+    "english": "Tiếng Anh",
+    "vietnamese": "Tiếng Việt"
+  }
+} 

@@ -42,7 +42,22 @@ const cachedRequest = async (apiCall, args = [], cacheKeyPrefix, ttl) => {
 // Teachers API
 export const teachersAPI = {
   getAll: async () => cachedRequest(api.get, ['/teachers'], 'teachersAPI.getAll', 60000),
-  getById: async (id) => cachedRequest(api.get, [`/teachers/${id}`], 'teachersAPI.getById', 60000),
+  getById: async (id) => {
+    // Special case for 'new' id - return a mock response instead of making an API call
+    if (id === 'new') {
+      return Promise.resolve({
+        data: {
+          name: '',
+          email: '',
+          phone: '',
+          specialization: '',
+          location: '',
+          bio: ''
+        }
+      });
+    }
+    return cachedRequest(api.get, [`/teachers/${id}`], 'teachersAPI.getById', 60000);
+  },
   create: (data) => api.post('/teachers', data),
   update: (id, data) => {
     clearCache(['teachersAPI.getAll', `teachersAPI.getById:["${id}"]`]);
@@ -226,6 +241,6 @@ const apiExports = {
   kindergartenClasses: kindergartenClassesAPI,
   holidays: holidaysAPI,
   health: healthAPI
-};
+}; 
 
 export default apiExports; 

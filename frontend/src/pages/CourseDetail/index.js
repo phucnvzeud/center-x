@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { coursesAPI, studentsAPI, teachersAPI, branchesAPI } from '../../api';
+import { useTranslation } from 'react-i18next';
 import SessionActions from '../../components/SessionActions';
 import * as XLSX from 'xlsx';
 import {
@@ -73,6 +74,7 @@ const SESSION_STATUS_OPTIONS = [
 ];
 
 const CourseDetail = () => {
+  const { t } = useTranslation();
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
@@ -168,7 +170,7 @@ const CourseDetail = () => {
       return true;
       } catch (err) {
         console.error('Error fetching course data:', err);
-        setError('Failed to load course data. Please try again later.');
+        setError(t('course_management.course_detail.error'));
         setLoading(false);
       return false;
       }
@@ -1199,7 +1201,9 @@ const CourseDetail = () => {
               size="sm"
               onClick={toggleTaughtSessions}
             >
-              {showTaughtSessions ? 'Hide Taught & Canceled Sessions' : 'Show Taught & Canceled Sessions'}
+              {showTaughtSessions ? 
+                t('course_management.course_detail.hide_taught_sessions') : 
+                t('course_management.course_detail.show_taught_canceled')}
             </Button>
             
             {otherFutureSessions.length > 0 && (
@@ -1209,7 +1213,9 @@ const CourseDetail = () => {
                 size="sm"
                 onClick={toggleFutureSessions}
               >
-                {showCollapsedFutureSessions ? 'Hide Future Sessions' : `Show ${otherFutureSessions.length} More Future Sessions`}
+                {showCollapsedFutureSessions ? 
+                  t('course_management.course_detail.hide_future_sessions') : 
+                  `${t('course_management.course_detail.show_future_sessions')} ${otherFutureSessions.length}`}
               </Button>
             )}
           </HStack>
@@ -1221,13 +1227,13 @@ const CourseDetail = () => {
             size="sm"
               onClick={exportSessionsToExcel}
             >
-              Export to Excel
+              {t('course_management.course_detail.export_to_excel')}
           </Button>
         </Flex>
           
           {nearestFutureSessions.length > 0 && (
           <Text fontSize="sm" color="gray.600" mb={3}>
-              Showing {nearestFutureSessions.length} nearest upcoming sessions
+              {t('course_management.course_detail.showing_nearest_sessions', { count: nearestFutureSessions.length })}
           </Text>
           )}
         
@@ -1235,12 +1241,12 @@ const CourseDetail = () => {
           <Table variant="simple" size="sm">
             <Thead bg="gray.50">
               <Tr>
-                <Th width="50px" textAlign="center">#</Th>
-                <Th>Date</Th>
-                <Th>Day & Time</Th>
-                <Th>Status</Th>
-                <Th>Notes</Th>
-                <Th>Actions</Th>
+                <Th width="50px" textAlign="center">{t('course_management.course_detail.table.number')}</Th>
+                <Th>{t('course_management.course_detail.table.date')}</Th>
+                <Th>{t('course_management.course_detail.table.day_time')}</Th>
+                <Th>{t('course_management.course_detail.table.status')}</Th>
+                <Th>{t('course_management.course_detail.table.notes')}</Th>
+                <Th>{t('course_management.course_detail.table.actions')}</Th>
               </Tr>
             </Thead>
             <Tbody>
@@ -1289,7 +1295,9 @@ const CourseDetail = () => {
                         bg={statusColors.bg}
                         color={statusColors.color}
                       >
-                      {session.status}
+                        {session.status === 'Pending' ? 
+                          t('course_management.course_detail.pending') : 
+                          session.status}
                       </Badge>
                     </Td>
                     <Td maxW="200px" isTruncated fontSize="sm">{session.notes || '-'}</Td>
@@ -1405,61 +1413,47 @@ const CourseDetail = () => {
     <Modal isOpen={isSessionModalOpen} onClose={closeModal}>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Update Session Status</ModalHeader>
+        <ModalHeader>{t('course_management.course_detail.update_session')}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <form onSubmit={handleSubmitSession}>
-            <FormControl mb={4}>
-              <FormLabel>Session Date</FormLabel>
-              <Text>{formatDate(selectedSession.date)}</Text>
-            </FormControl>
-            
-            <FormControl mb={4}>
-              <FormLabel>Status</FormLabel>
+            <FormControl isRequired mb={4}>
+              <FormLabel>{t('course_management.session_management.update_session_status')}</FormLabel>
               <Select
                 name="status"
-                value={selectedSession.status}
+                value={selectedSession.status || ''}
                 onChange={handleInputChange}
               >
-                {SESSION_STATUS_OPTIONS.map(option => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
+                <option value="Pending">{t('course_management.session_management.pending')}</option>
+                <option value="Taught">{t('course_management.session_management.taught')}</option>
+                <option value="Absent (Personal Reason)">{t('course_management.session_management.absent_personal')}</option>
+                <option value="Absent (Holiday)">{t('course_management.session_management.absent_holiday')}</option>
+                <option value="Absent (Other Reason)">{t('course_management.session_management.absent_other')}</option>
               </Select>
-              {selectedSession.status.startsWith('Absent') && originalStatus === 'Pending' && (
-                <Text fontSize="sm" color="blue.600" mt={2}>
-                  A compensatory session will be added automatically.
-                </Text>
-              )}
             </FormControl>
             
             <FormControl mb={4}>
-              <FormLabel>Notes</FormLabel>
+              <FormLabel>{t('course_management.session_management.notes')}</FormLabel>
               <Textarea
                 name="notes"
                 value={selectedSession.notes || ''}
                 onChange={handleInputChange}
-                placeholder="Add any notes about this session..."
-                size="sm"
+                placeholder={t('course_management.session_management.add_notes')}
+                rows={3}
               />
             </FormControl>
             
-            {updateError && (
-              <Text color="red.500" mb={4}>{updateError}</Text>
-            )}
-            
             <ModalFooter px={0} pb={0}>
               <Button mr={3} onClick={closeModal} variant="ghost">
-                Cancel
+                {t('course_management.course_detail.cancel')}
               </Button>
               <Button 
                 colorScheme="blue" 
                 type="submit" 
                 isLoading={updateLoading}
-                loadingText="Updating"
+                loadingText={t('course_management.course_detail.updating')}
               >
-                Update
+                {t('course_management.course_detail.update')}
               </Button>
             </ModalFooter>
           </form>
@@ -1498,44 +1492,34 @@ const CourseDetail = () => {
                 variant="ghost" 
                 colorScheme="blue"
               >
-                Previous: {course.previousCourse.name}
+                {t('course_management.course_detail.previous_course')}: {course.previousCourse.name}
               </Button>
             )}
           </HStack>
         </Box>
-        <HStack spacing={3}>
+        
+        <HStack spacing={2}>
           <Button 
             as={Link} 
             to="/courses" 
             leftIcon={<FaArrowLeft />} 
             size="sm" 
-            colorScheme="gray" 
             variant="outline"
           >
-            Back to Courses
+            {t('course_management.course_detail.back_to_courses')}
           </Button>
           <Button 
             as={Link} 
-            to={`/courses/edit/${course._id}`} 
+            to={`/courses/edit/${courseId}`} 
             leftIcon={<FaEdit />} 
             size="sm" 
             colorScheme="blue"
-          >
-            Edit Course
-          </Button>
-          <Button 
-            leftIcon={<FaFileExport />} 
-            size="sm" 
-            colorScheme="orange" 
             variant="outline"
-            onClick={exportSessionsToExcel}
           >
-            Export Sessions
+            {t('course_management.course_detail.edit_course')}
           </Button>
         </HStack>
       </Flex>
-      
-      {sessionModal}
 
       <Grid 
         templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }}
@@ -1552,7 +1536,7 @@ const CourseDetail = () => {
           transition="transform 0.2s"
           _hover={{ transform: "translateY(-2px)", shadow: "md" }}
         >
-          <Text fontSize="sm" color="gray.500" mb={1}>Start Date</Text>
+          <Text fontSize="sm" color="gray.500" mb={1}>{t('course_management.course_detail.start_date')}</Text>
           <Text fontSize="lg" fontWeight="semibold">{formatDate(course.startDate)}</Text>
         </Box>
         
@@ -1566,7 +1550,7 @@ const CourseDetail = () => {
           transition="transform 0.2s"
           _hover={{ transform: "translateY(-2px)", shadow: "md" }}
         >
-          <Text fontSize="sm" color="gray.500" mb={1}>Original End Date</Text>
+          <Text fontSize="sm" color="gray.500" mb={1}>{t('course_management.course_detail.original_end_date')}</Text>
           <Text fontSize="lg" fontWeight="semibold">{formatDate(course.estimatedEndDate || course.endDate)}</Text>
         </Box>
 
@@ -1580,16 +1564,16 @@ const CourseDetail = () => {
           transition="transform 0.2s"
           _hover={{ transform: "translateY(-2px)", shadow: "md" }}
         >
-          <Text fontSize="sm" color="gray.500" mb={1}>Actual End Date</Text>
+          <Text fontSize="sm" color="gray.500" mb={1}>{t('course_management.course_detail.actual_end_date')}</Text>
           <Text fontSize="lg" fontWeight="semibold">{actualEndDateInfo.formattedDate}</Text>
           {actualEndDateInfo.daysLeft > 0 && (
             <Text fontSize="sm" color="blue.500">
-              {actualEndDateInfo.daysLeft} days left
+              {actualEndDateInfo.daysLeft} {t('course_management.course_detail.days_left')}
             </Text>
             )}
           {actualEndDateInfo.daysLeft <= 0 && actualEndDateInfo.daysLeft > -7 && (
             <Text fontSize="sm" color="green.500">
-              Completed {Math.abs(actualEndDateInfo.daysLeft)} days ago
+              {t('course_management.course_detail.completed_days_ago')} {Math.abs(actualEndDateInfo.daysLeft)} {t('course_management.course_detail.days_left')}
             </Text>
             )}
         </Box>
@@ -1604,7 +1588,7 @@ const CourseDetail = () => {
           transition="transform 0.2s"
           _hover={{ transform: "translateY(-2px)", shadow: "md" }}
         >
-          <Text fontSize="sm" color="gray.500" mb={1}>Sessions</Text>
+          <Text fontSize="sm" color="gray.500" mb={1}>{t('course_management.course_detail.total_sessions')}</Text>
           <Text fontSize="lg" fontWeight="semibold">
             {course.sessions ? course.sessions.length : 0} total
             {course.sessions && course.sessions.length > course.totalSessions && (
@@ -1625,7 +1609,7 @@ const CourseDetail = () => {
           transition="transform 0.2s"
           _hover={{ transform: "translateY(-2px)", shadow: "md" }}
         >
-          <Text fontSize="sm" color="gray.500" mb={1}>Teacher</Text>
+          <Text fontSize="sm" color="gray.500" mb={1}>{t('course_management.course_detail.teacher')}</Text>
           <Text fontSize="lg" fontWeight="semibold">{course.teacher?.name || 'Not assigned'}</Text>
         </Box>
         
@@ -1639,7 +1623,7 @@ const CourseDetail = () => {
           transition="transform 0.2s"
           _hover={{ transform: "translateY(-2px)", shadow: "md" }}
         >
-          <Text fontSize="sm" color="gray.500" mb={1}>Progress</Text>
+          <Text fontSize="sm" color="gray.500" mb={1}>{t('course_management.course_detail.progress')}</Text>
           <Box>
             <Progress 
               value={isNaN(course.progress) ? 0 : (course.progress || 0)} 
@@ -1663,7 +1647,7 @@ const CourseDetail = () => {
           _hover={{ transform: "translateY(-2px)", shadow: "md" }}
           gridColumn={{ lg: "span 2" }}
         >
-          <Text fontSize="sm" color="gray.500" mb={1}>Payment Progress</Text>
+          <Text fontSize="sm" color="gray.500" mb={1}>{t('course_management.course_detail.payment_progress')}</Text>
           <Box>
             <Progress 
               value={paymentProgress.percent || 0} 
@@ -1692,9 +1676,9 @@ const CourseDetail = () => {
       >
         <Tabs onChange={(index) => setActiveTab(index)} colorScheme="brand">
           <TabList px={4}>
-            <Tab>Sessions</Tab>
-            <Tab>Enrolled Students</Tab>
-            <Tab>Schedule</Tab>
+            <Tab>{t('course_management.course_detail.sessions')}</Tab>
+            <Tab>{t('course_management.course_detail.enrolled_students')}</Tab>
+            <Tab>{t('course_management.course_detail.schedule')}</Tab>
           </TabList>
           <TabPanels>
             <TabPanel p={4}>

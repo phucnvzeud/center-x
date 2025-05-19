@@ -18,6 +18,7 @@
   padding: 1rem;
   margin: 1rem 0;
   color: #d32f2f;
+  text-align: left;
 }
 
 .error-message button {
@@ -35,6 +36,7 @@
   border-bottom: 2px solid #eee;
   padding-bottom: 0.5rem;
   margin-bottom: 2rem;
+  text-align: left;
 }
 
 /* Dashboard grid layout */
@@ -88,6 +90,7 @@
   width: 50px;
   height: 50px;
   background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
 }
 
 .teacher-icon { color: #3498db; }
@@ -99,6 +102,9 @@
 
 .stat-content {
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .stat-value {
@@ -137,6 +143,7 @@
   color: #333;
   border-bottom: 1px solid #eee;
   padding-bottom: 0.75rem;
+  text-align: left;
 }
 
 /* Detail stats styling */
@@ -150,6 +157,10 @@
   padding: 1rem;
   text-align: center;
   color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .active-stat {
@@ -172,6 +183,7 @@
   font-size: 1.8rem;
   font-weight: bold;
   margin-bottom: 0.5rem;
+  line-height: 1;
 }
 
 .detail-stat-label {
@@ -190,6 +202,7 @@
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
   color: #666;
+  align-items: center;
 }
 
 .progress-bar {
@@ -197,11 +210,13 @@
   background-color: #eee;
   overflow: hidden;
   margin-bottom: 0.75rem;
+  border-radius: 5px;
 }
 
 .progress-fill {
   height: 100%;
   background-color: #3498db;
+  border-radius: 5px;
 }
 
 .progress-total {
@@ -272,6 +287,9 @@
   font-size: 0.8rem;
   text-align: center;
   min-width: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .insight-icon {
@@ -282,6 +300,7 @@
   height: 36px;
   background-color: #f0f0f0;
   color: #666;
+  border-radius: 50%;
 }
 
 .holiday-icon {
@@ -290,6 +309,9 @@
 
 .insight-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .insight-title {
@@ -311,6 +333,7 @@
   padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 500;
+  border-radius: 12px;
 }
 
 .status-active {
@@ -426,6 +449,7 @@
   background-color: #f3f4f6;
   height: 8px;
   overflow: hidden;
+  border-radius: 4px;
 }
 
 .progress-bar {

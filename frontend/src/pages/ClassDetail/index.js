@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { kindergartenClassesAPI } from '../../api';
 import { clearCache, generateCacheKey } from '../../api/cache';
 import SessionActions from '../../components/SessionActions';
+import { useTranslation } from 'react-i18next';
 import { 
   FaChevronDown, 
   FaChevronRight, 
@@ -87,6 +88,7 @@ const SessionStatusOptions = [
 ];
 
 const ClassDetail = () => {
+  const { t } = useTranslation();
   const { classId } = useParams();
   const navigate = useNavigate();
   const sessionsRef = useRef(null);
@@ -269,7 +271,7 @@ const ClassDetail = () => {
   };
 
   const handleDeleteClass = async () => {
-    if (window.confirm('Are you sure you want to delete this class? This action cannot be undone.')) {
+    if (window.confirm(t('kindergarten.class.class_detail.delete_confirmation'))) {
       try {
         await kindergartenClassesAPI.remove(classId);
         toast.success('Class deleted successfully.');
@@ -277,7 +279,7 @@ const ClassDetail = () => {
       } catch (err) {
         console.error('Error deleting class:', err);
         toast.error('Failed to delete class.');
-        setError('Failed to delete class. Please try again later.');
+        setError(t('kindergarten.class.class_detail.error'));
       }
     }
   };
@@ -401,26 +403,23 @@ const ClassDetail = () => {
   };
 
   const handleConfirmDeleteSession = async () => {
-    if (sessionToDeleteId === null) return;
+    if (!sessionToDeleteId) return;
 
-    setSessionActionLoading(true);
     try {
-      // Assuming kindergartenClassesAPI.deleteSession(classId, sessionIndex) exists
-      await kindergartenClassesAPI.deleteSession(classId, sessionToDeleteId);
-      toast.success('Session deleted permanently.');
+      setSessionActionLoading(true);
       
+      await kindergartenClassesAPI.deleteSession(classId, sessionToDeleteId);
+      
+      toast.success(t('common.success'));
       setDeleteSessionModalOpen(false);
+      setSessionActionLoading(false);
       setSessionToDeleteId(null);
 
-      // Refresh data
+      // Refresh sessions data
       await fetchSessionsData();
-      const classResponse = await kindergartenClassesAPI.getById(classId);
-      setKClass(classResponse.data); // Also refresh class-level data like totalSessions if it might change
-
     } catch (err) {
-      console.error('Error deleting session permanently:', err);
-      toast.error(err.response?.data?.message || 'Failed to delete session. Please ensure this action is supported.');
-    } finally {
+      console.error('Error deleting session:', err);
+      toast.error(t('common.error'));
       setSessionActionLoading(false);
     }
   };
@@ -494,99 +493,32 @@ const ClassDetail = () => {
   };
 
   const exportSessionsToExcel = () => {
-    if (!kClass || !sessions || sessions.length === 0) {
-      toast.error('No session data available to export');
+    if (!sessions || sessions.length === 0) {
+      toast.error(t('kindergarten.class.class_detail.no_sessions'));
       return;
     }
 
     try {
-      // Group sessions by month
-      const sessionsByMonth = {};
+      // Format sessions for Excel export
+      const formattedSessions = sessions.map(session => ({
+        [t('kindergarten.class.class_detail.session_date')]: formatDate(session.startTime),
+        [t('kindergarten.class.class_detail.session_time')]: `${formatTime(session.startTime)} - ${formatTime(session.endTime)}`,
+        [t('kindergarten.class.class_detail.status')]: getStatusLabel(session.status),
+        [t('kindergarten.class.class_detail.notes')]: session.notes || ''
+      }));
       
-      // Extract unique months from sessions
-      sessions.forEach(session => {
-        const date = new Date(session.date);
-        const yearMonth = `${date.getFullYear()}-${date.getMonth()}`; // Key for grouping
-        const month = date.toLocaleString('en-US', { month: 'long', year: 'numeric' }); // Display value
-        
-        if (!sessionsByMonth[yearMonth]) {
-          sessionsByMonth[yearMonth] = {
-            displayName: month,
-            year: date.getFullYear(),
-            month: date.getMonth(),
-            sessions: {}
-          };
-        }
-        
-        const day = date.getDate();
-        sessionsByMonth[yearMonth].sessions[day] = {
-          status: session.status,
-          isCompleted: session.status === 'Completed'
-        };
-      });
-      
-      // Create workbook and worksheet
+      const ws = XLSX.utils.json_to_sheet(formattedSessions);
       const wb = XLSX.utils.book_new();
-      const wsData = [];
+      XLSX.utils.book_append_sheet(wb, ws, "Sessions");
       
-      // Sort months chronologically
-      const sortedMonthKeys = Object.keys(sessionsByMonth).sort();
-
-      // Create column headers (days 1-31)
-      const daysHeader = ['Month'];
-      for (let day = 1; day <= 31; day++) {
-        daysHeader.push(day);
-      }
-      wsData.push(daysHeader);
-      
-      // Add data for each month
-      sortedMonthKeys.forEach(monthKey => {
-        const monthData = sessionsByMonth[monthKey];
-        const year = monthData.year;
-        const month = monthData.month;
-        
-        // Get number of days in this month
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        
-        // Row for month name
-        const monthRow = [monthData.displayName];
-        
-        // Add data for each day in this month
-        for (let day = 1; day <= 31; day++) {
-          if (day <= daysInMonth) {
-            // This day exists in this month
-            const sessionData = monthData.sessions[day];
-            monthRow.push(sessionData && sessionData.isCompleted ? 1 : '');
-          } else {
-            // This day doesn't exist in this month (e.g., February 30)
-            monthRow.push('');
-          }
-        }
-        
-        wsData.push(monthRow);
-      });
-      
-      // Create worksheet from data
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-      
-      // Set column widths
-      const colWidth = 5;
-      ws['!cols'] = Array(32).fill({ wch: colWidth }); // 1 for month + 31 days
-      ws['!cols'][0] = { wch: 20 }; // Month column wider
-      
-      // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(wb, ws, 'Sessions');
-      
-      // Create a filename
-      const fileName = `${kClass.name} - Sessions.xlsx`;
-      
-      // Export the file
+      // Format filename with class name
+      const fileName = `${kClass.name.replace(/[^\w\s]/gi, '')}_Sessions.xlsx`;
       XLSX.writeFile(wb, fileName);
       
-      toast.success('Excel file exported successfully');
+      toast.success(`${t('common.success')}!`);
     } catch (err) {
-      console.error('Error exporting to Excel:', err);
-      toast.error('Failed to export Excel file');
+      console.error('Error exporting sessions:', err);
+      toast.error(t('common.error'));
     }
   };
 
@@ -683,70 +615,68 @@ const ClassDetail = () => {
   };
 
   const renderSessions = (monthSessions, monthName) => {
-    return (
-      <Table striped bordered hover responsive size="sm">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Date</th>
-            <th>Day & Time</th>
-            <th>Status</th>
-            <th>Notes</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {monthSessions.map((session, idx) => {
-            const dateObj = new Date(session.date);
-            const formattedDate = formatDate(dateObj);
-            const dayName = getDayName(dateObj);
-            const isToday = isSameDay(dateObj, new Date());
-            const isPast = dateObj < new Date();
-            
-            const statusVariant = getStatusVariant(session.status);
-            const sessionKey = `${monthName}-${idx}`;
+    const today = new Date();
             
             return (
-              <tr key={sessionKey} className={isToday ? 'today-session' : ''}>
-                <td>{idx + 1}</td>
-                <td className={isToday ? 'bg-info text-white' : ''}>{formattedDate}</td>
-                <td>
-                  <VStack spacing={0} align="flex-start">
-                    <Text fontWeight="medium">{dayName}</Text>
-                    <Text fontSize="sm" color={subtleTextColor}>
-                      {session.startTime || formatTime(session.date)} {session.endTime ? `- ${session.endTime}` : ''}
+      <TableContainer mt={4} bg={cardBgColor} borderRadius="md" borderWidth="1px" borderColor={borderColor} boxShadow="sm">
+        <Table variant="simple" size="sm">
+          <Thead bg={tableHeadBg}>
+            <Tr>
+              <Th>{t('kindergarten.class.class_detail.session_date')}</Th>
+              <Th>{t('kindergarten.class.class_detail.session_time')}</Th>
+              <Th>{t('kindergarten.class.class_detail.status')}</Th>
+              <Th>{t('kindergarten.class.class_detail.notes')}</Th>
+              <Th isNumeric>{t('kindergarten.class.class_detail.actions')}</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {monthSessions.map((session, idx) => (
+              <Tr 
+                key={idx} 
+                bg={isSameDay(new Date(session.startTime), today) ? todaySessionTrBg : undefined}
+                _hover={{ bg: 'gray.50' }}
+              >
+                <Td>
+                  <Text fontWeight={isSameDay(new Date(session.startTime), today) ? "bold" : "normal"}>
+                    {formatDate(session.startTime)} 
+                    <Text as="span" fontSize="xs" color="gray.500" ml={1}>
+                      ({getDayName(session.startTime)})
                     </Text>
-                  </VStack>
-                </td>
-                <td>
-                  <Badge bg={statusVariant}>
-                    {session.status}
-                  </Badge>
-                </td>
-                <Td 
-                  maxWidth="250px" 
-                  whiteSpace="normal" 
-                  wordBreak="break-word"
-                  fontSize="sm"
-                >
-                  {session.notes || '-'}
+                  </Text>
                 </Td>
-                <td>
-                  {renderSessionStatusButtons(session, session.index || idx)}
-                  <Button 
-                    size="sm" 
-                    variant="info" 
-                    className="ml-2"
-                    onClick={() => openSessionEditModal(session.index || idx)}
+                <Td>{formatTime(session.startTime)} - {formatTime(session.endTime)}</Td>
+                <Td>
+                  <Badge 
+                    colorScheme={getStatusVariant(session.status)} 
+                    py={1} 
+                    px={2} 
+                    borderRadius="md"
                   >
-                    <i className="fa fa-edit"></i>
-                  </Button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
+                    {getStatusLabel(session.status)}
+                  </Badge>
+                </Td>
+                <Td>
+                  <Text noOfLines={1} fontSize="sm" maxW="300px">
+                    {session.notes || '—'}
+                  </Text>
+                </Td>
+                <Td isNumeric>
+                  <HStack spacing={1} justify="flex-end">
+                    <IconButton
+                      icon={<FaEdit />}
+                      aria-label={t('kindergarten.class.class_detail.edit_session')}
+                      size="xs"
+                      colorScheme="blue"
+                      variant="ghost"
+                      onClick={() => handleSessionUpdate(session, idx)}
+                    />
+                  </HStack>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
       </Table>
+      </TableContainer>
     );
   };
 
@@ -808,7 +738,7 @@ const ClassDetail = () => {
     return (
       <Flex direction="column" align="center" justify="center" minH="80vh" bg={bgColor}>
         <Spinner size="xl" color="blue.500" thickness="4px" speed="0.65s" />
-        <Text mt={4} fontSize="lg" color={textColor}>Loading class details...</Text>
+        <Text mt={4} fontSize="lg" color={textColor}>{t('kindergarten.class.class_detail.loading')}</Text>
       </Flex>
     );
   }
@@ -817,10 +747,10 @@ const ClassDetail = () => {
     return (
       <Container maxW="container.md" centerContent py={10} bg={bgColor} minH="80vh">
         <Box p={8} bg={cardBgColor} boxShadow="xl" borderRadius="lg" textAlign="center">
-          <Heading as="h2" size="lg" color="red.500" mb={4}>Error Occurred</Heading>
+          <Heading as="h2" size="lg" color="red.500" mb={4}>{t('kindergarten.class.class_detail.error_occurred')}</Heading>
           <Text fontSize="md" color={textColor} mb={6}>{error}</Text>
           <Button colorScheme="blue" onClick={() => window.location.reload()}>
-            Retry
+            {t('kindergarten.retry')}
           </Button>
         </Box>
       </Container>
@@ -831,10 +761,10 @@ const ClassDetail = () => {
     return (
       <Container maxW="container.md" centerContent py={10} bg={bgColor} minH="80vh">
         <Box p={8} bg={cardBgColor} boxShadow="xl" borderRadius="lg" textAlign="center">
-          <Heading as="h2" size="lg" color="orange.500" mb={4}>Class Not Found</Heading>
-          <Text fontSize="md" color={textColor} mb={6}>The requested class could not be found.</Text>
+          <Heading as="h2" size="lg" color="orange.500" mb={4}>{t('kindergarten.class.class_detail.not_found')}</Heading>
+          <Text fontSize="md" color={textColor} mb={6}>{t('kindergarten.class.class_detail.not_found_message')}</Text>
           <Button as={RouterLink} to="/kindergarten/classes" colorScheme="blue">
-            Return to Classes List
+            {t('kindergarten.class.class_detail.return_to_classes')}
           </Button>
         </Box>
       </Container>
@@ -848,10 +778,10 @@ const ClassDetail = () => {
         <Flex justify="space-between" align="center" mb={4}>
           <Breadcrumb spacing="8px" separator={<FaChevronRight color="gray.500" />} fontSize="sm">
             <BreadcrumbItem>
-              <BreadcrumbLink as={RouterLink} to="/kindergarten" color={subtleTextColor} _hover={{ color: 'blue.500' }}>Dashboard</BreadcrumbLink>
+              <BreadcrumbLink as={RouterLink} to="/kindergarten" color={subtleTextColor} _hover={{ color: 'blue.500' }}>{t('kindergarten.dashboard')}</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbItem>
-              <BreadcrumbLink as={RouterLink} to="/kindergarten/classes" color={subtleTextColor} _hover={{ color: 'blue.500' }}>Classes</BreadcrumbLink>
+              <BreadcrumbLink as={RouterLink} to="/kindergarten/classes" color={subtleTextColor} _hover={{ color: 'blue.500' }}>{t('kindergarten.classes')}</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbItem isCurrentPage>
               <Text color={headingColor} fontWeight="medium">{kClass.name}</Text>
@@ -866,7 +796,7 @@ const ClassDetail = () => {
             color={textColor}
             _hover={{ bg: backButtonHoverBg }}
           >
-            Back
+            {t('kindergarten.class.back')}
           </Button>
         </Flex>
 
@@ -893,7 +823,7 @@ const ClassDetail = () => {
             </Heading>
             <Text fontSize="lg" color={subtleTextColor} mt={1}>
               <Icon as={FaSchool} mr={2} verticalAlign="middle" />
-              {kClass.school?.name || 'No School Assigned'}
+              {kClass.school?.name || t('kindergarten.class.class_detail.no_school_assigned')}
             </Text>
           </Box>
           <HStack spacing={3}>
@@ -905,7 +835,7 @@ const ClassDetail = () => {
               variant="solid"
               size="md"
             >
-              Edit Class
+              {t('kindergarten.class.class_detail.edit_class')}
             </Button>
             <Button
               leftIcon={<FaTimes />}
@@ -914,7 +844,7 @@ const ClassDetail = () => {
               size="md"
               onClick={handleDeleteClass} 
             >
-              Delete Class
+              {t('kindergarten.class.class_detail.delete_class')}
             </Button>
           </HStack>
         </Flex>
@@ -930,40 +860,40 @@ const ClassDetail = () => {
           <Flex align="center" mb={6}>
              <Icon as={FaGraduationCap} fontSize="2xl" color="blue.500" mr={3} />
             <Heading size="lg" color={headingColor} fontWeight="semibold">
-                Class Information
+                {t('kindergarten.class.class_detail.class_information')}
             </Heading>
                   </Flex>
           
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={{ base: 5, md: 8 }}>
             {/* Left Column: Basic Information */}
             <VStack align="stretch" spacing={2}>
-              <InfoItem label="Class Name" value={kClass.name} />
-              <InfoItem label="School" value={kClass.school?.name || 'N/A'} />
-              <InfoItem label="Teacher" value={kClass.teacher ? kClass.teacher.name : (kClass.teacherName || 'N/A')} />
+              <InfoItem label={t('kindergarten.class.name')} value={kClass.name} />
+              <InfoItem label={t('kindergarten.class.school')} value={kClass.school?.name || 'N/A'} />
+              <InfoItem label={t('kindergarten.class.teacher')} value={kClass.teacher ? kClass.teacher.name : (kClass.teacherName || 'N/A')} />
               {kClass.teacher?.email && (
                 <InfoItem 
-                  label="Teacher Email" 
+                  label={t('kindergarten.class.class_detail.teacher_email')} 
                   value={kClass.teacher.email} 
                   isLink={`mailto:${kClass.teacher.email}`}
                 />
                 )}
-              {kClass.teacher?.phone && <InfoItem label="Teacher Phone" value={kClass.teacher.phone} />}
-              <InfoItem label="Age Group" value={kClass.ageGroup} />
-              <InfoItem label="Student Count" value={String(kClass.studentCount || 0)} />
-              <InfoItem label="Status">
+              {kClass.teacher?.phone && <InfoItem label={t('kindergarten.class.class_detail.teacher_phone')} value={kClass.teacher.phone} />}
+              <InfoItem label={t('kindergarten.class.class_detail.age_group')} value={kClass.ageGroup} />
+              <InfoItem label={t('kindergarten.class.class_detail.student_count')} value={String(kClass.studentCount || 0)} />
+              <InfoItem label={t('kindergarten.class.status')}>
                 <Badge colorScheme={kClass.status === 'Active' ? 'green' : 'orange'} px={3} py={1} borderRadius="md">
                     {kClass.status}
                     </Badge>
               </InfoItem>
-              <InfoItem label="Start Date" value={formatDate(kClass.startDate)} />
-              <InfoItem label="Total Sessions" value={String(kClass.totalSessions || 0)} />
+              <InfoItem label={t('kindergarten.class.class_detail.start_date')} value={formatDate(kClass.startDate)} />
+              <InfoItem label={t('kindergarten.class.class_detail.total_sessions')} value={String(kClass.totalSessions || 0)} />
                 </VStack>
 
             {/* Right Column: Weekly Schedule & Holidays */}
             <VStack align="stretch" spacing={6}>
               <Box>
                 <Heading as="h4" size="md" mb={3} color={headingColor} borderBottomWidth="1px" borderColor={borderColor} pb={2}>
-                  Weekly Schedule
+                  {t('kindergarten.class.class_detail.weekly_schedule')}
                 </Heading>
               {kClass.weeklySchedule && kClass.weeklySchedule.length > 0 ? (
                   <VStack align="stretch" spacing={3}>
@@ -1049,295 +979,136 @@ const ClassDetail = () => {
             </SimpleGrid>
         </Box>
 
-        {/* Sessions Tracking Section */}
+        {/* Sessions Statistics Section */}
         <Box 
-          ref={sessionsRef} 
-          mb={8} 
-          id="sessions-tracking"
           bg={cardBgColor}
           p={{ base: 4, md: 6 }}
                   borderRadius="lg"
           boxShadow="md"
+          mb={8}
+          id="sessions"
+          ref={sessionsRef}
         >
-          <Flex justify="space-between" align="center" mb={6}>
-                  <Flex align="center">
+          <Flex align="center" mb={6}>
               <Icon as={FaCalendarAlt} fontSize="2xl" color="blue.500" mr={3} />
               <Heading size="lg" color={headingColor} fontWeight="semibold">
-                    Sessions
+              {t('kindergarten.class.class_detail.sessions')}
                 </Heading>
-            </Flex>
-            <HStack spacing={3}>
-                  <Button
-                    leftIcon={<FaCalendarPlus />}
-                colorScheme="green"
-                    onClick={() => setCustomSessionModalOpen(true)}
-                size="sm"
-                  >
-                    Add Custom Session
-                  </Button>
-                  <Button
-                    leftIcon={<FaFileExcel />}
-                colorScheme="teal"
-                    onClick={exportSessionsToExcel}
-                size="sm"
-                  >
-                    Export to Excel
-                  </Button>
-                </HStack>
               </Flex>
 
-          {/* Session Stats */}
-          {sessionStats && kClass && (
-            <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4} mb={6}>
+          {/* Statistics Cards */}
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={5} mb={6}>
               <StatCard 
-                label="Total Sessions" 
-                value={kClass.totalSessions ?? 0} 
-                icon={FaCalendarAlt}
-                color="blue"
-              />
-              <StatCard 
-                label="Completed" 
-                value={sessionStats.completed ?? 0} 
+              label={t('kindergarten.class.class_detail.sessions_completed')}
+              value={sessionStats?.completed || 0}
                 icon={FaCalendarCheck}
                 color="green"
               />
               <StatCard 
-                label="Remaining" 
-                value={Math.max(0, (kClass.totalSessions ?? 0) - (sessionStats.completed ?? 0))} 
+              label={t('kindergarten.class.class_detail.sessions_remaining')}
+              value={sessionStats?.remaining || 0}
                 icon={FaRegCalendarAlt}
-                color="purple"
+              color="blue"
               />
               <StatCard 
-                label="Canceled" 
-                value={sessionStats.canceled ?? 0} 
+              label={t('kindergarten.class.class_detail.canceled_sessions')}
+              value={sessionStats?.canceled || 0}
                 icon={FaCalendarTimes}
                 color="red"
               />
+            <StatCard 
+              label={t('kindergarten.class.class_detail.completion_rate')}
+              value={sessionStats?.completionRate ? `${sessionStats.completionRate}%` : '0%'}
+              icon={FaCalendarCheck}
+              color="purple"
+            />
             </SimpleGrid>
-          )}
-
-          {/* Progress Bar for Session Completion */}
-          {sessionStats && kClass && 
-            typeof kClass.totalSessions === 'number' &&
-            typeof sessionStats.completed === 'number' &&
-          (() => {
-            const effectiveTotal = kClass.totalSessions; // Use kClass.totalSessions
-            const calculatedProgress = effectiveTotal > 0 ? (sessionStats.completed / effectiveTotal) * 100 : 0;
-            const displayProgress = Math.min(100, Math.max(0, calculatedProgress)); // Ensure progress is between 0 and 100
-            const roundedProgress = parseFloat(displayProgress.toFixed(1));
-
-            return (
-              <Box mt={6} mb={6}> 
-                <Flex justify="space-between" align="center" mb={1}>
-                  <Text fontSize="sm" color={textColor}>Class Progress</Text>
-                  <Text fontSize="sm" fontWeight="bold" color={progressTextColor}>
-                    {roundedProgress}%
-                  </Text>
-                </Flex>
-                <Progress 
-                  value={roundedProgress} 
+          
+          {/* Action Buttons */}
+          <Flex 
+            wrap="wrap" 
+            justify={{ base: 'flex-start', md: 'flex-end' }} 
+            gap={3} 
+            mb={6}
+          >
+            <Button 
+              leftIcon={<FaFileExcel />} 
+              colorScheme="green" 
                   size="sm" 
+              onClick={exportSessionsToExcel}
+            >
+              {t('kindergarten.class.class_detail.export_sessions')}
+            </Button>
+            <Button 
+              leftIcon={<FaCalendarPlus />} 
                   colorScheme="blue" 
-                  borderRadius="md" 
-                  hasStripe 
-                  isAnimated
-                />
-            </Box>
-            );
-          })()}
-
-          {/* Sessions List */}
-          {sessions.length > 0 ? (
-            <Box borderWidth="1px" borderRadius="md" borderColor={borderColor} overflow="hidden">
-              {Object.entries(sessionsByMonth).map(([monthKey, monthData]) => (
-                <Box key={monthKey}>
+              size="sm"
+              onClick={() => setCustomSessionModalOpen(true)}
+            >
+              {t('kindergarten.class.class_detail.add_custom_session')}
+            </Button>
+          </Flex>
+          
+          {/* Monthly Sessions */}
+          {sessionsByMonth && Object.entries(sessionsByMonth).length > 0 ? (
+            Object.entries(sessionsByMonth).map(([monthKey, monthData]) => (
+              <Box key={monthKey} mb={4} borderWidth="1px" borderColor={borderColor} borderRadius="md" overflow="hidden">
                       <Flex
-                        p={4}
+                  p={3} 
                     bg={monthHeaderBg}
-                    borderBottomWidth={expandedMonths[monthKey] ? "1px" : "0"}
-                    borderColor={borderColor}
                         cursor="pointer"
+                  alignItems="center"
                     onClick={() => toggleMonthExpansion(monthKey)}
                     _hover={{ bg: monthHeaderHoverBg }}
-                    align="center"
-                    justify="space-between"
                       >
-                        <Flex align="center">
                           <Icon 
                             as={expandedMonths[monthKey] ? FaChevronDown : FaChevronRight} 
                             mr={2} 
                         color={chevronIconColor}
-                            boxSize="12px"
                           />
-                      <Text fontWeight="semibold" color={headingColor} mb="0">
-                        {monthData.label}
-                          </Text>
-                      <HStack spacing={2} ml={2} align="center">
-                        <Badge 
-                          colorScheme="blue" 
-                          borderRadius="full"
-                          px={2}
-                          py={1}
-                          fontSize="xs"
-                          display="flex"
-                          alignItems="center"
-                        >
-                          {monthData.sessions.length} total
-                        </Badge>
-                        {monthData.sessions.filter(session => session.status === 'Scheduled').length > 0 && (
-                          <Badge 
-                            colorScheme="red" 
-                            borderRadius="full"
-                            display="flex"
-                            alignItems="center"
-                            px={2}
-                            py={1}
-                            fontSize="xs"
-                            opacity="0.85"
-                          >
-                            <Box as={FaRegCalendarAlt} mr={1} boxSize="10px" />
-                            {monthData.sessions.filter(session => session.status === 'Scheduled').length} scheduled
-                          </Badge>
-                        )}
-                      </HStack>
-                    </Flex>
+                  <Heading as="h3" size="md" fontWeight="medium">
+                    {t('kindergarten.class.class_detail.month_sessions')} {monthData.label} ({monthData.sessions.length})
+                  </Heading>
                       </Flex>
                       
                       {expandedMonths[monthKey] && (
                     <Box p={4}>
-                      <TableContainer>
-                        <Table variant="simple" size="sm">
-                          <Thead bg={tableHeadBg}>
-                              <Tr>
-                              <Th width="5%">#</Th>
-                              <Th width="15%">Date</Th>
-                              <Th width="15%">Day & Time</Th>
-                              <Th width="15%">Status</Th>
-                              <Th width="25%">Notes</Th>
-                              <Th width="25%">Actions</Th>
-                              </Tr>
-                            </Thead>
-                            <Tbody>
-                            {monthData.sessions.map((session, idx) => {
-                              const dateObj = new Date(session.date);
-                              const formattedDate = formatDate(dateObj);
-                              const dayName = getDayName(dateObj);
-                              const isToday = isSameDay(dateObj, new Date());
-                              const isPast = dateObj < new Date();
-                              const statusOption = SessionStatusOptions.find(opt => opt.value === session.status) || {};
-                                
-                                return (
-                                  <Tr 
-                                  key={`${monthKey}-${idx}`}
-                                  bg={isToday ? todaySessionTrBg : undefined}
-                                  position="relative"
-                                  >
-                                    <SessionActions
-                                      session={session}
-                                      onMarkCompleted={() => handleQuickStatusUpdate(session.index, 'Completed')}
-                                      onMarkCanceled={() => handleQuickStatusUpdate(session.index, 'Canceled')}
-                                      onAdvancedEdit={() => handleAdvancedUpdate(session, session.index)}
-                                      onDelete={() => {
-                                        setSessionToDeleteId(session.index);
-                                        setDeleteSessionModalOpen(true);
-                                      }}
-                                      isLoading={updatingSessionId !== null}
-                                      completedLabel="Mark Completed"
-                                      canceledLabel="Mark Canceled"
-                                      showDelete={true}
-                                    />
-                                  <Td>{idx + 1}</Td>
-                                  <Td fontWeight={isToday ? "bold" : "normal"}>
-                                    {formattedDate}
-                                    </Td>
-                                    <Td>
-                                    <VStack spacing={0} align="flex-start">
-                                      <Text fontWeight="medium">{dayName}</Text>
-                                      <Text fontSize="sm" color={subtleTextColor}>
-                                        {session.startTime || formatTime(session.date)} {session.endTime ? `- ${session.endTime}` : ''}
-                                      </Text>
-                                    </VStack>
-                                    </Td>
-                                    <Td>
-                                    <Badge 
-                                      colorScheme={statusOption.colorScheme || 'gray'} 
-                                      fontSize="xs"
-                                      px={2}
-                                      py={1}
-                                      borderRadius="full"
-                                    >
-                                      {session.status}
-                                    </Badge>
-                                    </Td>
-                                  <Td 
-                                    maxWidth="250px" 
-                                    whiteSpace="normal" 
-                                    wordBreak="break-word"
-                                    fontSize="sm"
-                                  >
-                                    {session.notes || '-'}
-                                    </Td>
-                                    <Td>
-                                      <HStack spacing={2} visibility="hidden">
-                                        <IconButton icon={<FaCheck />} size="xs" aria-label="Placeholder" />
-                                        <IconButton icon={<FaTimes />} size="xs" aria-label="Placeholder" />
-                                        <IconButton icon={<FaEdit />} size="xs" aria-label="Placeholder" />
-                                        <IconButton icon={<FaTrash />} size="xs" aria-label="Placeholder" />
-                                      </HStack>
-                                    </Td>
-                                  </Tr>
-                                );
-                              })}
-                            </Tbody>
-                          </Table>
-                      </TableContainer>
+                    {renderSessions(monthData.sessions, monthData.label)}
                         </Box>
                       )}
                     </Box>
-                  ))}
-                </Box>
+            ))
               ) : (
-            <Box 
-              p={8} 
-              textAlign="center" 
-              borderWidth="1px" 
-              borderRadius="lg" 
-              borderColor={borderColor}
-              bg={noSessionsBoxBg}
-            >
-              <Icon as={FaRegCalendarAlt} boxSize={10} color="gray.400" mb={4} />
-              <Heading size="md" mb={2} color={subtleTextColor}>No Sessions Available</Heading>
-              <Text color={subtleTextColor}>
-                There are no scheduled sessions for this class yet.
-              </Text>
-              <Button 
-                mt={4} 
-                colorScheme="blue" 
-                leftIcon={<FaCalendarPlus />}
-                onClick={() => setCustomSessionModalOpen(true)}
-              >
-                Add Custom Session
-              </Button>
+            <Box p={6} textAlign="center" bg={noSessionsBoxBg} borderRadius="md">
+              <Text color="gray.500">{t('kindergarten.class.class_detail.no_sessions')}</Text>
                 </Box>
               )}
         </Box>
 
-        {/* Session Status Update Modal */}
-        <Modal isOpen={sessionModalOpen} onClose={() => setSessionModalOpen(false)}>
+        {/* Session Edit Modal */}
+        <Modal isOpen={sessionModalOpen} onClose={() => setSessionModalOpen(false)} size="md">
           <ModalOverlay />
           <ModalContent>
-            <ModalHeader>Update Session Status</ModalHeader>
+            <ModalHeader>{t('kindergarten.class.class_detail.edit_session')}</ModalHeader>
             <ModalCloseButton />
             <ModalBody>
-            {sessionToUpdate && (
                 <VStack spacing={4} align="stretch">
-                  <FormControl>
-                    <FormLabel>Date</FormLabel>
-                    <Input value={formatDate(sessionToUpdate.date)} isReadOnly />
-                  </FormControl>
+                <Box>
+                  <Text fontWeight="bold" mb={2}>{t('kindergarten.class.class_detail.basic_details')}</Text>
+                  <Text>
+                    {sessionToUpdate && 
+                      `${formatDate(sessionToUpdate.startTime)} (${getDayName(sessionToUpdate.startTime)})`
+                    }
+                  </Text>
+                  <Text fontSize="sm" color="gray.500">
+                    {sessionToUpdate && 
+                      `${formatTime(sessionToUpdate.startTime)} - ${formatTime(sessionToUpdate.endTime)}`
+                    }
+                  </Text>
+                </Box>
                 
                   <FormControl>
-                    <FormLabel>Status</FormLabel>
+                  <FormLabel>{t('kindergarten.class.class_detail.session_status')}</FormLabel>
                   <Select
                     value={newSessionStatus}
                     onChange={(e) => setNewSessionStatus(e.target.value)}
@@ -1351,39 +1122,42 @@ const ClassDetail = () => {
                 </FormControl>
                 
                   <FormControl>
-                    <FormLabel>Notes</FormLabel>
+                  <FormLabel>{t('kindergarten.class.class_detail.notes')}</FormLabel>
                   <Textarea
                     value={sessionNotes}
                     onChange={(e) => setSessionNotes(e.target.value)}
-                    rows={4}
+                    placeholder="Add notes about this session"
+                    rows={3}
                   />
                 </FormControl>
                 
                 {newSessionStatus === 'Canceled' && (
-                    <FormControl display="flex" alignItems="center">
-                      <FormLabel htmlFor="add-compensatory" mb="0">
-                        Add compensatory session
-                      </FormLabel>
-                      <Switch 
-                      id="add-compensatory"
+                  <FormControl>
+                    <Checkbox 
                       isChecked={addCompensatory}
-                        onChange={() => setAddCompensatory(!addCompensatory)}
-                      />
+                      onChange={(e) => setAddCompensatory(e.target.checked)}
+                      colorScheme="blue"
+                    >
+                      Add a compensatory session
+                    </Checkbox>
                   </FormControl>
                 )}
                 </VStack>
-            )}
           </ModalBody>
           <ModalFooter>
-              <Button variant="ghost" mr={3} onClick={() => setSessionModalOpen(false)}>
-                Cancel
+              <Button 
+                variant="outline" 
+                mr={3} 
+                onClick={() => setSessionModalOpen(false)}
+              >
+                {t('kindergarten.class.class_detail.cancel')}
             </Button>
             <Button
                 colorScheme="blue" 
                 onClick={handleSessionStatusUpdate}
               isLoading={sessionActionLoading}
             >
-                Update
+                {t('kindergarten.class.class_detail.save')}
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -1393,12 +1167,12 @@ const ClassDetail = () => {
         <Modal isOpen={customSessionModalOpen} onClose={() => setCustomSessionModalOpen(false)}>
           <ModalOverlay />
           <ModalContent>
-            <ModalHeader>Add Custom Session</ModalHeader>
+            <ModalHeader>{t('kindergarten.class.class_detail.custom_session')}</ModalHeader>
             <ModalCloseButton />
             <ModalBody>
-              <VStack spacing={4} align="stretch">
+              <VStack spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel>{t('kindergarten.class.class_detail.date')}</FormLabel>
                   <Input
                     type="date"
                     name="date"
@@ -1406,9 +1180,10 @@ const ClassDetail = () => {
                     onChange={handleCustomSessionFormChange}
                   />
                 </FormControl>
-                <SimpleGrid columns={2} spacing={4}>
+                
+                <Grid templateColumns="repeat(2, 1fr)" gap={4} width="100%">
                   <FormControl isRequired>
-                    <FormLabel>Start Time</FormLabel>
+                    <FormLabel>{t('kindergarten.class.class_detail.start_time')}</FormLabel>
                     <Input
                       type="time"
                       name="startTime"
@@ -1416,8 +1191,9 @@ const ClassDetail = () => {
                       onChange={handleCustomSessionFormChange}
                     />
                   </FormControl>
+                  
                   <FormControl isRequired>
-                    <FormLabel>End Time</FormLabel>
+                    <FormLabel>{t('kindergarten.class.class_detail.end_time')}</FormLabel>
                     <Input
                       type="time"
                       name="endTime"
@@ -1425,55 +1201,61 @@ const ClassDetail = () => {
                       onChange={handleCustomSessionFormChange}
                     />
                   </FormControl>
-                </SimpleGrid>
+                </Grid>
+                
                 <FormControl>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel>{t('kindergarten.class.class_detail.notes')}</FormLabel>
                   <Textarea
                     name="notes"
                     value={customSessionForm.notes}
                     onChange={handleCustomSessionFormChange}
-                    placeholder="Reason for adding this custom session"
-                    rows={4}
+                    rows={3}
                   />
                 </FormControl>
               </VStack>
           </ModalBody>
           <ModalFooter>
-              <Button variant="ghost" mr={3} onClick={() => setCustomSessionModalOpen(false)}>
-                Cancel
+              <Button 
+                variant="ghost" 
+                mr={3} 
+                onClick={() => setCustomSessionModalOpen(false)}
+              >
+                {t('kindergarten.class.class_detail.cancel')}
             </Button>
             <Button
                 colorScheme="blue"
                 onClick={handleCustomSessionSubmit}
               isLoading={sessionActionLoading}
             >
-              Add Session
+                {t('kindergarten.class.class_detail.add_session')}
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
         {/* Delete Session Confirmation Modal */}
-        <Modal isOpen={deleteSessionModalOpen} onClose={() => setDeleteSessionModalOpen(false)} isCentered>
+        <Modal isOpen={deleteSessionModalOpen} onClose={() => setDeleteSessionModalOpen(false)}>
           <ModalOverlay />
           <ModalContent>
-            <ModalHeader>Confirm Permanent Deletion</ModalHeader>
+            <ModalHeader>{t('common.confirmDelete')}</ModalHeader>
             <ModalCloseButton />
             <ModalBody>
-              <Text>Are you sure you want to permanently delete this session?</Text>
-              <Text fontWeight="bold" color="red.500">This action cannot be undone and will not create a compensatory session.</Text>
+              <Text>{t('kindergarten.class.class_detail.session_delete_confirmation')}</Text>
             </ModalBody>
             <ModalFooter>
-              <Button variant="ghost" mr={3} onClick={() => setDeleteSessionModalOpen(false)} isDisabled={sessionActionLoading}>
-                Cancel
+              <Button 
+                variant="ghost" 
+                mr={3} 
+                onClick={() => setDeleteSessionModalOpen(false)}
+              >
+                {t('kindergarten.class.class_detail.cancel')}
               </Button>
               <Button 
                 colorScheme="red" 
                 onClick={handleConfirmDeleteSession}
                 isLoading={sessionActionLoading}
-                leftIcon={<FaTrash />}
               >
-                Delete Permanently
+                {t('kindergarten.class.class_detail.delete')}
               </Button>
             </ModalFooter>
           </ModalContent>

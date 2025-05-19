@@ -74,7 +74,7 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
     const indexPath = path.resolve(__dirname, '../frontend/build', 'index.html');
     console.log(`Requested path: ${req.path}`);
-    console.log(`Serving index from: ${indexPath}`);
+    console.log(`Serving index from: ${indexPath} (Production)`);
     console.log(`Index exists: ${fs.existsSync(indexPath)}`);
     
     if (fs.existsSync(indexPath)) {
@@ -85,9 +85,33 @@ if (process.env.NODE_ENV === 'production') {
   });
 } else {
   console.log('Running in DEVELOPMENT mode');
-  // In development, add a catch-all route for non-API routes
+  // In development, also serve index.html for non-API routes to support client-side routing
+  // This is helpful if requests for frontend routes accidentally hit the backend server directly.
+  // The primary way to access the app in dev is via the frontend dev server (e.g., localhost:3000).
+  
+  // Serve static assets from public (if any are directly referenced and not handled by frontend dev server)
+  const publicPath = path.join(__dirname, '../frontend/public');
+  app.use(express.static(publicPath));
+  
   app.get('*', (req, res) => {
-    res.status(404).send('API server running in development mode. Frontend should be served separately.');
+    // Check if the request is for an API endpoint. If so, this catch-all shouldn't handle it.
+    // API routes should have been handled before this point.
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).send(`API endpoint ${req.path} not found.`);
+    }
+
+    // For non-API routes, serve the main index.html from the public folder (typical for create-react-app dev setup)
+    const indexPath = path.resolve(__dirname, '../frontend/public', 'index.html');
+    console.log(`Requested path: ${req.path}`);
+    console.log(`Serving index from: ${indexPath} (Development)`);
+    console.log(`Index exists: ${fs.existsSync(indexPath)}`);
+
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      // Fallback if public/index.html isn't found - this indicates a setup issue
+      res.status(404).send('Development index.html not found. Ensure frontend is running or paths are correct.');
+    }
   });
 }
 

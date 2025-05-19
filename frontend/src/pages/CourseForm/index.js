@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { coursesAPI, teachersAPI, branchesAPI } from '../../api';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Button,
@@ -42,6 +43,7 @@ const LEVEL_OPTIONS = [
 ];
 
 const CourseForm = () => {
+  const { t } = useTranslation();
   const { courseId } = useParams();
   const navigate = useNavigate();
   const isEditMode = !!courseId;
@@ -185,7 +187,7 @@ const CourseForm = () => {
     try {
       // Add validation for required fields
       if (schedule.length === 0) {
-        setError('Please add at least one weekly schedule item.');
+        setError(t('course_management.form.schedule_required'));
         return;
       }
       
@@ -229,7 +231,7 @@ const CourseForm = () => {
       if (err.response) {
         setError(`Failed to save course: ${err.response.data.message || 'Unknown error'}`);
       } else {
-        setError('Failed to save course. Please check all fields and try again.');
+        setError(t('course_management.form.validation_error'));
       }
     }
   };
@@ -238,7 +240,7 @@ const CourseForm = () => {
     return (
       <Flex justify="center" align="center" height="50vh">
         <Spinner size="xl" color="blue.500" thickness="4px" />
-        <Text ml={4} fontSize="lg" color="gray.600">Loading...</Text>
+        <Text ml={4} fontSize="lg" color="gray.600">{t('common.loading')}</Text>
       </Flex>
     );
   }
@@ -246,305 +248,259 @@ const CourseForm = () => {
   return (
     <Container maxW="container.lg" py={6}>
       <Flex mb={6} justify="space-between" alignItems="center">
-        <Heading size="lg">{isEditMode ? 'Edit Course' : 'Create New Course'}</Heading>
+        <Heading size="lg">{isEditMode ? t('course_management.edit_course') : t('course_management.create_new_course')}</Heading>
         <Button 
-          as={Link} 
-          to="/courses" 
           leftIcon={<FaArrowLeft />} 
-          size="sm" 
-          colorScheme="gray" 
-          variant="outline"
+          variant="outline" 
+          onClick={() => navigate('/courses')}
         >
-          Back to Courses
+          {t('common.back')}
         </Button>
       </Flex>
       
       {error && (
-        <Alert status="error" mb={6} borderRadius="md">
+        <Alert status="error" mb={4} borderRadius="md">
           <AlertIcon />
           {error}
         </Alert>
       )}
       
-      <Box 
-        as="form" 
-        onSubmit={handleSubmit} 
-        bg={bgColor} 
-        borderWidth="1px" 
-        borderColor={borderColor} 
-        borderRadius="md" 
-        p={6} 
-        shadow="sm"
+      <Box
+        as="form"
+        onSubmit={handleSubmit}
+        bg={bgColor}
+        borderWidth="1px"
+        borderRadius="lg"
+        borderColor={borderColor}
+        p={6}
+        boxShadow="sm"
       >
-        <VStack spacing={8} align="stretch">
-          <Box>
-            <Heading size="md" mb={4}>Basic Information</Heading>
-            <Divider mb={4} />
-            
-            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
-              <GridItem>
-                <FormControl isRequired>
-                  <FormLabel>Course Name</FormLabel>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={course.name}
-                    onChange={handleInputChange}
-                  />
-                </FormControl>
-              </GridItem>
-              
-              <GridItem>
-                <FormControl isRequired>
-                  <FormLabel>Level</FormLabel>
-                  <Select
-                    id="level"
-                    name="level"
-                    value={course.level}
-                    onChange={handleInputChange}
-                  >
-                    {LEVEL_OPTIONS.map(level => (
-                      <option key={level} value={level}>{level}</option>
-                    ))}
-                  </Select>
-                </FormControl>
-              </GridItem>
-              
-              <GridItem>
-                <FormControl isRequired>
-                  <FormLabel>Branch</FormLabel>
-                  <Select
-                    id="branch"
-                    name="branch"
-                    value={course.branch}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select a branch</option>
-                    {branches.map(branch => (
-                      <option key={branch._id} value={branch._id}>{branch.name}</option>
-                    ))}
-                  </Select>
-                </FormControl>
-              </GridItem>
-              
-              <GridItem>
-                <FormControl isRequired>
-                  <FormLabel>Teacher</FormLabel>
-                  <Select
-                    id="teacher"
-                    name="teacher"
-                    value={course.teacher}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select a teacher</option>
-                    {teachers.map(teacher => (
-                      <option key={teacher._id} value={teacher._id}>{teacher.name}</option>
-                    ))}
-                  </Select>
-                </FormControl>
-              </GridItem>
-              
-              <GridItem colSpan={{ base: 1, md: 2 }}>
-                <FormControl>
-                  <FormLabel>Previous Course (Optional)</FormLabel>
-                  <Select
-                    id="previousCourse"
-                    name="previousCourse"
-                    value={course.previousCourse || ''}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">None</option>
-                    {previousCourses.map(prevCourse => (
-                      <option key={prevCourse._id} value={prevCourse._id}>
-                        {prevCourse.name} ({prevCourse.level})
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-              </GridItem>
-              
-              <GridItem colSpan={{ base: 1, md: 2 }}>
-                <FormControl>
-                  <FormLabel>Description</FormLabel>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={course.description}
-                    onChange={handleInputChange}
-                    rows="3"
-                    resize="vertical"
-                  />
-                </FormControl>
-              </GridItem>
-            </Grid>
-          </Box>
+        <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
+          <FormControl isRequired>
+            <FormLabel>{t('course_management.form.name')}</FormLabel>
+            <Input
+              id="name"
+              name="name"
+              value={course.name}
+              onChange={handleInputChange}
+            />
+          </FormControl>
           
-          <Box>
-            <Heading size="md" mb={4}>Schedule & Duration</Heading>
-            <Divider mb={4} />
+          <FormControl isRequired>
+            <FormLabel>{t('course_management.form.branch')}</FormLabel>
+            <Select
+              id="branch"
+              name="branch"
+              value={course.branch}
+              onChange={handleInputChange}
+            >
+              <option value="">{t('common.selectOption')}</option>
+              {branches.map(branch => (
+                <option key={branch._id} value={branch._id}>{branch.name}</option>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <FormControl isRequired>
+            <FormLabel>{t('course_management.form.teacher')}</FormLabel>
+            <Select
+              id="teacher"
+              name="teacher"
+              value={course.teacher}
+              onChange={handleInputChange}
+            >
+              <option value="">{t('common.selectOption')}</option>
+              {teachers.map(teacher => (
+                <option key={teacher._id} value={teacher._id}>{teacher.name}</option>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <FormControl>
+            <FormLabel>{t('course_management.form.previous_course')}</FormLabel>
+            <Select
+              id="previousCourse"
+              name="previousCourse"
+              value={course.previousCourse || ""}
+              onChange={handleInputChange}
+            >
+              <option value="">{t('course_management.form.none')}</option>
+              {previousCourses
+                .filter(c => c._id !== courseId) // Don't show the current course as an option
+                .map(course => (
+                  <option key={course._id} value={course._id}>{course.name}</option>
+                ))
+              }
+            </Select>
+          </FormControl>
+          
+          <FormControl isRequired>
+            <FormLabel>{t('course_management.form.start_date')}</FormLabel>
+            <Input
+              id="startDate"
+              name="startDate"
+              type="date"
+              value={course.startDate}
+              onChange={handleInputChange}
+            />
+          </FormControl>
+          
+          <FormControl isRequired>
+            <FormLabel>{t('course_management.form.end_date')}</FormLabel>
+            <Input
+              id="endDate"
+              name="endDate"
+              type="date"
+              value={course.endDate}
+              onChange={handleInputChange}
+            />
+          </FormControl>
+          
+          <FormControl isRequired>
+            <FormLabel>{t('course_management.form.total_sessions')}</FormLabel>
+            <NumberInput
+              id="totalSessions"
+              min={1}
+              value={course.totalSessions}
+              onChange={(value) => handleNumberInputChange('totalSessions', value)}
+            >
+              <NumberInputField />
+            </NumberInput>
+          </FormControl>
+          
+          <FormControl isRequired>
+            <FormLabel>{t('course_management.form.level')}</FormLabel>
+            <Select
+              id="level"
+              name="level"
+              value={course.level}
+              onChange={handleInputChange}
+            >
+              {LEVEL_OPTIONS.map((level) => (
+                <option key={level} value={level}>
+                  {t(`course_management.level.${level.toLowerCase().replace(' ', '_')}`)}
+                </option>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <FormControl>
+            <FormLabel>{t('course_management.form.max_students')}</FormLabel>
+            <NumberInput
+              id="maxStudents"
+              min={1}
+              value={course.maxStudents}
+              onChange={(value) => handleNumberInputChange('maxStudents', value)}
+            >
+              <NumberInputField />
+            </NumberInput>
+          </FormControl>
+          
+          <FormControl>
+            <FormLabel>{t('course_management.form.price')}</FormLabel>
+            <NumberInput
+              id="price"
+              min={0}
+              value={course.price}
+              onChange={(value) => handleNumberInputChange('price', value)}
+            >
+              <NumberInputField />
+            </NumberInput>
+          </FormControl>
+          
+          <GridItem colSpan={{ base: 1, md: 2 }}>
+            <FormControl>
+              <FormLabel>{t('course_management.form.description')}</FormLabel>
+              <Textarea
+                id="description"
+                name="description"
+                value={course.description}
+                onChange={handleInputChange}
+                rows={3}
+              />
+            </FormControl>
+          </GridItem>
+          
+          <GridItem colSpan={{ base: 1, md: 2 }}>
+            <Flex justify="space-between" mb={4}>
+              <FormLabel pt={2}>{t('course_management.form.weekly_schedule')}</FormLabel>
+              <Button
+                leftIcon={<FaPlus />}
+                colorScheme="blue"
+                size="sm"
+                onClick={handleAddSchedule}
+              >
+                {t('course_management.form.add_schedule')}
+              </Button>
+            </Flex>
             
-            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6} mb={6}>
-              <GridItem>
-                <FormControl isRequired>
-                  <FormLabel>Start Date</FormLabel>
-                  <Input
-                    type="date"
-                    id="startDate"
-                    name="startDate"
-                    value={course.startDate}
-                    onChange={handleInputChange}
-                  />
-                </FormControl>
-              </GridItem>
-              
-              <GridItem>
-                <FormControl>
-                  <FormLabel>End Date (Optional)</FormLabel>
-                  <Input
-                    type="date"
-                    id="endDate"
-                    name="endDate"
-                    value={course.endDate || ''}
-                    onChange={handleInputChange}
-                  />
-                </FormControl>
-              </GridItem>
-              
-              <GridItem>
-                <FormControl isRequired>
-                  <FormLabel>Total Sessions</FormLabel>
-                  <NumberInput min={1} value={course.totalSessions}>
-                    <NumberInputField
-                      id="totalSessions"
-                      name="totalSessions"
-                      onChange={handleInputChange}
-                    />
-                  </NumberInput>
-                </FormControl>
-              </GridItem>
-              
-              <GridItem>
-                <FormControl isRequired>
-                  <FormLabel>Maximum Students</FormLabel>
-                  <NumberInput min={1} value={course.maxStudents}>
-                    <NumberInputField
-                      id="maxStudents"
-                      name="maxStudents"
-                      onChange={handleInputChange}
-                    />
-                  </NumberInput>
-                </FormControl>
-              </GridItem>
-            </Grid>
-            
-            <FormControl mb={4}>
-              <FormLabel>Weekly Schedule</FormLabel>
-              <VStack spacing={3} align="stretch">
-                {schedule.map((item, index) => (
-                  <Flex 
-                    key={index} 
-                    p={3} 
-                    bg="gray.50" 
-                    borderRadius="md" 
-                    borderWidth="1px" 
-                    borderColor="gray.200"
-                    align="center"
-                    justify="space-between"
-                  >
+            {schedule.length === 0 ? (
+              <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
+                {t('course_management.form.schedule_required')}
+              </Text>
+            ) : (
+              schedule.map((item, index) => (
+                <Flex key={index} gap={3} mb={3} align="center">
+                  <FormControl flex="1">
+                    <FormLabel fontSize="sm">{t('course_management.form.day')}</FormLabel>
                     <Select
                       value={item.day}
                       onChange={(e) => handleScheduleChange(index, 'day', e.target.value)}
-                      width="auto"
-                      mr={4}
                     >
                       {DAYS_OF_WEEK.map(day => (
                         <option key={day} value={day}>{day}</option>
                       ))}
                     </Select>
-                    
-                    <HStack spacing={2} flex="1">
-                      <Input
-                        type="time"
-                        value={item.startTime}
-                        onChange={(e) => handleScheduleChange(index, 'startTime', e.target.value)}
-                        width="auto"
-                      />
-                      <Text>to</Text>
-                      <Input
-                        type="time"
-                        value={item.endTime}
-                        onChange={(e) => handleScheduleChange(index, 'endTime', e.target.value)}
-                        width="auto"
-                      />
-                    </HStack>
-                    
-                    <IconButton
-                      aria-label="Remove schedule"
-                      icon={<FaTrash />}
-                      colorScheme="red"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveSchedule(index)}
-                      ml={2}
+                  </FormControl>
+                  
+                  <FormControl flex="1">
+                    <FormLabel fontSize="sm">{t('course_management.form.start_time')}</FormLabel>
+                    <Input
+                      type="time"
+                      value={item.startTime}
+                      onChange={(e) => handleScheduleChange(index, 'startTime', e.target.value)}
                     />
-                  </Flex>
-                ))}
-                
-                <Button
-                  leftIcon={<FaPlus />}
-                  colorScheme="blue"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddSchedule}
-                  alignSelf="flex-start"
-                  mt={2}
-                >
-                  Add Schedule
-                </Button>
-              </VStack>
-            </FormControl>
-          </Box>
-          
-          <Box>
-            <Heading size="md" mb={4}>Pricing</Heading>
-            <Divider mb={4} />
-            
-            <FormControl isRequired mb={6}>
-              <FormLabel>Course Price</FormLabel>
-              <InputGroup>
-                <InputLeftAddon children="$" />
-                <NumberInput 
-                  min={0} 
-                  precision={2} 
-                  value={course.price}
-                  onChange={(valueString) => handleNumberInputChange('price', parseFloat(valueString))}
-                  width="full"
-                >
-                  <NumberInputField
-                    id="price"
-                    name="price"
-                    borderLeftRadius={0}
+                  </FormControl>
+                  
+                  <FormControl flex="1">
+                    <FormLabel fontSize="sm">{t('course_management.form.end_time')}</FormLabel>
+                    <Input
+                      type="time"
+                      value={item.endTime}
+                      onChange={(e) => handleScheduleChange(index, 'endTime', e.target.value)}
+                    />
+                  </FormControl>
+                  
+                  <IconButton
+                    aria-label="Remove schedule"
+                    icon={<FaTrash />}
+                    colorScheme="red"
+                    variant="ghost"
+                    onClick={() => handleRemoveSchedule(index)}
+                    alignSelf="flex-end"
+                    mb={1}
                   />
-                </NumberInput>
-              </InputGroup>
-            </FormControl>
-          </Box>
-          
-          <Flex justify="flex-end" gap={3} mt={4}>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/courses')}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              colorScheme="blue"
-            >
-              {isEditMode ? 'Update Course' : 'Create Course'}
-            </Button>
-          </Flex>
-        </VStack>
+                </Flex>
+              ))
+            )}
+          </GridItem>
+        </Grid>
+        
+        <Flex justify="flex-end" mt={8}>
+          <Button 
+            variant="outline" 
+            mr={3} 
+            onClick={() => navigate('/courses')}
+          >
+            {t('course_management.form.cancel')}
+          </Button>
+          <Button 
+            colorScheme="blue" 
+            type="submit"
+          >
+            {t('course_management.form.save')}
+          </Button>
+        </Flex>
       </Box>
     </Container>
   );

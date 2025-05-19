@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { notificationsAPI } from '../../api';
 import { useNotifications } from '../../context/NotificationContext';
-import { formatDistanceToNow } from 'date-fns';
+import { useAppTranslation, translateNotificationMessage, useI18nUtils } from '../../utils/i18nHelper';
 import { 
   Box, 
   Heading, 
@@ -79,6 +79,9 @@ const Notifications = () => {
   const unreadBg = useColorModeValue('blue.50', 'blue.900');
   const iconColor = useColorModeValue('gray.300', 'gray.600');
 
+  const { t } = useAppTranslation();
+  const { formatDistanceToNowLocalized } = useI18nUtils();
+
   // Fetch notifications on component mount
   useEffect(() => {
     fetchNotifications(currentPage, perPage);
@@ -104,34 +107,34 @@ const Notifications = () => {
 
   const getTypeLabel = (type) => {
     switch(type) {
-      case 'success': return 'Success';
-      case 'warning': return 'Warning';
-      case 'error': return 'Error';
-      default: return 'Info';
+      case 'success': return t('notifications.types.success');
+      case 'warning': return t('notifications.types.warning');
+      case 'error': return t('notifications.types.error');
+      default: return t('notifications.types.info');
     }
   };
 
   const getEntityLabel = (entityType) => {
     switch(entityType) {
-      case 'course': return 'Course';
-      case 'teacher': return 'Teacher';
-      case 'student': return 'Student';
-      case 'class': return 'Kindergarten Class';
-      case 'school': return 'School';
-      case 'region': return 'Region';
-      case 'branch': return 'Branch';
-      case 'session': return 'Session';
+      case 'course': return t('notifications.entity_types.course');
+      case 'teacher': return t('notifications.entity_types.teacher');
+      case 'student': return t('notifications.entity_types.student');
+      case 'class': return t('notifications.entity_types.class');
+      case 'school': return t('notifications.entity_types.school');
+      case 'region': return t('notifications.entity_types.region');
+      case 'branch': return t('notifications.entity_types.branch');
+      case 'session': return t('notifications.entity_types.session');
       default: return entityType;
     }
   };
 
   const getActionLabel = (action) => {
     switch(action) {
-      case 'create': return 'Created';
-      case 'update': return 'Updated';
-      case 'delete': return 'Deleted';
-      case 'cancel': return 'Canceled';
-      case 'ending_soon': return 'Ending Soon';
+      case 'create': return t('notifications.actions.create');
+      case 'update': return t('notifications.actions.update');
+      case 'delete': return t('notifications.actions.delete');
+      case 'cancel': return t('notifications.actions.cancel');
+      case 'ending_soon': return t('notifications.actions.ending_soon');
       default: return action;
     }
   };
@@ -159,7 +162,7 @@ const Notifications = () => {
   return (
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
-        <Heading fontSize="xl" fontWeight="semibold">Notifications</Heading>
+        <Heading fontSize="xl" fontWeight="semibold">{t('notifications.title')}</Heading>
             {notifications.length > 0 && (
           <Button 
             size="sm"
@@ -168,7 +171,7 @@ const Notifications = () => {
             leftIcon={<FaCheckCircle />}
                 onClick={markAllAsRead}
               >
-                Mark all as read
+                {t('notifications.mark_all_read')}
           </Button>
             )}
       </Flex>
@@ -184,9 +187,9 @@ const Notifications = () => {
             >
         <Tabs onChange={(index) => setTabIndex(index)} colorScheme="blue">
           <TabList px={4} bg={headerBg}>
-            <Tab>All</Tab>
-            <Tab>Unread</Tab>
-            <Tab>Read</Tab>
+            <Tab>{t('notifications.all')}</Tab>
+            <Tab>{t('notifications.unread')}</Tab>
+            <Tab>{t('notifications.read')}</Tab>
           </TabList>
 
           <TabPanels>
@@ -195,7 +198,7 @@ const Notifications = () => {
                 {loading ? (
                   <Flex justify="center" align="center" py={10}>
                     <Spinner color="blue.500" size="lg" />
-                    <Text ml={3} color="gray.500">Loading notifications...</Text>
+                    <Text ml={3} color="gray.500">{t('notifications.loading')}</Text>
                   </Flex>
                 ) : error ? (
                   <Box p={6} textAlign="center">
@@ -204,7 +207,7 @@ const Notifications = () => {
                 ) : getFilteredNotifications().length === 0 ? (
                   <Box p={10} textAlign="center">
                     <FaBell size={30} color={iconColor} style={{ margin: '0 auto 16px' }} />
-                    <Text color="gray.500">No notifications found</Text>
+                    <Text color="gray.500">{t('notifications.no_notifications')}</Text>
                   </Box>
                 ) : (
                   <VStack spacing={0} divider={<Divider />} align="stretch">
@@ -234,7 +237,7 @@ const Notifications = () => {
                                 colorScheme={getTypeColor(notification.type)}
                                 mr={2}
                               >
-              {getTypeLabel(notification.type)}
+                                {getTypeLabel(notification.type)}
                               </Badge>
                               <Badge 
                                 colorScheme="gray" 
@@ -244,12 +247,12 @@ const Notifications = () => {
                               </Badge>
                             </Box>
                             <Text fontSize="xs" color="gray.500">
-                              {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                              {formatDistanceToNowLocalized(new Date(notification.createdAt))}
                             </Text>
                           </Flex>
                           
                           <Text fontWeight={!notification.read ? "medium" : "normal"} mb={2}>
-                            {notification.message}
+                            {translateNotificationMessage(notification.message, notification, t)}
                           </Text>
                           
                           <Flex align="center">
@@ -268,7 +271,7 @@ const Notifications = () => {
                               variant="subtle"
                             >
                               <Box mr={1}>{getActionIcon(notification.action)}</Box>
-                  {getActionLabel(notification.action)}
+                              {getActionLabel(notification.action)}
                             </Badge>
                             
                             <Box ml="auto">
@@ -282,26 +285,28 @@ const Notifications = () => {
                                   onClick={(e) => e.stopPropagation()}
                                 />
                                 <MenuList>
-              {!notification.read && (
+                                  {!notification.read && (
                                     <MenuItem
                                       icon={<FaCheckCircle />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    markAsRead(notification._id);
-                  }}
-                >
-                  Mark as read
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        markAsRead(notification._id);
+                                      }}
+                                    >
+                                      {t('notifications.mark_as_read')}
                                     </MenuItem>
-              )}
+                                  )}
                                   <MenuItem
                                     icon={<FaTrash />}
                                     color="red.500"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteNotification(notification._id);
-                }}
-              >
-                Delete
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (window.confirm(t('notifications.confirm_delete'))) {
+                                        deleteNotification(notification._id);
+                                      }
+                                    }}
+                                  >
+                                    {t('notifications.delete')}
                                   </MenuItem>
                                 </MenuList>
                               </Menu>
@@ -313,7 +318,7 @@ const Notifications = () => {
                   </VStack>
                 )}
               </TabPanel>
-        ))}
+            ))}
           </TabPanels>
         </Tabs>
       </Box>

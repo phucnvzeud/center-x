@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { teachersAPI } from '../../api';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Button,
@@ -21,6 +22,7 @@ import {
 import { FaArrowLeft, FaSave } from 'react-icons/fa';
 
 const TeacherEdit = () => {
+  const { t } = useTranslation();
   const { teacherId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -37,6 +39,8 @@ const TeacherEdit = () => {
   });
   const [errors, setErrors] = useState({});
   
+  const isCreating = teacherId === 'new';
+
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
@@ -59,13 +63,27 @@ const TeacherEdit = () => {
         setLoading(false);
       } catch (err) {
         console.error('Error fetching teacher:', err);
-        setError('Failed to load teacher information. Please try again later.');
+        setError(t('teachers.error'));
         setLoading(false);
       }
     };
 
-    fetchTeacher();
-  }, [teacherId]);
+    if (isCreating) {
+      // If creating a new teacher, just initialize the form with empty values
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        specialization: '',
+        location: '',
+        bio: ''
+      });
+      setLoading(false);
+    } else {
+      // Only fetch teacher data if editing an existing teacher
+      fetchTeacher();
+    }
+  }, [teacherId, isCreating, t]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -87,13 +105,13 @@ const TeacherEdit = () => {
     const newErrors = {};
     
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('teachers.required_field');
     }
     
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('teachers.required_field');
     } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = t('teachers.invalid_email');
     }
     
     setErrors(newErrors);
@@ -105,8 +123,8 @@ const TeacherEdit = () => {
     
     if (!validateForm()) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fix the errors in the form.',
+        title: t('teachers.validation_error'),
+        description: t('teachers.validation_error_message'),
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -116,22 +134,32 @@ const TeacherEdit = () => {
     
     try {
       setSaving(true);
-      await teachersAPI.update(teacherId, formData);
-      
-      toast({
-        title: 'Teacher updated',
-        description: 'Teacher information has been updated successfully.',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-      
-      navigate(`/teachers/${teacherId}`);
+      if (!isCreating) {
+        await teachersAPI.update(teacherId, formData);
+        toast({
+          title: t('teachers.teacher_updated'),
+          description: t('teachers.teacher_updated'),
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+        navigate(`/teachers/${teacherId}`);
+      } else {
+        const response = await teachersAPI.create(formData);
+        toast({
+          title: t('teachers.teacher_created'),
+          description: t('teachers.teacher_created'),
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+        navigate(`/teachers/${response.data._id}`);
+      }
     } catch (err) {
-      console.error('Error updating teacher:', err);
+      console.error(`Error ${isCreating ? 'creating' : 'updating'} teacher:`, err);
       toast({
-        title: 'Update failed',
-        description: 'Failed to update teacher information. Please try again.',
+        title: isCreating ? t('teachers.creation_failed') : t('teachers.update_failed'),
+        description: `${t('teachers.update_failed')} ${t('teachers.retry')}`,
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -145,7 +173,7 @@ const TeacherEdit = () => {
     return (
       <Box p={4} textAlign="center">
         <Spinner color="brand.500" size="lg" />
-        <Text mt={2} color="gray.500">Loading teacher information...</Text>
+        <Text mt={2} color="gray.500">{t('teachers.loading')}</Text>
       </Box>
     );
   }
@@ -153,10 +181,10 @@ const TeacherEdit = () => {
   if (error) {
     return (
       <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
-        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Heading size="md" mb={2} color="red.600">{t('common.error')}</Heading>
         <Text mb={4}>{error}</Text>
         <Button colorScheme="red" variant="outline" onClick={() => window.location.reload()}>
-          Retry
+          {t('teachers.retry')}
         </Button>
       </Box>
     );
@@ -167,83 +195,85 @@ const TeacherEdit = () => {
       <Flex align="center" mb={6}>
         <IconButton
           as={Link}
-          to={`/teachers/${teacherId}`}
+          to={isCreating ? '/teachers' : `/teachers/${teacherId}`}
           icon={<FaArrowLeft />}
-          aria-label="Back to teacher details"
+          aria-label={isCreating ? t('teachers.back_to_teachers') : t('teachers.back_to_teachers')}
           mr={4}
           variant="outline"
         />
-        <Heading fontSize="xl" fontWeight="semibold">Edit Teacher</Heading>
+        <Heading fontSize="xl" fontWeight="semibold">
+          {isCreating ? t('teachers.create_new') : t('teachers.edit_teacher')}
+        </Heading>
       </Flex>
 
       <Box as="form" onSubmit={handleSubmit} bg={bgColor} borderWidth="1px" borderColor={borderColor} borderRadius="md" p={6}>
         <Stack spacing={4}>
           <FormControl isInvalid={errors.name}>
-            <FormLabel htmlFor="name">Name</FormLabel>
+            <FormLabel htmlFor="name">{t('teachers.name')}</FormLabel>
             <Input 
               id="name"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="Enter teacher's name"
+              placeholder={t('teachers.name')}
             />
             <FormErrorMessage>{errors.name}</FormErrorMessage>
           </FormControl>
 
           <FormControl isInvalid={errors.email}>
-            <FormLabel htmlFor="email">Email</FormLabel>
+            <FormLabel htmlFor="email">{t('teachers.email')}</FormLabel>
             <Input 
               id="email"
               name="email"
               type="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="Enter email address"
+              placeholder={t('teachers.email')}
             />
             <FormErrorMessage>{errors.email}</FormErrorMessage>
           </FormControl>
 
           <FormControl>
-            <FormLabel htmlFor="phone">Phone</FormLabel>
+            <FormLabel htmlFor="phone">{t('teachers.phone')}</FormLabel>
             <Input 
               id="phone"
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              placeholder="Enter phone number"
+              placeholder={t('teachers.phone')}
             />
           </FormControl>
 
           <FormControl>
-            <FormLabel htmlFor="specialization">Specialization</FormLabel>
+            <FormLabel htmlFor="specialization">{t('teachers.specialization')}</FormLabel>
             <Input 
               id="specialization"
               name="specialization"
               value={formData.specialization}
               onChange={handleChange}
-              placeholder="Enter specialization (e.g. Mathematics, Science)"
+              placeholder={t('teachers.specialization')}
             />
           </FormControl>
           
           <FormControl>
-            <FormLabel htmlFor="location">Location</FormLabel>
+            <FormLabel htmlFor="location">{t('teachers.location')}</FormLabel>
             <Input 
               id="location"
               name="location"
               value={formData.location}
               onChange={handleChange}
-              placeholder="Enter location"
+              placeholder={t('teachers.location')}
             />
           </FormControl>
 
           <FormControl>
-            <FormLabel htmlFor="bio">Biography</FormLabel>
+            <FormLabel htmlFor="bio">{t('teachers.bio')}</FormLabel>
             <Textarea 
               id="bio"
               name="bio"
               value={formData.bio}
               onChange={handleChange}
-              placeholder="Enter teacher's biography"
+              placeholder={t('teachers.bio')}
               rows={5}
             />
           </FormControl>
@@ -251,19 +281,19 @@ const TeacherEdit = () => {
           <Flex justify="flex-end" mt={6} gap={4}>
             <Button 
               as={Link}
-              to={`/teachers/${teacherId}`}
+              to={isCreating ? '/teachers' : `/teachers/${teacherId}`}
               variant="outline"
             >
-              Cancel
+              {t('teachers.cancel')}
             </Button>
             <Button 
               type="submit"
               colorScheme="brand"
               leftIcon={<FaSave />}
               isLoading={saving}
-              loadingText="Saving"
+              loadingText={t('teachers.saving')}
             >
-              Save Changes
+              {t('teachers.save_changes')}
             </Button>
           </Flex>
         </Stack>

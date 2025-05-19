@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Heading,
@@ -31,6 +32,7 @@ import {
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
 const Branches = () => {
+  const { t } = useTranslation();
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -53,7 +55,7 @@ const Branches = () => {
       setLoading(false);
     } catch (err) {
       console.error('Error fetching branches:', err);
-      setError('Failed to load branches. Please try again later.');
+      setError(t('branches.error'));
       setLoading(false);
     }
   };
@@ -95,18 +97,18 @@ const Branches = () => {
       closeModal();
     } catch (err) {
       console.error('Error saving branch:', err);
-      setError('Failed to save branch. Please try again.');
+      setError(t('branches.save_error'));
     }
   };
 
   const handleDelete = async (branchId) => {
-    if (window.confirm('Are you sure you want to delete this branch?')) {
+    if (window.confirm(t('branches.delete_confirm'))) {
       try {
         await axios.delete(`/api/branches/${branchId}`);
         fetchBranches();
       } catch (err) {
         console.error('Error deleting branch:', err);
-        setError('Failed to delete branch. Please try again.');
+        setError(t('branches.delete_error'));
       }
     }
   };
@@ -115,7 +117,7 @@ const Branches = () => {
     return (
       <Box p={4} textAlign="center">
         <Spinner color="brand.500" size="lg" />
-        <Text mt={2} color="gray.500">Loading branches...</Text>
+        <Text mt={2} color="gray.500">{t('branches.loading')}</Text>
       </Box>
     );
   }
@@ -123,10 +125,10 @@ const Branches = () => {
   if (error) {
     return (
       <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
-        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Heading size="md" mb={2} color="red.600">{t('common.error')}</Heading>
         <Text mb={4}>{error}</Text>
         <Button colorScheme="red" variant="outline" onClick={() => fetchBranches()}>
-          Retry
+          {t('kindergarten.retry')}
         </Button>
       </Box>
     );
@@ -135,25 +137,25 @@ const Branches = () => {
   return (
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
-        <Heading fontSize="xl" fontWeight="semibold">Branches</Heading>
+        <Heading fontSize="xl" fontWeight="semibold">{t('branches.management')}</Heading>
         <Button 
           leftIcon={<FaPlus />} 
           colorScheme="brand" 
           size="sm" 
           onClick={() => openModal()}
         >
-          New Branch
+          {t('branches.new_branch')}
         </Button>
       </Flex>
       
       {branches.length === 0 ? (
         <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" textAlign="center" borderRadius="md">
-          <Text color="gray.500" mb={4}>No branches found. Add your first branch to get started.</Text>
+          <Text color="gray.500" mb={4}>{t('branches.no_branches')}</Text>
           <Button leftIcon={<FaPlus />} colorScheme="brand" size="sm" onClick={() => openModal()}>
-            Add Branch
+            {t('branches.add_branch')}
           </Button>
         </Box>
-      ) : (
+      ) :
         <Box 
           borderWidth="1px" 
           borderColor={borderColor} 
@@ -163,9 +165,9 @@ const Branches = () => {
           <Table variant="simple">
             <Thead bg={tableHeaderBg}>
               <Tr>
-                <Th>Name</Th>
-                <Th>Address</Th>
-                <Th width="150px">Actions</Th>
+                <Th>{t('branches.branch_name')}</Th>
+                <Th>{t('branches.address')}</Th>
+                <Th width="150px">{t('branches.actions')}</Th>
               </Tr>
             </Thead>
             <Tbody>
@@ -177,7 +179,7 @@ const Branches = () => {
                     <HStack spacing={2}>
                       <IconButton
                         icon={<FaEdit />}
-                        aria-label="Edit branch"
+                        aria-label={t('branches.edit_branch')}
                         size="sm"
                         colorScheme="blue"
                         variant="ghost"
@@ -185,7 +187,7 @@ const Branches = () => {
                       />
                       <IconButton
                         icon={<FaTrash />}
-                        aria-label="Delete branch"
+                        aria-label={t('branches.delete_branch')}
                         size="sm"
                         colorScheme="red"
                         variant="ghost"
@@ -198,44 +200,44 @@ const Branches = () => {
             </Tbody>
           </Table>
         </Box>
-      )}
+      }
 
       <Modal isOpen={isOpen} onClose={closeModal}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{editingBranch ? 'Edit Branch' : 'Add New Branch'}</ModalHeader>
+          <ModalHeader>{editingBranch ? t('branches.edit_branch') : t('branches.new_branch')}</ModalHeader>
           <ModalCloseButton />
           <form onSubmit={handleSubmit}>
             <ModalBody pb={6}>
               <FormControl isRequired>
-                <FormLabel htmlFor="name">Branch Name</FormLabel>
+                <FormLabel htmlFor="name">{t('branches.branch_name')}</FormLabel>
                 <Input
                   id="name"
                   name="name"
                   value={editingBranch ? editingBranch.name : newBranch.name}
                   onChange={handleInputChange}
-                  placeholder="Enter branch name"
+                  placeholder={t('branches.enter_name')}
                 />
               </FormControl>
 
               <FormControl mt={4} isRequired>
-                <FormLabel htmlFor="address">Address</FormLabel>
+                <FormLabel htmlFor="address">{t('branches.address')}</FormLabel>
                 <Input
                   id="address"
                   name="address"
                   value={editingBranch ? editingBranch.address : newBranch.address}
                   onChange={handleInputChange}
-                  placeholder="Enter branch address"
+                  placeholder={t('branches.enter_address')}
                 />
               </FormControl>
             </ModalBody>
 
             <ModalFooter>
               <Button colorScheme="gray" mr={3} onClick={closeModal}>
-                Cancel
+                {t('branches.cancel')}
               </Button>
               <Button type="submit" colorScheme="brand">
-                {editingBranch ? 'Update' : 'Save'}
+                {editingBranch ? t('branches.update') : t('branches.save')}
               </Button>
             </ModalFooter>
           </form>

@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../context/NotificationContext';
-import { formatDistanceToNow } from 'date-fns';
 import { BsBell, BsCalendarX, BsCalendarCheck } from 'react-icons/bs';
+import { useAppTranslation, translateNotificationMessage, useI18nUtils } from '../../utils/i18nHelper';
 import './NotificationWidget.css';
 
-const NotificationWidget = () => {
+const NotificationWidget = ({ limit = 5 }) => {
   const { 
     notifications, 
     loading, 
@@ -16,11 +16,13 @@ const NotificationWidget = () => {
   } = useNotifications();
   
   const navigate = useNavigate();
+  const { t } = useAppTranslation();
+  const { formatDistanceToNowLocalized } = useI18nUtils();
 
   // Fetch notifications on component mount
   useEffect(() => {
-    fetchNotifications(1, 5); // Show only 5 latest notifications
-  }, [fetchNotifications]);
+    fetchNotifications(1, limit); // Use the limit prop
+  }, [fetchNotifications, limit]);
 
   const handleNotificationClick = (notification) => {
     if (!notification.read) {
@@ -47,25 +49,25 @@ const NotificationWidget = () => {
   return (
     <div className="notification-widget">
       <div className="widget-header">
-        <h3>Recent Activity</h3>
+        <h3>{t('dashboard.recent_activity')}</h3>
         {notifications.length > 0 && (
           <button 
             className="mark-all-read-widget-btn" 
             onClick={markAllAsRead}
           >
-            Mark all as read
+            {t('dashboard.mark_all_as_read')}
           </button>
         )}
       </div>
       
       <div className="widget-content">
-        {loading && <div className="widget-loading">Loading...</div>}
+        {loading && <div className="widget-loading">{t('notifications.loading')}</div>}
         
         {error && <div className="widget-error">{error}</div>}
         
         {!loading && notifications.length === 0 && (
           <div className="widget-empty">
-            <p>No recent activity</p>
+            <p>{t('notifications.no_notifications')}</p>
           </div>
         )}
         
@@ -80,11 +82,11 @@ const NotificationWidget = () => {
               <div className="widget-notification-header">
                 {getNotificationIcon(notification)}
                 <div className="widget-notification-time">
-                  {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                  {formatDistanceToNowLocalized(new Date(notification.createdAt))}
                 </div>
               </div>
               <div className="widget-notification-message">
-                {notification.message}
+                {translateNotificationMessage(notification.message, notification, t)}
               </div>
             </div>
           </div>
@@ -97,7 +99,7 @@ const NotificationWidget = () => {
             className="view-all-btn" 
             onClick={() => navigate('/notifications')}
           >
-            View all activity
+            {t('notifications.title')}
           </button>
         </div>
       )}

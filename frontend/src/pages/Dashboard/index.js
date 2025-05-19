@@ -7,9 +7,11 @@ import NotificationWidget from '../../components/NotificationWidget';
 import { FaUserGraduate, FaChalkboardTeacher, FaBook, FaCalendarAlt, FaSchool, FaUserFriends, FaExclamationTriangle, FaChartPie, FaChartBar, FaBell, FaUsersCog, FaLayerGroup, FaCheckSquare, FaClock, FaMoneyBillWave } from 'react-icons/fa';
 import { format, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
 import { Box, Grid, GridItem, Heading, Text, Flex, Stack, Stat, StatLabel, StatNumber, Badge, Table, Thead, Tbody, Tr, Th, Td, Divider, SimpleGrid, useColorModeValue, Progress, HStack } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
 import './Dashboard.css';
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({
     teachers: 0,
     students: 0,
@@ -334,13 +336,13 @@ const Dashboard = () => {
 
   return (
     <Box>
-      <Heading mb={6} fontSize="xl" fontWeight="semibold">Dashboard</Heading>
+      <Heading mb={6} fontSize="xl" fontWeight="semibold">{t('dashboard.title')}</Heading>
       
       {/* Top Row: Key Metrics Overview */}
       <SimpleGrid columns={{ base: 2, md: 4, lg: 6 }} spacing={4} mb={6}>
         <StatCard 
           icon={<FaChalkboardTeacher />} 
-          title="Teachers" 
+          title={t('dashboard.teachers')} 
           value={stats.teachers} 
           iconBg="purple.100" 
           iconColor="purple.500" 
@@ -348,7 +350,7 @@ const Dashboard = () => {
         />
         <StatCard 
           icon={<FaUserGraduate />} 
-          title="Students" 
+          title={t('dashboard.students')} 
           value={stats.students} 
           iconBg="blue.100" 
           iconColor="blue.500" 
@@ -356,7 +358,7 @@ const Dashboard = () => {
         />
         <StatCard 
           icon={<FaBook />} 
-          title="Courses" 
+          title={t('dashboard.courses')} 
           value={stats.courses} 
           iconBg="green.100" 
           iconColor="green.500" 
@@ -364,7 +366,7 @@ const Dashboard = () => {
         />
         <StatCard 
           icon={<FaSchool />} 
-          title="Schools" 
+          title={t('dashboard.schools')} 
           value={stats.schools.total} 
           iconBg="orange.100" 
           iconColor="orange.500" 
@@ -372,7 +374,7 @@ const Dashboard = () => {
         />
         <StatCard 
           icon={<FaUsersCog />} 
-          title="Classes" 
+          title={t('dashboard.classes')} 
           value={stats.classes.total} 
           iconBg="teal.100" 
           iconColor="teal.500" 
@@ -380,7 +382,7 @@ const Dashboard = () => {
         />
         <StatCard 
           icon={<FaLayerGroup />} 
-          title="Sessions" 
+          title={t('dashboard.sessions')} 
           value={stats.totalSessions} 
           iconBg="yellow.100" 
           iconColor="yellow.500" 
@@ -402,18 +404,18 @@ const Dashboard = () => {
               <Box color="purple.500" mr={2}>
                 <FaBell />
               </Box>
-              <Heading size="sm">Recent Activity & Notifications</Heading>
+              <Heading size="sm">{t('dashboard.recent_activity_notifications')}</Heading>
             </Flex>
             <NotificationWidget limit={5} />
           </Box>
           
           {/* Upcoming Sessions */}
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm" mb={6}>
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
             <Flex align="center" mb={4}>
               <Box color="purple.500" mr={2}>
                   <FaCalendarAlt />
               </Box>
-              <Heading size="sm">Upcoming Sessions</Heading>
+              <Heading size="sm">{t('dashboard.upcoming_sessions')}</Heading>
             </Flex>
             {upcomingSessions.length > 0 ? (
               <Stack spacing={3}>
@@ -437,7 +439,9 @@ const Dashboard = () => {
                 ))}
               </Stack>
             ) : (
-              <Text fontSize="sm" color="gray.500">No upcoming sessions</Text>
+              <Text fontSize="sm" color="gray.500">
+                {t('dashboard.no_upcoming_sessions')}
+              </Text>
             )}
           </Box>
           
@@ -447,7 +451,7 @@ const Dashboard = () => {
               <Box color="purple.500" mr={2}>
                 <FaExclamationTriangle />
               </Box>
-              <Heading size="sm">Upcoming Holidays</Heading>
+              <Heading size="sm">{t('dashboard.upcoming_holidays')}</Heading>
             </Flex>
             {nextHolidays.length > 0 ? (
               <Stack spacing={3}>
@@ -466,7 +470,9 @@ const Dashboard = () => {
                 ))}
               </Stack>
             ) : (
-              <Text fontSize="sm" color="gray.500">No upcoming holidays</Text>
+              <Text fontSize="sm" color="gray.500">
+                {t('dashboard.no_upcoming_holidays')}
+              </Text>
             )}
           </Box>
         </GridItem>
@@ -479,19 +485,19 @@ const Dashboard = () => {
               <Box color="purple.500" mr={2}>
                 <FaCheckSquare />
               </Box>
-              <Heading size="sm">Course Status Overview</Heading>
+              <Heading size="sm">{t('dashboard.course_status_overview')}</Heading>
             </Flex>
             <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-              <StatusStatCard title="Active Courses" value={stats.activeCourses} colorScheme="green" />
-              <StatusStatCard title="Upcoming" value={stats.upcomingCourses} colorScheme="blue" />
-              <StatusStatCard title="Completed" value={stats.completedCourses} colorScheme="purple" />
-              <StatusStatCard title="Cancelled" value={stats.cancelledCourses} colorScheme="red" />
+              <StatusStatCard title={t('dashboard.active_courses')} value={stats.activeCourses} colorScheme="green" />
+              <StatusStatCard title={t('dashboard.upcoming')} value={stats.upcomingCourses} colorScheme="blue" />
+              <StatusStatCard title={t('dashboard.completed')} value={stats.completedCourses} colorScheme="purple" />
+              <StatusStatCard title={t('dashboard.cancelled')} value={stats.cancelledCourses} colorScheme="red" />
             </SimpleGrid>
             <Box mt={4}>
-              <Text fontSize="sm" fontWeight="medium" mb={1}>Sessions Completion</Text>
+              <Text fontSize="sm" fontWeight="medium" mb={1}>{t('dashboard.sessions_completion')}</Text>
               <Flex align="center" mb={1}>
                 <Text fontSize="xs" color="gray.500">
-                  {stats.completedSessions} of {stats.totalSessions} Total Sessions
+                  {stats.completedSessions} {t('dashboard.of')} {stats.totalSessions} {t('dashboard.total_sessions')}
                 </Text>
                 <Text fontSize="xs" fontWeight="bold" ml="auto">
                   {stats.totalSessions > 0 ? Math.round((stats.completedSessions / stats.totalSessions) * 100) : 0}%
@@ -512,9 +518,13 @@ const Dashboard = () => {
               <Box color="purple.500" mr={2}>
                 <FaClock />
               </Box>
-              <Heading size="sm">Today's Schedule</Heading>
+              <Heading size="sm">{t('dashboard.today_sessions')}</Heading>
             </Flex>
-            {todaySessions.length > 0 ? (
+            {todaySessions.length === 0 ? (
+              <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
+                {t('dashboard.no_sessions_today')}
+              </Text>
+            ) : (
               <Table variant="simple" size="sm">
                 <Thead>
                   <Tr>
@@ -539,8 +549,6 @@ const Dashboard = () => {
                   ))}
                 </Tbody>
               </Table>
-            ) : (
-              <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>No sessions scheduled for today</Text>
             )}
           </Box>
           
@@ -550,7 +558,7 @@ const Dashboard = () => {
               <Box color="purple.500" mr={2}>
                 <FaChartPie />
               </Box>
-              <Heading size="sm">Course Status Distribution</Heading>
+              <Heading size="sm">{t('dashboard.course_status_distribution')}</Heading>
             </Flex>
             <Box height="250px">
               {coursesByStatus.length > 1 && (
@@ -574,14 +582,14 @@ const Dashboard = () => {
               <Box color="purple.500" mr={2}>
                 <FaBook />
               </Box>
-              <Heading size="sm">Recent Courses</Heading>
+              <Heading size="sm">{t('dashboard.recent_courses')}</Heading>
             </Flex>
             <Table variant="simple" size="sm">
               <Thead>
                 <Tr>
-                  <Th>Course Name</Th>
-                  <Th>Status</Th>
-                  <Th>Students</Th>
+                  <Th>{t('dashboard.recent_courses_table.course_name')}</Th>
+                  <Th>{t('dashboard.recent_courses_table.status')}</Th>
+                  <Th>{t('dashboard.recent_courses_table.students')}</Th>
                 </Tr>
               </Thead>
               <Tbody>
@@ -600,7 +608,7 @@ const Dashboard = () => {
                 ))}
                 {recentCourses.length === 0 && (
                   <Tr>
-                    <Td colSpan={3}>No courses found</Td>
+                    <Td colSpan={3}>{t('common.noData')}</Td>
                   </Tr>
                 )}
               </Tbody>
@@ -616,17 +624,17 @@ const Dashboard = () => {
               <Box color="blue.500" mr={2}>
                 <FaUserGraduate />
               </Box>
-              <Heading size="sm">Student Overview</Heading>
+              <Heading size="sm">{t('dashboard.student_overview')}</Heading>
             </Flex>
             <SimpleGrid columns={2} spacing={4} mb={4}>
               <Box p={3} bg="blue.50" borderRadius="md" borderWidth="1px" borderColor="blue.200">
-                <Text fontSize="sm" color="blue.700">Active Students</Text>
+                <Text fontSize="sm" color="blue.700">{t('dashboard.active_students')}</Text>
                 <Text fontSize="xl" fontWeight="bold" color="blue.700">
                   {stats.students}
                 </Text>
               </Box>
               <Box p={3} bg="teal.50" borderRadius="md" borderWidth="1px" borderColor="teal.200">
-                <Text fontSize="sm" color="teal.700">Average per Course</Text>
+                <Text fontSize="sm" color="teal.700">{t('dashboard.average_per_course')}</Text>
                 <Text fontSize="xl" fontWeight="bold" color="teal.700">
                   {stats.studentStats.averagePerCourse}
                 </Text>
@@ -634,7 +642,7 @@ const Dashboard = () => {
             </SimpleGrid>
             
             <Box mb={4}>
-              <Text fontSize="sm" fontWeight="medium" mb={2}>Enrollment Rate</Text>
+              <Text fontSize="sm" fontWeight="medium" mb={2}>{t('dashboard.enrollment_rate')}</Text>
               <Progress 
                 value={stats.studentStats.enrollmentRate} 
                 size="sm" 
@@ -643,7 +651,7 @@ const Dashboard = () => {
                 mb={1}
               />
               <Flex justify="space-between">
-                <Text fontSize="xs" color="gray.500">New Students (This Month)</Text>
+                <Text fontSize="xs" color="gray.500">{t('dashboard.new_students_this_month')}</Text>
                 <Text fontSize="xs" fontWeight="bold">{stats.studentStats.newThisMonth}</Text>
               </Flex>
             </Box>
@@ -652,27 +660,27 @@ const Dashboard = () => {
             
             <HStack spacing={4} justify="center" mb={3}>
               <Box textAlign="center">
-                <Text fontSize="sm" color="gray.500">Active Enrollments</Text>
+                <Text fontSize="sm" color="gray.500">{t('dashboard.active_enrollments')}</Text>
                 <Text fontSize="lg" fontWeight="bold" color="purple.500">{stats.studentStats.activeEnrollments}</Text>
               </Box>
               <Box textAlign="center">
-                <Text fontSize="sm" color="gray.500">Total Students</Text>
+                <Text fontSize="sm" color="gray.500">{t('dashboard.total_students')}</Text>
                 <Text fontSize="lg" fontWeight="bold" color="purple.500">{stats.students}</Text>
               </Box>
             </HStack>
             
             <Link to="/students" style={{ display: 'block', textAlign: 'center', color: '#805ad5', fontSize: '14px' }}>
-              View All Students
+              {t('dashboard.view_all_students')}
             </Link>
           </Box>
           
           {/* Recent Student Activities - New Section */}
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} mb={6} borderRadius="md" shadow="sm">
+          <Box bg="white" borderWidth="1px" borderColor="gray.200" p={4} borderRadius="md" shadow="sm" mb={6}>
             <Flex align="center" mb={4}>
               <Box color="blue.500" mr={2}>
                 <FaUserFriends />
               </Box>
-              <Heading size="sm">Recent Student Activities</Heading>
+              <Heading size="sm">{t('dashboard.student_activities')}</Heading>
             </Flex>
             
             {recentStudentActivities.length > 0 ? (
@@ -687,14 +695,14 @@ const Dashboard = () => {
                   >
                     <Flex align="center" mb={1}>
                       <Badge colorScheme="green" mr={2}>
-                        {activity.type === 'enrollment' ? 'Enrollment' : 'Activity'}
+                        {activity.type === 'enrollment' ? t('notifications.actions.create') : t('dashboard.activity')}
                       </Badge>
                       <Text fontSize="sm" fontWeight="medium">
                         {activity.studentName}
                       </Text>
                     </Flex>
                     <Text fontSize="xs" color="gray.500">
-                      Enrolled in <Link to={`/courses/${activity.courseId}`} style={{ color: '#805ad5' }}>
+                      {t('students.enrolled_in')} <Link to={`/courses/${activity.courseId}`} style={{ color: '#805ad5' }}>
                         {activity.courseName}
                       </Link>
                     </Text>
@@ -706,7 +714,7 @@ const Dashboard = () => {
               </Stack>
             ) : (
               <Text fontSize="sm" color="gray.500" textAlign="center" py={2}>
-                No recent student activities
+                {t('dashboard.no_student_activities')}
               </Text>
             )}
           </Box>
@@ -717,25 +725,25 @@ const Dashboard = () => {
               <Box color="green.500" mr={2}>
                 <FaMoneyBillWave />
               </Box>
-              <Heading size="sm">Revenue Overview</Heading>
+              <Heading size="sm">{t('dashboard.revenue_overview')}</Heading>
             </Flex>
             <Stack spacing={4}>
               <Box p={3} bg="gray.50" borderRadius="md">
-                <Text fontSize="sm" color="gray.500">Monthly Revenue</Text>
+                <Text fontSize="sm" color="gray.500">{t('dashboard.monthly_revenue')}</Text>
                 <Text fontSize="xl" fontWeight="bold">${revenue.monthly.toLocaleString()}</Text>
                 <HStack mt={1}>
                   <Badge colorScheme={revenue.growth >= 0 ? "green" : "red"}>
                     {revenue.growth >= 0 ? "+" : ""}{revenue.growth.toFixed(1)}%
                   </Badge>
-                  <Text fontSize="xs" color="gray.500">vs last month</Text>
+                  <Text fontSize="xs" color="gray.500">{t('dashboard.vs_last_month')}</Text>
                 </HStack>
               </Box>
               <Box p={3} bg="gray.50" borderRadius="md">
-                <Text fontSize="sm" color="gray.500">Annual Revenue</Text>
+                <Text fontSize="sm" color="gray.500">{t('dashboard.annual_revenue')}</Text>
                 <Text fontSize="xl" fontWeight="bold">${revenue.annual.toLocaleString()}</Text>
               </Box>
               <Box p={3} bg="gray.50" borderRadius="md">
-                <Text fontSize="sm" color="gray.500">Revenue Per Student</Text>
+                <Text fontSize="sm" color="gray.500">{t('dashboard.revenue_per_student')}</Text>
                 <Text fontSize="xl" fontWeight="bold">
                   ${stats.students > 0 ? Math.round(revenue.annual / stats.students).toLocaleString() : 0}
                 </Text>
@@ -749,7 +757,7 @@ const Dashboard = () => {
               <Box color="purple.500" mr={2}>
                 <FaChartBar />
               </Box>
-              <Heading size="sm">Teachers by Branch</Heading>
+              <Heading size="sm">{t('dashboard.teachers_by_branch')}</Heading>
             </Flex>
             <Box height="200px">
               {teachersByBranch.length > 1 && (
@@ -759,8 +767,8 @@ const Dashboard = () => {
                   options={{
                     ...chartOptions,
                     title: '',
-                    hAxis: { title: 'Teachers', titleTextStyle: { color: '#4b5563' } },
-                    vAxis: { title: 'Branch', titleTextStyle: { color: '#4b5563' } },
+                    hAxis: { title: t('dashboard.teachers'), titleTextStyle: { color: '#4b5563' } },
+                    vAxis: { title: t('teachers.branch'), titleTextStyle: { color: '#4b5563' } },
                   }}
                   width="100%"
                   height="100%"
@@ -776,36 +784,47 @@ const Dashboard = () => {
 
 // Stat Card Component
 const StatCard = ({ icon, title, value, iconBg, iconColor, to }) => {
+  const { t } = useTranslation();
+  const bg = useColorModeValue('white', 'gray.700');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const textColor = useColorModeValue('gray.600', 'gray.300');
+  const headingColor = useColorModeValue('gray.800', 'white');
+  
   return (
     <Box 
       as={Link}
       to={to}
-      bg="white" 
-      borderWidth="1px" 
-      borderColor="gray.200"
       p={4}
+      bg={bg} 
+      borderWidth="1px" 
+      borderColor={borderColor} 
       borderRadius="md"
       shadow="sm"
+      textAlign="center"
+      _hover={{ 
+        shadow: 'md', 
+        transform: 'translateY(-2px)', 
+        borderColor: 'blue.300' 
+      }}
       transition="all 0.2s"
-      _hover={{ shadow: "md", borderColor: "purple.200", transform: "translateY(-2px)" }}
     >
-      <Flex align="center" mb={2}>
+      <Flex direction="column" align="center">
         <Flex
-          w="32px"
-          h="32px"
+          w="50px" 
+          h="50px" 
           align="center"
           justify="center"
           bg={iconBg}
           color={iconColor}
-          mr={3}
-          fontSize="lg"
-          borderRadius="md"
+          borderRadius="full" 
+          mb={3}
+          fontSize="xl"
         >
           {icon}
         </Flex>
-        <Text fontWeight="medium" color="gray.600" fontSize="sm">{title}</Text>
+        <Text color={textColor} fontSize="sm" mb={1}>{title}</Text>
+        <Text color={headingColor} fontSize="2xl" fontWeight="bold">{value}</Text>
       </Flex>
-      <Text fontSize="2xl" fontWeight="bold">{value.toLocaleString()}</Text>
     </Box>
   );
 };
@@ -813,15 +832,9 @@ const StatCard = ({ icon, title, value, iconBg, iconColor, to }) => {
 // Status Stat Card Component
 const StatusStatCard = ({ title, value, colorScheme }) => {
   return (
-    <Box
-      bg={`${colorScheme}.50`}
-      p={4}
-      borderRadius="md"
-      borderWidth="1px"
-      borderColor={`${colorScheme}.200`}
-    >
-      <Text fontSize="sm" color={`${colorScheme}.700`} mb={1}>{title}</Text>
-      <Text fontSize="2xl" fontWeight="bold" color={`${colorScheme}.700`}>{value}</Text>
+    <Box bg={`${colorScheme}.50`} p={3} borderRadius="md" textAlign="center">
+      <Text color={`${colorScheme}.700`} fontSize="2xl" fontWeight="bold" mb={1}>{value}</Text>
+      <Text color={`${colorScheme}.600`} fontSize="sm">{title}</Text>
     </Box>
   );
 };

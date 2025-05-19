@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { kindergartenClassesAPI, schoolsAPI, regionsAPI, teachersAPI } from '../../api';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Heading,
@@ -28,11 +29,13 @@ import {
   BreadcrumbLink,
   useColorModeValue,
   useBreakpointValue,
-  GridItem
+  GridItem,
+  Icon
 } from '@chakra-ui/react';
-import { FaSearch, FaPlus, FaFilter, FaEllipsisV, FaEdit, FaTrash, FaEye, FaCalendarAlt, FaChalkboardTeacher, FaSchool } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaFilter, FaEllipsisV, FaEdit, FaTrash, FaEye, FaCalendarAlt, FaChalkboardTeacher, FaSchool, FaUserGraduate } from 'react-icons/fa';
 
 const ClassList = ({ limit, compact = false }) => {
+  const { t } = useTranslation();
   const { schoolId } = useParams();
   const navigate = useNavigate();
   
@@ -136,16 +139,16 @@ const ClassList = ({ limit, compact = false }) => {
         setLoading(false);
       } catch (err) {
         console.error('Error fetching classes data:', err);
-        setError('Failed to load classes data. Please try again later.');
+        setError(t('kindergarten.class_list.error'));
         setLoading(false);
       }
     };
     
     fetchData();
-  }, [schoolId, isSchoolSpecific, statusFilter, teacherFilter, regionFilter, schoolFilter, schools, showFinished]);
+  }, [schoolId, isSchoolSpecific, statusFilter, teacherFilter, regionFilter, schoolFilter, schools, showFinished, t]);
 
   const handleDeleteClass = async (classId) => {
-    if (window.confirm('Are you sure you want to delete this class?')) {
+    if (window.confirm(t('kindergarten.class_list.delete_confirm'))) {
       try {
         await kindergartenClassesAPI.remove(classId);
         
@@ -156,7 +159,7 @@ const ClassList = ({ limit, compact = false }) => {
         if (err.response && err.response.data && err.response.data.message) {
           setError(err.response.data.message);
         } else {
-          setError('Failed to delete class. Please try again later.');
+          setError(t('kindergarten.class_list.error'));
         }
       }
     }
@@ -194,7 +197,7 @@ const ClassList = ({ limit, compact = false }) => {
     if (kClass.teacher && kClass.teacher.name) {
       return kClass.teacher.name;
     }
-    return kClass.teacherName || 'Not assigned';
+    return kClass.teacherName || t('kindergarten.class_list.teacher');
   };
 
   // Helper function to get status color
@@ -217,7 +220,7 @@ const ClassList = ({ limit, compact = false }) => {
     return (
       <Box p={4} textAlign="center">
         <Spinner color="brand.500" size="lg" />
-        <Text mt={2} color="gray.500">Loading classes...</Text>
+        <Text mt={2} color="gray.500">{t('kindergarten.class_list.loading')}</Text>
       </Box>
     );
   }
@@ -225,10 +228,10 @@ const ClassList = ({ limit, compact = false }) => {
   if (error) {
     return (
       <Box p={4} bg="red.50" borderWidth="1px" borderColor="red.200">
-        <Heading size="md" mb={2} color="red.600">Error</Heading>
+        <Heading size="md" mb={2} color="red.600">{t('common.error')}</Heading>
         <Text mb={4}>{error}</Text>
         <Button colorScheme="red" variant="outline" onClick={() => window.location.reload()}>
-          Retry
+          {t('kindergarten.retry')}
         </Button>
       </Box>
     );
@@ -239,12 +242,12 @@ const ClassList = ({ limit, compact = false }) => {
       {!compact && (
         <Breadcrumb mb={4} fontSize="sm" color="gray.500">
           <BreadcrumbItem>
-            <BreadcrumbLink as={Link} to="/kindergarten">Dashboard</BreadcrumbLink>
+            <BreadcrumbLink as={Link} to="/kindergarten">{t('kindergarten.dashboard')}</BreadcrumbLink>
           </BreadcrumbItem>
           {isSchoolSpecific && school ? (
             <>
               <BreadcrumbItem>
-                <BreadcrumbLink as={Link} to="/kindergarten/schools">Schools</BreadcrumbLink>
+                <BreadcrumbLink as={Link} to="/kindergarten/schools">{t('kindergarten.schools')}</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbItem isCurrentPage>
                 <BreadcrumbLink>{school.name}</BreadcrumbLink>
@@ -252,310 +255,362 @@ const ClassList = ({ limit, compact = false }) => {
             </>
           ) : (
             <BreadcrumbItem isCurrentPage>
-              <BreadcrumbLink>Classes</BreadcrumbLink>
+              <BreadcrumbLink>{t('kindergarten.classes')}</BreadcrumbLink>
             </BreadcrumbItem>
           )}
         </Breadcrumb>
       )}
       
       {!compact && (
-        <Flex justify="space-between" align="center" mb={6}>
+        <Flex 
+          justify="space-between" 
+          align="center" 
+          mb={4} 
+          flexDir={{ base: 'column', md: 'row' }}
+          gap={{ base: 2, md: 0 }}
+        >
           <Heading fontSize="xl" fontWeight="semibold">
-          {isSchoolSpecific && school ? `Classes in ${school.name}` : 'All Kindergarten Classes'}
+            {isSchoolSpecific && school 
+              ? `${school.name} ${t('kindergarten.classes')}` 
+              : t('kindergarten.class_list.title')}
           </Heading>
+          
           <HStack spacing={2}>
             <Button 
-              size="sm"
-              variant={showFinished ? "solid" : "outline"} 
-              colorScheme={showFinished ? "blue" : "gray"}
-              onClick={() => {
-                // When toggling, reset any explicit status filter
-                if (statusFilter === 'Completed') {
-                  setStatusFilter('');
-                }
-                setShowFinished(!showFinished);
-              }}
-            >
-              {showFinished ? "Show Active" : "Show Finished"}
-            </Button>
-            <Button 
-              leftIcon={<FaFilter />}
-              size="sm"
-              onClick={toggleFilters}
-              colorScheme="gray"
-              variant="outline"
-            >
-              {isFiltersVisible ? 'Hide Filters' : 'Show Filters'}
-            </Button>
-            <Button 
               as={Link} 
-              to="/kindergarten/classes/new" 
+              to={isSchoolSpecific 
+                ? `/kindergarten/schools/${schoolId}/classes/new` 
+                : '/kindergarten/classes/new'
+              } 
               leftIcon={<FaPlus />} 
               colorScheme="brand"
               size="sm"
-          state={{ schoolId: schoolId }}
         >
-              New Class
+              {t('kindergarten.new_class')}
             </Button>
           </HStack>
         </Flex>
       )}
       
-      {isFiltersVisible && (
-        <Box bg={bgColor} p={4} borderRadius="md" mb={6} borderWidth="1px" borderColor={borderColor}>
-          <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(5, 1fr)" }} gap={4}>
-            <Box>
-              <InputGroup>
+      <Box 
+        mb={4} 
+        bg={bgColor} 
+        borderWidth="1px" 
+        borderColor={borderColor} 
+        borderRadius="md" 
+        p={4}
+      >
+        <Grid templateColumns="repeat(12, 1fr)" gap={4}>
+          <GridItem colSpan={{ base: 12, md: isFiltersVisible ? 9 : 12 }}>
+            <InputGroup size="md">
                 <InputLeftElement pointerEvents="none">
                   <FaSearch color="gray.300" />
                 </InputLeftElement>
                 <Input
-              placeholder="Search classes or teachers..."
+                type="text" 
+                placeholder={t('kindergarten.class_list.search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
               </InputGroup>
-            </Box>
+          </GridItem>
           
-            <Box>
+          {!compact && (
+            <GridItem colSpan={{ base: 12, md: 3 }} display={{ base: 'block', md: isFiltersVisible ? 'block' : 'none' }}>
+              <Flex justify="space-between" align="center">
+                <Button 
+                  leftIcon={<FaFilter />} 
+                  size="md" 
+                  colorScheme="gray" 
+                  variant="outline"
+                  onClick={toggleFilters}
+                  width={{ base: '100%', md: 'auto' }}
+                >
+                  {isFiltersVisible ? t('kindergarten.class_list.toggle_filters') : t('kindergarten.class_list.toggle_filters')}
+                </Button>
+                
+                {isFiltersVisible && (
+                  <Button 
+                    size="md" 
+                    variant="link" 
+                    colorScheme="blue" 
+                    onClick={resetFilters}
+                    display={{ base: 'none', md: 'block' }}
+                  >
+                    {t('kindergarten.class_list.reset_filters')}
+                  </Button>
+                )}
+              </Flex>
+            </GridItem>
+          )}
+        </Grid>
+        
+        {isFiltersVisible && !compact && (
+          <>
+            <Grid 
+              templateColumns="repeat(12, 1fr)" 
+              gap={4} 
+              mt={4}
+            >
+              <GridItem colSpan={{ base: 12, sm: 6, md: 3 }}>
               <Select 
-                placeholder="All Statuses" 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="Active">Active</option>
-                <option value="Planning">Planning</option>
-                <option value="Completed">Completed</option>
-                <option value="Cancelled">Cancelled</option>
+                  placeholder={t('kindergarten.class_list.status_filter')}
+                  size="md"
+                >
+                  <option value="">{t('kindergarten.class_list.all')}</option>
+                  <option value="Active">{t('kindergarten.class_list.active')}</option>
+                  <option value="Planning">{t('kindergarten.class_list.planning')}</option>
+                  <option value="Completed">{t('kindergarten.class_list.completed')}</option>
+                  <option value="Cancelled">{t('kindergarten.class_list.cancelled')}</option>
               </Select>
-            </Box>
+              </GridItem>
         
-            <Box>
+              <GridItem colSpan={{ base: 12, sm: 6, md: 3 }}>
               <Select 
-                placeholder="All Teachers" 
               value={teacherFilter}
               onChange={(e) => setTeacherFilter(e.target.value)}
+                  placeholder={t('kindergarten.class_list.teacher_filter')}
+                  size="md"
                 isDisabled={loadingFilters}
             >
+                  <option value="">{t('kindergarten.class_list.all_teachers')}</option>
               {teachers.map(teacher => (
                   <option key={teacher._id} value={teacher._id}>
                     {teacher.name}
                   </option>
               ))}
               </Select>
-            </Box>
+              </GridItem>
           
             {!isSchoolSpecific && (
               <>
-                <Box>
+                  <GridItem colSpan={{ base: 12, sm: 6, md: 3 }}>
                   <Select 
-                    placeholder="All Regions" 
               value={regionFilter}
               onChange={(e) => setRegionFilter(e.target.value)}
+                      placeholder={t('kindergarten.class_list.region_filter')}
+                      size="md"
                     isDisabled={loadingFilters}
             >
+                      <option value="">{t('kindergarten.class_list.all_regions')}</option>
               {regions.map(region => (
                       <option key={region._id} value={region._id}>
                         {region.name}
                       </option>
               ))}
                   </Select>
-                </Box>
+                  </GridItem>
           
-                <Box>
+                  <GridItem colSpan={{ base: 12, sm: 6, md: 3 }}>
                   <Select 
-                    placeholder="All Schools" 
               value={schoolFilter}
               onChange={(e) => setSchoolFilter(e.target.value)}
+                      placeholder={t('kindergarten.class_list.school_filter')}
+                      size="md"
                     isDisabled={loadingFilters}
             >
+                      <option value="">{t('kindergarten.class_list.all_schools')}</option>
                     {schools.map(school => (
                       <option key={school._id} value={school._id}>
                         {school.name}
                       </option>
                     ))}
                   </Select>
-                </Box>
+                  </GridItem>
               </>
             )}
           </Grid>
           
-          <Flex justify="flex-end" mt={4}>
+            <Flex mt={3} justify="space-between" align="center">
+              <Button 
+                size="sm" 
+                colorScheme={showFinished ? "blue" : "gray"} 
+                variant={showFinished ? "solid" : "outline"}
+                onClick={() => setShowFinished(!showFinished)}
+              >
+                {t('kindergarten.class_list.show_finished')}
+              </Button>
+              
             <Button 
+                size="sm" 
               variant="outline" 
-              size="sm" 
+                colorScheme="blue" 
             onClick={resetFilters}
+                display={{ base: 'block', md: 'none' }}
           >
-              Clear Filters
+                {t('kindergarten.class_list.reset_filters')}
             </Button>
           </Flex>
+          </>
+        )}
         </Box>
-      )}
       
+      {/* Display classes */}
       {displayedClasses.length === 0 ? (
-        <Box p={6} bg="gray.50" borderWidth="1px" borderColor="gray.200" textAlign="center" borderRadius="md">
-          <Text color="gray.500" mb={4}>
-            {searchTerm || statusFilter || teacherFilter || regionFilter || (!isSchoolSpecific && schoolFilter) ? 
-              'No classes match your filters. Try adjusting your search criteria.' :
-              'No classes found. Add your first class to get started.'
-          }
-          </Text>
-          {!(searchTerm || statusFilter || teacherFilter || regionFilter || (!isSchoolSpecific && schoolFilter)) && (
+        <Box p={6} borderWidth="1px" borderColor="gray.200" borderRadius="md" textAlign="center">
+          <Text color="gray.500">{t('kindergarten.class_list.no_classes')}</Text>
+          {!compact && (
             <Button 
               as={Link} 
-              to="/kindergarten/classes/new" 
+              to={isSchoolSpecific 
+                ? `/kindergarten/schools/${schoolId}/classes/new` 
+                : '/kindergarten/classes/new'
+              } 
+              mt={4} 
               leftIcon={<FaPlus />} 
               colorScheme="brand"
               size="sm"
-              state={{ schoolId: schoolId }}
             >
-              Add Class
+              {t('kindergarten.new_class')}
             </Button>
           )}
         </Box>
       ) : (
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-          {displayedClasses.map(kClass => {
-            const statusColorScheme = getStatusColor(kClass.status);
-            
-            return (
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+          {displayedClasses.map(kClass => (
               <Box 
                   key={kClass._id} 
-                bg={bgColor}
                 borderWidth="1px" 
-                borderColor={borderColor}
+              borderColor="gray.200"
                 borderRadius="md"
-                p={4}
-                transition="all 0.2s"
-                cursor="pointer"
+              overflow="hidden"
+              bg={bgColor}
+              transition="transform 0.2s, box-shadow 0.2s"
+              _hover={{ 
+                transform: "translateY(-2px)", 
+                shadow: "md", 
+                borderColor: "brand.300",
+                cursor: "pointer"
+              }}
                 onClick={() => handleClassClick(kClass._id)}
-                _hover={{ shadow: "md", borderColor: "brand.200", transform: "translateY(-2px)" }}
-                >
-                <Flex mb={2} justify="space-between" align="flex-start">
-                  <Box>
-                    <Flex align="center" gap={2}>
-                      <Heading size="sm" margin="0">{kClass.name}</Heading>
-                      <Badge px={2} py={1} bg={statusColorScheme.bg} color={statusColorScheme.color} alignSelf="center" marginTop="1px">
-                        {kClass.status}
-                      </Badge>
+            >
+              <Box p={4}>
+                <Flex justify="space-between" align="flex-start" mb={2}>
+                  <Heading as="h3" size="sm" noOfLines={2} mb={1} flex="1">
+                    {kClass.name}
+                  </Heading>
+                  <Badge 
+                    ml={2} 
+                    px={2} 
+                    py={1} 
+                    borderRadius="full" 
+                    bg={getStatusColor(kClass.status).bg}
+                    color={getStatusColor(kClass.status).color}
+                  >
+                      {kClass.status}
+                    </Badge>
+                </Flex>
+                
+                <VStack align="flex-start" spacing={1} mt={3}>
+                  <Flex align="center" w="100%">
+                    <Icon as={FaChalkboardTeacher} color="blue.500" mr={2} />
+                    <Text fontSize="sm" isTruncated>
+                      {getTeacherName(kClass)}
+                    </Text>
+                  </Flex>
+                  
+                  {kClass.school && (
+                    <Flex align="center" w="100%">
+                      <Icon as={FaSchool} color="green.500" mr={2} />
+                      <Text fontSize="sm" isTruncated>
+                        {kClass.school.name}
+                      </Text>
                     </Flex>
+                  )}
+                  
+                  {kClass.studentCount !== undefined && (
+                    <Flex align="center" w="100%">
+                      <Icon as={FaUserGraduate} color="purple.500" mr={2} />
+                      <Text fontSize="sm">
+                        {kClass.studentCount} {t('kindergarten.students')}
+                      </Text>
+                    </Flex>
+                  )}
+                </VStack>
                   </Box>
+              
+              {!compact && (
+                <Flex 
+                  bg="gray.50" 
+                  p={2} 
+                  borderTopWidth="1px" 
+                  borderColor="gray.200"
+                  justify="space-between"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <HStack spacing={1}>
+                    <IconButton
+                      icon={<FaEye />}
+                      aria-label={t('kindergarten.class_list.view_class')}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="blue"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/kindergarten/classes/${kClass._id}`);
+                      }}
+                    />
+                    <IconButton
+                      icon={<FaEdit />}
+                      aria-label={t('kindergarten.class_list.edit_class')}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="blue"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/kindergarten/classes/edit/${kClass._id}`);
+                      }}
+                    />
+                    <IconButton
+                      icon={<FaTrash />}
+                      aria-label={t('kindergarten.class_list.delete_class')}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="red"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClass(kClass._id);
+                      }}
+                    />
+                  </HStack>
+                  
                   <Menu>
                     <MenuButton
                       as={IconButton}
-                      aria-label="Options"
                       icon={<FaEllipsisV />}
                       variant="ghost"
                       size="sm"
                       onClick={(e) => e.stopPropagation()}
                     />
-                    <MenuList onClick={(e) => e.stopPropagation()}>
+                    <MenuList fontSize="sm" onClick={(e) => e.stopPropagation()}>
                       <MenuItem 
-                        as={Link} 
-                        to={`/kindergarten/classes/${kClass._id}`}
                         icon={<FaEye />}
+                        onClick={() => navigate(`/kindergarten/classes/${kClass._id}`)}
                       >
-                        View Details
+                        {t('kindergarten.class_list.view_class')}
                       </MenuItem>
                       <MenuItem 
-                        as={Link} 
-                        to={`/kindergarten/classes/edit/${kClass._id}`}
                         icon={<FaEdit />}
+                        onClick={() => navigate(`/kindergarten/classes/edit/${kClass._id}`)}
                       >
-                        Edit
-                      </MenuItem>
-                      <MenuItem 
-                        as={Link} 
-                        to={`/kindergarten/classes/${kClass._id}/schedule`}
-                        icon={<FaCalendarAlt />}
-                      >
-                        Schedule
+                        {t('kindergarten.class_list.edit_class')}
                       </MenuItem>
                       <MenuItem 
                         icon={<FaTrash />} 
+                        onClick={() => handleDeleteClass(kClass._id)}
                         color="red.500"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClass(kClass._id);
-                            }} 
                       >
-                        Delete
+                        {t('kindergarten.class_list.delete_class')}
                       </MenuItem>
                     </MenuList>
                   </Menu>
-                </Flex>
-                
-                <VStack align="stretch" spacing={3} fontSize="sm">
-                  <Box>
-                    <Flex>
-                      <Box width="24px" textAlign="center" mr={1}>
-                        <FaChalkboardTeacher style={{
-                          display: 'inline-block',
-                          verticalAlign: 'middle',
-                          position: 'relative',
-                          top: '-1px',
-                          color: '#3182CE'
-                        }} />
-                      </Box>
-                      <Box as="span" fontWeight="medium" width="70px">Teacher:</Box>
-                      <Box as="span" flexGrow={1}>{getTeacherName(kClass)}</Box>
                     </Flex>
-                  </Box>
-                  
-                  {kClass.school && (
-                    <Box>
-                      <Flex>
-                        <Box width="24px" textAlign="center" mr={1}>
-                          <FaSchool style={{
-                            display: 'inline-block',
-                            verticalAlign: 'middle',
-                            position: 'relative',
-                            top: '-1px',
-                            color: '#38A169'
-                          }} />
-                        </Box>
-                        <Box as="span" fontWeight="medium" width="70px">School:</Box>
-                        <Box as="span" flexGrow={1}>{kClass.school.name}</Box>
-                      </Flex>
-                    </Box>
                   )}
-                  
-                  {kClass.daySchedule && (
-                    <Box>
-                      <Flex>
-                        <Box width="24px" textAlign="center" mr={1}>
-                          <FaCalendarAlt style={{
-                            display: 'inline-block',
-                            verticalAlign: 'middle',
-                            position: 'relative',
-                            top: '-1px',
-                            color: '#3182CE'
-                          }} />
-                        </Box>
-                        <Box as="span" fontWeight="medium" width="70px">Schedule:</Box>
-                        <Box as="span" flexGrow={1}>{kClass.daySchedule}</Box>
-                      </Flex>
-                    </Box>
-                  )}
-                </VStack>
               </Box>
-                            );
-                          })}
+          ))}
         </SimpleGrid>
-      )}
-      
-      {limit && filteredClasses.length > limit && (
-        <Flex justify="center" mt={4}>
-          <Button 
-            as={Link}
-            to="/kindergarten/classes"
-            size="sm"
-            colorScheme="brand"
-            variant="link"
-          >
-            View All Classes ({filteredClasses.length})
-          </Button>
-        </Flex>
         )}
     </Box>
   );

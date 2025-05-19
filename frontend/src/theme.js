@@ -50,6 +50,24 @@ const theme = extendTheme({
         bg: 'gray.50',
         color: 'gray.800',
       },
+      '.chakra-select__menu': {
+        borderRadius: '0 !important',
+      },
+      '.chakra-select__menu-list': {
+        borderRadius: '0 !important',
+      },
+      '.chakra-select__option': {
+        borderRadius: '0 !important',
+      },
+      '[role=menu]': {
+        borderRadius: '0 !important',
+      },
+      '[role=listbox]': {
+        borderRadius: '0 !important',
+      },
+      '[role=menuitem]': {
+        borderRadius: '0 !important',
+      },
     },
   },
   components: {
@@ -157,7 +175,54 @@ const theme = extendTheme({
         field: {
           borderRadius: '0',
         },
+        icon: {
+          borderRadius: '0',
+        }
       },
+      variants: {
+        outline: {
+          field: {
+            borderRadius: '0',
+          },
+          menu: {
+            borderRadius: '0',
+          },
+          menuList: {
+            borderRadius: '0',
+          },
+          option: {
+            borderRadius: '0',
+          }
+        },
+        filled: {
+          field: {
+            borderRadius: '0',
+          },
+          menu: {
+            borderRadius: '0',
+          },
+          menuList: {
+            borderRadius: '0',
+          },
+          option: {
+            borderRadius: '0',
+          }
+        },
+        flushed: {
+          field: {
+            borderRadius: '0',
+          },
+          menu: {
+            borderRadius: '0',
+          },
+          menuList: {
+            borderRadius: '0',
+          },
+          option: {
+            borderRadius: '0',
+          }
+      },
+      }
     },
     Textarea: {
       baseStyle: {
@@ -185,8 +250,14 @@ const theme = extendTheme({
     },
     Menu: {
       baseStyle: {
+        button: {
+          borderRadius: '0',
+        },
         list: {
           borderRadius: '0',
+          padding: '0',
+          border: '1px solid',
+          borderColor: 'gray.200',
         },
         item: {
           borderRadius: '0',
