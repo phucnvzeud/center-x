@@ -10,7 +10,7 @@
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "test": "cd backend && npm test",
     "build": "cd frontend && npm run build",
-    "render-build": "npm install --legacy-peer-deps && cd backend && npm install --legacy-peer-deps && cd ../frontend && rm -rf node_modules && cd .. && node scripts/build-frontend.js",
+    "render-build": "npm install --legacy-peer-deps && cd backend && npm install --legacy-peer-deps && cd ../frontend && echo 'GENERATE_SOURCEMAP=false' > .env && rm -rf node_modules && cd .. && node scripts/build-frontend.js",
     "render-start": "cd backend && NODE_ENV=production npm start"
   },
   "dependencies": {
