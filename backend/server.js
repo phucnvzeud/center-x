@@ -6,9 +6,44 @@ const morgan = require('morgan');
 const path = require('path');
 const fs = require('fs');
 const connectDB = require('./config/db');
+const http = require('http');
+const { Server } = require('socket.io');
+const { setApp } = require('./utils/notificationQueue');
 
 // Initialize express app
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.NODE_ENV === 'production' ? false : ['http://localhost:3000'],
+    methods: ['GET', 'POST']
+  }
+});
+
+// Socket.io connection handler
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
+  
+  // Join a user-specific room for targeted notifications
+  socket.on('join', (userId) => {
+    if (userId) {
+      socket.join(`user-${userId}`);
+      console.log(`User ${userId} joined their notification room`);
+    }
+  });
+  
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+// Make io accessible to other modules
+app.set('io', io);
+
+// Connect notification queue to express app
+setApp(app);
+
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -116,7 +151,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
   console.log(`Current directory: ${__dirname}`);
   console.log(`Frontend build directory exists: ${fs.existsSync(path.join(__dirname, '../frontend/build'))}`);

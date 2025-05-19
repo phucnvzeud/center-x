@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import { io } from 'socket.io-client';
 
 const NotificationContext = createContext();
 
@@ -10,6 +11,60 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [connected, setConnected] = useState(false);
+  const socketRef = useRef(null);
+
+  // Connect to WebSocket server
+  useEffect(() => {
+    // Create socket connection
+    const SOCKET_URL = process.env.NODE_ENV === 'production'
+      ? window.location.origin
+      : 'http://localhost:5000';
+      
+    socketRef.current = io(SOCKET_URL);
+    
+    // Connection events
+    socketRef.current.on('connect', () => {
+      console.log('Connected to notification server');
+      setConnected(true);
+      
+      // Initial data fetch after connection
+      fetchNotifications();
+      fetchUnreadCount();
+      
+      // Join user-specific room (placeholder - replace with actual user ID)
+      // socketRef.current.emit('join', currentUser.id);
+    });
+    
+    socketRef.current.on('disconnect', () => {
+      console.log('Disconnected from notification server');
+      setConnected(false);
+    });
+    
+    socketRef.current.on('connect_error', (err) => {
+      console.error('Socket connection error:', err);
+      setError('Failed to connect to notification server');
+    });
+    
+    // Listen for notification events
+    socketRef.current.on('notification:created', (notification) => {
+      console.log('New notification received:', notification);
+      setNotifications(prev => [notification, ...prev]);
+      fetchUnreadCount(); // Update badge count
+    });
+    
+    socketRef.current.on('notification:unread_count', (data) => {
+      console.log('Unread count updated:', data);
+      setUnreadCount(data.count);
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
 
   // Fetch notifications from API
   const fetchNotifications = useCallback(async (page = 1, limit = 10) => {
@@ -50,11 +105,11 @@ export const NotificationProvider = ({ children }) => {
         )
       );
       
-      fetchUnreadCount();
+      // Server will emit WebSocket event to update count
     } catch (err) {
       console.error('Error marking notification as read:', err);
     }
-  }, [fetchUnreadCount]);
+  }, []);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
@@ -66,7 +121,7 @@ export const NotificationProvider = ({ children }) => {
         prev.map(notification => ({ ...notification, read: true }))
       );
       
-      setUnreadCount(0);
+      // Server will emit WebSocket event to update count
     } catch (err) {
       console.error('Error marking all notifications as read:', err);
     }
@@ -79,23 +134,11 @@ export const NotificationProvider = ({ children }) => {
       
       // Update local state
       setNotifications(prev => prev.filter(notification => notification._id !== id));
-      fetchUnreadCount();
+      // Server will emit WebSocket event to update count
     } catch (err) {
       console.error('Error deleting notification:', err);
     }
-  }, [fetchUnreadCount]);
-
-  // Poll for new notifications every 30 seconds
-  useEffect(() => {
-    fetchNotifications();
-    fetchUnreadCount();
-
-    const interval = setInterval(() => {
-      fetchUnreadCount();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [fetchNotifications, fetchUnreadCount]);
+  }, []);
 
   return (
     <NotificationContext.Provider
@@ -104,6 +147,7 @@ export const NotificationProvider = ({ children }) => {
         unreadCount,
         loading,
         error,
+        connected,
         fetchNotifications,
         fetchUnreadCount,
         markAsRead,

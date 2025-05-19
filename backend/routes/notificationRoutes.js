@@ -3,6 +3,7 @@ const router = express.Router();
 const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
 const { queueNotification, checkQueueSystem } = require('../utils/notificationQueue');
+const socketUtils = require('../utils/socketUtils');
 
 // Get all notifications (with pagination and filtering)
 router.get('/', async (req, res) => {
@@ -52,7 +53,7 @@ router.get('/unread/count', async (req, res) => {
   }
 });
 
-// Mark notification as read
+// Mark a notification as read
 router.patch('/:id/read', async (req, res) => {
   try {
     const notification = await Notification.findByIdAndUpdate(
@@ -65,6 +66,15 @@ router.patch('/:id/read', async (req, res) => {
       return res.status(404).json({ message: 'Notification not found' });
     }
     
+    // Get the updated unread count
+    const unreadCount = await Notification.countDocuments({ read: false });
+    
+    // Emit WebSocket event for updated count
+    const io = req.app.get('io');
+    if (io) {
+      socketUtils.unreadCountUpdated(io, unreadCount);
+    }
+    
     res.json(notification);
   } catch (error) {
     console.error('Error marking notification as read:', error);
@@ -75,15 +85,18 @@ router.patch('/:id/read', async (req, res) => {
 // Mark all notifications as read
 router.patch('/read-all', async (req, res) => {
   try {
-    const result = await Notification.updateMany(
+    await Notification.updateMany(
       { read: false },
       { read: true }
     );
     
-    res.json({ 
-      message: 'All notifications marked as read',
-      count: result.modifiedCount
-    });
+    // Emit WebSocket event for updated count
+    const io = req.app.get('io');
+    if (io) {
+      socketUtils.unreadCountUpdated(io, 0);
+    }
+    
+    res.json({ message: 'All notifications marked as read' });
   } catch (error) {
     console.error('Error marking all notifications as read:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

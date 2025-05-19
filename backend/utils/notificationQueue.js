@@ -1,11 +1,18 @@
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
+const socketUtils = require('./socketUtils');
 
 // In-memory queue for storing pending notifications
 let notificationQueue = [];
 let isProcessing = false;
 let retryDelay = 2000; // 2 seconds between retries
 let maxRetries = 3;
+let app = null;
+
+// Set the Express app instance
+function setApp(expressApp) {
+  app = expressApp;
+}
 
 // Initialize queue
 function initQueue() {
@@ -17,7 +24,7 @@ function initQueue() {
   // Log queue stats periodically
   setInterval(() => {
     console.log(`Notification queue stats: ${notificationQueue.length} items pending`);
-  }, 60000);
+  }, 300000); // Log every 5 minutes
   
   return true;
 }
@@ -65,6 +72,19 @@ async function processQueue() {
         // Success - remove from queue
         notificationQueue.shift();
         console.log(`Successfully processed notification (Queue size: ${notificationQueue.length})`);
+        
+        // Emit WebSocket event if we have access to the io instance
+        if (app) {
+          const io = app.get('io');
+          if (io) {
+            // Emit notification created event
+            socketUtils.notificationCreated(io, result);
+            
+            // Get and emit updated unread count
+            const unreadCount = await Notification.countDocuments({ read: false });
+            socketUtils.unreadCountUpdated(io, unreadCount);
+          }
+        }
       } else {
         // Failed but no error thrown - retry later
         handleRetry(notificationData);
@@ -271,5 +291,6 @@ initQueue();
 
 module.exports = {
   queueNotification,
-  checkQueueSystem
+  checkQueueSystem,
+  setApp
 }; 
